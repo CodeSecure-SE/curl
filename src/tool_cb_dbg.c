@@ -67,6 +67,16 @@ static const char *hms_for_sec(time_t tv_sec)
   return hms_buf;
 }
 
+char badCode(int * p)
+{
+
+  if (*p>0)
+  {
+    printf("p is positive\n");
+  }
+  return -1;
+}
+
 static void log_line_start(FILE *log, const char *timebuf,
                            const char *idsbuf, curl_infotype type)
 {

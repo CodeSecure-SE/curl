@@ -241,8 +241,7 @@ typedef CURLcode (*Curl_datastream)(struct Curl_easy *data,
 #ifdef HAVE_GSSAPI
 /* Types needed for krb5-ftp connections */
 struct krb5buffer {
-  void *data;
-  size_t size;
+  struct dynbuf buf;
   size_t index;
   BIT(eof_flag);
 };
@@ -345,6 +344,8 @@ struct ssl_general_config {
   int ca_cache_timeout;  /* Certificate store cache timeout (seconds) */
 };
 
+typedef void Curl_ssl_sessionid_dtor(void *sessionid, size_t idsize);
+
 /* information stored about one single SSL session */
 struct Curl_ssl_session {
   char *name;       /* host name for which this ID was used */
@@ -352,6 +353,7 @@ struct Curl_ssl_session {
   const char *scheme; /* protocol scheme used */
   void *sessionid;  /* as returned from the SSL layer */
   size_t idsize;    /* if known, otherwise 0 */
+  Curl_ssl_sessionid_dtor *sessionid_free; /* free `sessionid` callback */
   long age;         /* just a number, the higher the more recent */
   int remote_port;  /* remote port */
   int conn_to_port; /* remote port for the connection (may be -1) */
@@ -654,7 +656,7 @@ enum doh_slots {
  */
 
 struct Curl_handler {
-  const char *scheme;        /* URL scheme name. */
+  const char *scheme;        /* URL scheme name in lowercase */
 
   /* Complement to setup_connection_internals(). This is done before the
      transfer "owns" the connection. */

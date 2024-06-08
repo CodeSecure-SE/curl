@@ -46,7 +46,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: CodeSecure-SE/codesonar_ci
-          ref: main
           path: cso-scripts
       - name: Build and Analyze
         run: python3 cso-scripts/build_and_analyze.py codesonar.conf make -j $PARALLEL

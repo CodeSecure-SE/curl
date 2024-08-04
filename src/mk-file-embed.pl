@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 #***************************************************************************
 #                                  _   _ ____  _
 #  Project                     ___| | | |  _ \| |
@@ -21,25 +22,35 @@
 # SPDX-License-Identifier: curl
 #
 ###########################################################################
-# - Try to find the libpsl library
-# Once done this defines
-#
-# LIBPSL_FOUND - system has the libpsl library
-# LIBPSL_INCLUDE_DIR - the libpsl include directory
-# LIBPSL_LIBRARY - the libpsl library name
 
-find_path(LIBPSL_INCLUDE_DIR libpsl.h)
+my $varname = "var";
+if($ARGV[0] eq "--var") {
+    shift;
+    $varname = shift @ARGV;
+}
 
-find_library(LIBPSL_LIBRARY NAMES psl libpsl)
+print <<HEAD
+/*
+ * NEVER EVER edit this manually, fix the mk-file-embed.pl script instead!
+ */
+extern const unsigned char ${varname}[];
+const unsigned char ${varname}[] = {
+HEAD
+    ;
 
-if(LIBPSL_INCLUDE_DIR)
-  file(STRINGS "${LIBPSL_INCLUDE_DIR}/libpsl.h" libpsl_version_str REGEX "^#define[\t ]+PSL_VERSION[\t ]+\"(.*)\"")
-  string(REGEX REPLACE "^.*\"([^\"]+)\"" "\\1"  LIBPSL_VERSION "${libpsl_version_str}")
-endif()
+while (<STDIN>) {
+    my $line = $_;
+    foreach my $n (split //, $line) {
+        my $ord = ord($n);
+        printf("%s,", $ord);
+        if($ord == 10) {
+             printf("\n");
+        }
+    }
+}
 
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(LibPSL
-  REQUIRED_VARS LIBPSL_LIBRARY LIBPSL_INCLUDE_DIR
-  VERSION_VAR LIBPSL_VERSION)
-
-mark_as_advanced(LIBPSL_INCLUDE_DIR LIBPSL_LIBRARY)
+print <<ENDLINE
+0
+};
+ENDLINE
+    ;

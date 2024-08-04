@@ -122,6 +122,7 @@ typedef enum {
   C_DOH_CERT_STATUS,
   C_DOH_INSECURE,
   C_DOH_URL,
+  C_DUMP_CA_EMBED,
   C_DUMP_HEADER,
   C_ECH,
   C_EGD_FILE,
@@ -285,6 +286,7 @@ typedef enum {
   C_SERVICE_NAME,
   C_SESSIONID,
   C_SHOW_ERROR,
+  C_SHOW_HEADERS,
   C_SILENT,
   C_SOCKS4,
   C_SOCKS4A,
@@ -408,6 +410,7 @@ static const struct LongShort aliases[]= {
   {"doh-cert-status",            ARG_BOOL, ' ', C_DOH_CERT_STATUS},
   {"doh-insecure",               ARG_BOOL, ' ', C_DOH_INSECURE},
   {"doh-url"        ,            ARG_STRG, ' ', C_DOH_URL},
+  {"dump-ca-embed",              ARG_NONE, ' ', C_DUMP_CA_EMBED},
   {"dump-header",                ARG_FILE, 'D', C_DUMP_HEADER},
   {"ech",                        ARG_STRG, ' ', C_ECH},
   {"egd-file",                   ARG_STRG, ' ', C_EGD_FILE},
@@ -456,7 +459,7 @@ static const struct LongShort aliases[]= {
   {"http3",                      ARG_NONE, ' ', C_HTTP3},
   {"http3-only",                 ARG_NONE, ' ', C_HTTP3_ONLY},
   {"ignore-content-length",      ARG_BOOL, ' ', C_IGNORE_CONTENT_LENGTH},
-  {"include",                    ARG_BOOL, 'i', C_INCLUDE},
+  {"include",                    ARG_BOOL, ' ', C_INCLUDE},
   {"insecure",                   ARG_BOOL, 'k', C_INSECURE},
   {"interface",                  ARG_STRG, ' ', C_INTERFACE},
   {"ip-tos",                     ARG_STRG, ' ', C_IP_TOS},
@@ -572,6 +575,7 @@ static const struct LongShort aliases[]= {
   {"service-name",               ARG_STRG, ' ', C_SERVICE_NAME},
   {"sessionid",                  ARG_BOOL, ' ', C_SESSIONID},
   {"show-error",                 ARG_BOOL, 'S', C_SHOW_ERROR},
+  {"show-headers",               ARG_BOOL, 'i', C_SHOW_HEADERS},
   {"silent",                     ARG_BOOL, 's', C_SILENT},
   {"socks4",                     ARG_STRG, ' ', C_SOCKS4},
   {"socks4a",                    ARG_STRG, ' ', C_SOCKS4A},
@@ -1240,6 +1244,20 @@ static ParameterError set_rate(struct GlobalConfig *global,
 
   if(div) {
     char unit = div[1];
+    curl_off_t numunits;
+    char *endp;
+
+    if(curlx_strtoofft(&div[1], &endp, 10, &numunits)) {
+      /* if it fails, there is no legit number specified */
+      if(endp == &div[1])
+        /* if endp did not move, accept it as a 1 */
+        numunits = 1;
+      else
+        return PARAM_BAD_USE;
+    }
+    else
+      unit = *endp;
+
     switch(unit) {
     case 's': /* per second */
       numerator = 1000;
@@ -1257,6 +1275,14 @@ static ParameterError set_rate(struct GlobalConfig *global,
       err = PARAM_BAD_USE;
       break;
     }
+
+    if((LONG_MAX / numerator) < numunits) {
+      /* overflow, too large number */
+      errorf(global, "too large --rate unit");
+      err = PARAM_NUMBER_TOO_LARGE;
+    }
+    /* this typecast is okay based on the check above */
+    numerator *= (long)numunits;
   }
 
   if(err)
@@ -2113,6 +2139,9 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
     case C_URL_QUERY:  /* --url-query */
       err = url_query(nextarg, global, config);
       break;
+    case C_DUMP_CA_EMBED: /* --dump-ca-embed */
+      err = PARAM_CA_EMBED_REQUESTED;
+      break;
     case C_DUMP_HEADER: /* --dump-header */
       err = getstr(&config->headerfile, nextarg, DENY_BLANK);
       break;
@@ -2487,6 +2516,7 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       }
       break;
     case C_INCLUDE: /* --include */
+    case C_SHOW_HEADERS: /* --show-headers */
       config->show_headers = toggle; /* show the headers as well in the
                                         general output stream */
       break;
@@ -2984,7 +3014,8 @@ ParameterError parse_args(struct GlobalConfig *global, int argc,
   if(result && result != PARAM_HELP_REQUESTED &&
      result != PARAM_MANUAL_REQUESTED &&
      result != PARAM_VERSION_INFO_REQUESTED &&
-     result != PARAM_ENGINES_REQUESTED) {
+     result != PARAM_ENGINES_REQUESTED &&
+     result != PARAM_CA_EMBED_REQUESTED) {
     const char *reason = param2text(result);
 
     if(orig_opt && strcmp(":", orig_opt))

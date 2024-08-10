@@ -600,6 +600,7 @@ CURL_CHECK_WIN32_LARGEFILE
 CURL_CHECK_WIN32_CRYPTO
 
 CURL_DARWIN_CFLAGS
+
 case $host_os in
   darwin*)
     CURL_SUPPORTS_BUILTIN_AVAILABLE
@@ -2754,7 +2755,6 @@ dnl **********************************************************************
 dnl Check for the presence of AppleIDN
 dnl **********************************************************************
 
-CURL_DARWIN_CFLAGS
 case $host_os in
   darwin*)
     AC_MSG_CHECKING([whether to build with Apple IDN])
@@ -5212,7 +5212,8 @@ AC_MSG_NOTICE([Configured to build curl/libcurl:
   Features:         ${SUPPORT_FEATURES}
 ])
 
-non13=`echo "$TLSCHOICE" | $EGREP -io 'bearssl|secure-transport'`;
+# grep -o would simplify this, but is nonportable
+[non13=`echo "$TLSCHOICE" | $AWK '{split("bearssl secure-transport", a); for (i in a) if(match(tolower($0), a[i])) print a[i];}'`]
 if test -n "$non13"; then
  for a in $non13; do
    AC_MSG_WARN([$a is enabled for TLS but it does not support TLS 1.3])

@@ -35,10 +35,10 @@
 #
 # NGTCP2_FOUND         System has ngtcp2
 # NGTCP2_INCLUDE_DIRS  The ngtcp2 include directories
-# NGTCP2_LIBRARIES     The libraries needed to use ngtcp2
+# NGTCP2_LIBRARIES     The ngtcp2 library names
 # NGTCP2_VERSION       Version of ngtcp2
 
-if(NOT MSVC OR VCPKG_TOOLCHAIN)
+if(CURL_USE_PKGCONFIG)
   find_package(PkgConfig QUIET)
   pkg_search_module(PC_NGTCP2 "libngtcp2")
 endif()
@@ -72,12 +72,10 @@ if(NGTCP2_FIND_COMPONENTS)
 
   if(NGTCP2_CRYPTO_BACKEND)
     string(TOLOWER "ngtcp2_crypto_${NGTCP2_CRYPTO_BACKEND}" _crypto_library)
-    if(NOT MSVC OR VCPKG_TOOLCHAIN)
+    if(CURL_USE_PKGCONFIG)
       pkg_search_module(PC_${_crypto_library} "lib${_crypto_library}")
     endif()
-    find_library(${_crypto_library}_LIBRARY
-      NAMES
-        ${_crypto_library}
+    find_library(${_crypto_library}_LIBRARY NAMES ${_crypto_library}
       HINTS
         ${PC_${_crypto_library}_LIBDIR}
         ${PC_${_crypto_library}_LIBRARY_DIRS}

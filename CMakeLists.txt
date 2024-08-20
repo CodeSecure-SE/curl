@@ -36,7 +36,7 @@
 #   HAVE_OPENSSL_SRP: `SSL_CTX_set_srp_username` present in OpenSSL/wolfSSL
 #   HAVE_GNUTLS_SRP: `gnutls_srp_verifier` present in GnuTLS
 #   HAVE_SSL_CTX_SET_QUIC_METHOD: `SSL_CTX_set_quic_method` present in OpenSSL/wolfSSL
-#   HAVE_QUICHE_CONN_SET_QLOG_FD: `quiche_conn_set_qlog_fd` present in QUICHE
+#   HAVE_QUICHE_CONN_SET_QLOG_FD: `quiche_conn_set_qlog_fd` present in quiche
 #   HAVE_ECH: ECH API checks for OpenSSL, BoringSSL or wolfSSL
 #
 # For each of the above variables, if the variable is DEFINED (either
@@ -208,7 +208,7 @@ else()
 endif()
 
 # Override to force-disable or force-enable the use of pkg-config.
-if(NOT MSVC OR VCPKG_TOOLCHAIN)
+if(UNIX OR (MSVC AND VCPKG_TOOLCHAIN))  # Keep this in sync with CMake/curl-config.cmake.in
   set(_curl_use_pkgconfig_default ON)
 else()
   set(_curl_use_pkgconfig_default OFF)
@@ -221,7 +221,7 @@ set(LIBCURL_PC_REQUIRES_PRIVATE "")
 
 if(ENABLE_ARES)
   set(USE_ARES 1)
-  find_package(CARES REQUIRED)
+  find_package(Cares REQUIRED)
   list(APPEND CURL_LIBS ${CARES_LIBRARIES})
   list(APPEND LIBCURL_PC_REQUIRES_PRIVATE "libcares")
   add_definitions("-DCARES_NO_DEPRECATED")  # Ignore c-ares deprecation warnings
@@ -465,7 +465,7 @@ cmake_dependent_option(CURL_USE_MBEDTLS "Enable mbedTLS for SSL/TLS" OFF CURL_EN
 cmake_dependent_option(CURL_USE_BEARSSL "Enable BearSSL for SSL/TLS" OFF CURL_ENABLE_SSL OFF)
 cmake_dependent_option(CURL_USE_WOLFSSL "Enable wolfSSL for SSL/TLS" OFF CURL_ENABLE_SSL OFF)
 cmake_dependent_option(CURL_USE_GNUTLS "Enable GnuTLS for SSL/TLS" OFF CURL_ENABLE_SSL OFF)
-cmake_dependent_option(CURL_USE_RUSTLS "Enable rustls for SSL/TLS" OFF CURL_ENABLE_SSL OFF)
+cmake_dependent_option(CURL_USE_RUSTLS "Enable Rustls for SSL/TLS" OFF CURL_ENABLE_SSL OFF)
 
 set(_openssl_default ON)
 if(WIN32 OR CURL_USE_SECTRANSP OR CURL_USE_SCHANNEL OR CURL_USE_MBEDTLS OR CURL_USE_WOLFSSL)
@@ -615,7 +615,7 @@ if(CURL_USE_GNUTLS)
   if(NOT GNUTLS_FOUND)
     find_package(GnuTLS REQUIRED)
   endif()
-  find_package(nettle REQUIRED)
+  find_package(Nettle REQUIRED)
   set(_ssl_enabled ON)
   set(USE_GNUTLS ON)
   list(APPEND CURL_LIBS ${GNUTLS_LIBRARIES} ${NETTLE_LIBRARIES})
@@ -637,7 +637,7 @@ if(CURL_USE_GNUTLS)
 endif()
 
 if(CURL_USE_RUSTLS)
-  find_package(rustls REQUIRED)
+  find_package(Rustls REQUIRED)
   set(_ssl_enabled ON)
   set(USE_RUSTLS ON)
   list(APPEND CURL_LIBS ${RUSTLS_LIBRARIES})
@@ -830,7 +830,7 @@ if(USE_QUICHE)
   if(USE_NGTCP2)
     message(FATAL_ERROR "Only one HTTP/3 backend can be selected!")
   endif()
-  find_package(QUICHE REQUIRED)
+  find_package(Quiche REQUIRED)
   if(NOT HAVE_BORINGSSL)
     message(FATAL_ERROR "quiche requires BoringSSL")
   endif()
@@ -1045,7 +1045,7 @@ mark_as_advanced(CURL_USE_LIBPSL)
 set(USE_LIBPSL OFF)
 
 if(CURL_USE_LIBPSL)
-  find_package(LibPSL)  # TODO: add REQUIRED to match autotools
+  find_package(Libpsl)  # TODO: add REQUIRED to match autotools
   if(LIBPSL_FOUND)
     list(APPEND CURL_LIBS ${LIBPSL_LIBRARIES})
     list(APPEND LIBCURL_PC_REQUIRES_PRIVATE "libpsl")
@@ -1063,7 +1063,7 @@ mark_as_advanced(CURL_USE_LIBSSH2)
 set(USE_LIBSSH2 OFF)
 
 if(CURL_USE_LIBSSH2)
-  find_package(LibSSH2)
+  find_package(Libssh2)
   if(LIBSSH2_FOUND)
     list(APPEND CURL_LIBS ${LIBSSH2_LIBRARIES})
     list(APPEND LIBCURL_PC_REQUIRES_PRIVATE "libssh2")
@@ -1131,7 +1131,7 @@ if(CURL_USE_GSASL)
   endif()
 endif()
 
-option(CURL_USE_GSSAPI "Use GSSAPI implementation (right now only Heimdal is supported with CMake build)" OFF)
+option(CURL_USE_GSSAPI "Use GSSAPI implementation" OFF)
 mark_as_advanced(CURL_USE_GSSAPI)
 
 if(CURL_USE_GSSAPI)

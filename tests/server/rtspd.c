@@ -89,10 +89,10 @@ typedef enum {
   RPROT_HTTP = 2
 } reqprot_t;
 
-#define SET_RTP_PKT_CHN(p,c)  ((p)[1] = (unsigned char)((c) & 0xFF))
+#define SET_RTP_PKT_CHN(p,c)  ((p)[1] = (char)((c) & 0xFF))
 
-#define SET_RTP_PKT_LEN(p,l) (((p)[2] = (unsigned char)(((l) >> 8) & 0xFF)), \
-                              ((p)[3] = (unsigned char)((l) & 0xFF)))
+#define SET_RTP_PKT_LEN(p,l) (((p)[2] = (char)(((l) >> 8) & 0xFF)), \
+                              ((p)[3] = (char)((l) & 0xFF)))
 
 struct httprequest {
   char reqbuf[REQBUFSIZ]; /* buffer area for the incoming request */
@@ -106,7 +106,7 @@ struct httprequest {
   bool auth;      /* Authorization header present in the incoming request */
   size_t cl;      /* Content-Length of the incoming request */
   bool digest;    /* Authorization digest header found */
-  bool ntlm;      /* Authorization ntlm header found */
+  bool ntlm;      /* Authorization NTLM header found */
   int pipe;       /* if non-zero, expect this many requests to do a "piped"
                      request/response */
   int skip;       /* if non-zero, the server is instructed to not read this

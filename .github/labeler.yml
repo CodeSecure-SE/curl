@@ -44,7 +44,6 @@ CI:
           - any-glob-to-any-file:
               - '.azure-pipelines.yml'
               - '.circleci/**'
-              - '.cirrus.yml'
               - '.github/**'
               - 'appveyor.*'
               - 'scripts/ci*'
@@ -93,7 +92,7 @@ documentation:
   - all:
       - changed-files:
           - any-glob-to-all-files:
-              - '{.github/workflows/badwords.yml,.github/workflows/man-examples.yml,.github/workflows/synopsis.yml,.github/scripts/badwords.*,.github/scripts/cd2cd,.github/scripts/cd2nroff,.github/scripts/cdall.pl,.github/scripts/nroff2cd,.github/scripts/verify-examples.pl,.github/scripts/verify-synopsis.pl,**/*.md,**/*.txt,**/*.1,CHANGES,docs/**,LICENSES/**,README,RELEASE-NOTES,scripts/cd*}'
+              - '{.github/workflows/badwords.yml,.github/workflows/man-examples.yml,.github/workflows/synopsis.yml,.github/scripts/badwords.*,.github/scripts/cd2cd,.github/scripts/cd2nroff,.github/scripts/cdall.pl,.github/scripts/nroff2cd,.github/scripts/verify-examples.pl,.github/scripts/verify-synopsis.pl,**/*.md,**/*.txt,**/*.1,CHANGES.md,docs/**,LICENSES/**,README,RELEASE-NOTES,scripts/cd*}'
           - all-globs-to-all-files:
               # negative matches
               - '!**/CMakeLists.txt'
@@ -109,19 +108,19 @@ GOPHER:
   - all:
       - changed-files:
           - any-glob-to-all-files:
-              - '{lib/gopher*}'
+              - 'lib/gopher*'
 
 HTTP:
   - all:
       - changed-files:
           - any-glob-to-all-files:
-              - '{docs/examples/hsts*,docs/examples/http-*,docs/examples/httpput*,docs/examples/https*,docs/examples/*post*,docs/HSTS.md,docs/HTTP-COOKIES.md,docs/libcurl/opts/CURLINFO_COOKIE*,docs/libcurl/opts/CURLOPT_COOKIE*,docs/libcurl/opts/CURLINFO_HTTP_**,docs/libcurl/opts/CURLINFO_REDIRECT*,docs/libcurl/opts/CURLINFO_REFER*,docs/libcurl/opts/CURLOPT_FOLLOWLOCATION*,docs/libcurl/opts/CURLOPT_HSTS*,docs/libcurl/opts/CURLOPT_HTTP*,docs/libcurl/opts/CURLOPT_POST.*,docs/libcurl/opts/CURLOPT_POSTFIELD*,docs/libcurl/opts/CURLOPT_POSTREDIR*,docs/libcurl/opts/CURLOPT_REDIR*,docs/libcurl/opts/CURLOPT_REFER*,docs/libcurl/opts/CURLOPT_TRAILER*,docs/libcurl/opts/CURLOPT_TRANSFER_ENCODING*,lib/cf-https*,lib/cf-h1*,lib/cf-h2*,lib/cookie.*,lib/http*,tests/http*,tests/http-server.pl,tests/http/*,tests/nghttp*}'
+              - '{docs/examples/hsts*,docs/examples/http-*,docs/examples/httpput*,docs/examples/https*,docs/examples/*post*,docs/HSTS.md,docs/HTTP-COOKIES.md,docs/libcurl/opts/CURLINFO_COOKIE*,docs/libcurl/opts/CURLOPT_COOKIE*,docs/libcurl/opts/CURLINFO_HTTP_**,docs/libcurl/opts/CURLINFO_REDIRECT*,docs/libcurl/opts/CURLINFO_REFER*,docs/libcurl/opts/CURLOPT_FOLLOWLOCATION*,docs/libcurl/opts/CURLOPT_HSTS*,docs/libcurl/opts/CURLOPT_HTTP*,docs/libcurl/opts/CURLOPT_POST.*,docs/libcurl/opts/CURLOPT_POSTFIELD*,docs/libcurl/opts/CURLOPT_POSTREDIR*,docs/libcurl/opts/CURLOPT_REDIR*,docs/libcurl/opts/CURLOPT_REFER*,docs/libcurl/opts/CURLOPT_TRAILER*,docs/libcurl/opts/CURLOPT_TRANSFER_ENCODING*,lib/cf-https*,lib/cf-h1*,lib/cf-h2*,lib/cookie.*,lib/hsts.*,lib/http*,tests/http*,tests/http-server.pl,tests/http/*,tests/nghttp*}'
 
 HTTP/2:
   - all:
       - changed-files:
           - any-glob-to-all-files:
-              - '{CMake/FindNGHTTP2.cmake,CMake/FindQUICHE.cmake,docs/HTTP2.md,docs/libcurl/opts/CURLOPT_STREAM*,docs/examples/http2*,lib/http2*,tests/http2-server.pl}'
+              - '{CMake/FindNGHTTP2.cmake,CMake/FindQuiche.cmake,docs/HTTP2.md,docs/libcurl/opts/CURLOPT_STREAM*,docs/examples/http2*,lib/http2*,tests/http2-server.pl}'
 
 HTTP/3:
   - all:
@@ -145,7 +144,7 @@ LDAP:
   - all:
       - changed-files:
           - any-glob-to-all-files:
-              - '{lib/*ldap*}'
+              - 'lib/*ldap*'
 
 libcurl API:
   - all:
@@ -189,7 +188,7 @@ RTMP:
   - all:
       - changed-files:
           - any-glob-to-all-files:
-              - '{lib/curl_rtmp.*}'
+              - 'lib/curl_rtmp.*'
 
 RTSP:
   - all:
@@ -201,7 +200,7 @@ SCP/SFTP:
   - all:
       - changed-files:
           - any-glob-to-all-files:
-              - '{CMake/FindLibSSH2.cmake,docs/libcurl/opts/CURLOPT_SSH*,docs/examples/sftp*,lib/vssh/**,tests/sshhelp.pm,tests/sshserver.pl}'
+              - '{CMake/FindLibssh2.cmake,docs/libcurl/opts/CURLOPT_SSH*,docs/examples/sftp*,lib/vssh/**,tests/sshhelp.pm,tests/sshserver.pl}'
 
 script:
   - all:
@@ -237,7 +236,7 @@ TLS:
   - all:
       - changed-files:
           - any-glob-to-all-files:
-              - '{CMake/FindBearSSL.cmake,CMake/FindMbedTLS.cmake,CMake/FindWolfSSL.cmake,docs/examples/ssl*,docs/examples/*ssl.*,docs/examples/*tls.*,docs/SSL*,docs/libcurl/curl_global_sslset*,docs/libcurl/opts/CURLINFO_CA*,docs/libcurl/opts/CURLINFO_CERT*,docs/libcurl/opts/CURLINFO_SSL*,docs/libcurl/opts/CURLINFO_TLS*,docs/libcurl/opts/CURLOPT_CA*,docs/libcurl/opts/CURLOPT_CERT*,docs/libcurl/opts/CURLOPT_PINNEDPUBLICKEY*,docs/libcurl/opts/CURLOPT_SSL*,docs/libcurl/opts/CURLOPT_TLS*,docs/libcurl/opts/CURLOPT_USE_SSL*,lib/vtls/**,m4/curl-bearssl.m4,m4/curl-gnutls.m4,m4/curl-mbedtls.m4,m4/curl-openssl.m4,m4/curl-rustls.m4,m4/curl-schannel.m4,m4/curl-sectransp.m4,m4/curl-wolfssl.m4}'
+              - '{CMake/FindBearSSL.cmake,CMake/FindMbedTLS.cmake,CMake/FindWolfSSL.cmake,CMake/FindRustls.cmake,docs/examples/ssl*,docs/examples/*ssl.*,docs/examples/*tls.*,docs/SSL*,docs/libcurl/curl_global_sslset*,docs/libcurl/opts/CURLINFO_CA*,docs/libcurl/opts/CURLINFO_CERT*,docs/libcurl/opts/CURLINFO_SSL*,docs/libcurl/opts/CURLINFO_TLS*,docs/libcurl/opts/CURLOPT_CA*,docs/libcurl/opts/CURLOPT_CERT*,docs/libcurl/opts/CURLOPT_PINNEDPUBLICKEY*,docs/libcurl/opts/CURLOPT_SSL*,docs/libcurl/opts/CURLOPT_TLS*,docs/libcurl/opts/CURLOPT_USE_SSL*,lib/vtls/**,m4/curl-bearssl.m4,m4/curl-gnutls.m4,m4/curl-mbedtls.m4,m4/curl-openssl.m4,m4/curl-rustls.m4,m4/curl-schannel.m4,m4/curl-sectransp.m4,m4/curl-wolfssl.m4}'
 
 URL:
   - all:
@@ -255,4 +254,4 @@ Windows:
   - all:
       - changed-files:
           - any-glob-to-all-files:
-              - '{appveyor.*,CMake/Platforms/WindowsCache.cmake,lib/*win32*,lib/curl_multibyte.*,lib/rename.*,lib/vtls/schannel*,m4/curl-schannel.m4,projects/**,src/tool_doswin.c,winbuild/**,libcurl.def}'
+              - '{appveyor.*,.github/workflows/cygwin.yml,.github/workflows/windows.yml,CMake/Platforms/WindowsCache.cmake,lib/*win32*,lib/curl_multibyte.*,lib/rename.*,lib/vtls/schannel*,m4/curl-schannel.m4,projects/**,src/tool_doswin.c,winbuild/**,libcurl.def}'

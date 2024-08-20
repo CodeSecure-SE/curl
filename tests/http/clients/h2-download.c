@@ -25,23 +25,27 @@
  * HTTP/2 server push
  * </DESC>
  */
-
 /* curl stuff */
 #include <curl/curl.h>
-#include <curl/mprintf.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-/* somewhat unix-specific */
-#include <sys/time.h>
-#include <unistd.h>
+#ifndef _MSC_VER
+/* somewhat Unix-specific */
+#include <unistd.h>  /* getopt() */
+#endif
+
+#ifdef _MSC_VER
+#define snprintf _snprintf
+#endif
 
 #ifndef CURLPIPE_MULTIPLEX
 #error "too old libcurl, cannot do HTTP/2 server push!"
 #endif
 
+#ifndef _MSC_VER
 static int verbose = 1;
 
 static void log_line_start(FILE *log, const char *idsbuf, curl_infotype type)
@@ -81,11 +85,10 @@ static int debug_cb(CURL *handle, curl_infotype type,
   if(!curl_easy_getinfo(handle, CURLINFO_XFER_ID, &xfer_id) && xfer_id >= 0) {
     if(!curl_easy_getinfo(handle, CURLINFO_CONN_ID, &conn_id) &&
         conn_id >= 0) {
-      curl_msnprintf(idsbuf, sizeof(idsbuf), TRC_IDS_FORMAT_IDS_2,
-                     xfer_id, conn_id);
+      snprintf(idsbuf, sizeof(idsbuf), TRC_IDS_FORMAT_IDS_2, xfer_id, conn_id);
     }
     else {
-      curl_msnprintf(idsbuf, sizeof(idsbuf), TRC_IDS_FORMAT_IDS_1, xfer_id);
+      snprintf(idsbuf, sizeof(idsbuf), TRC_IDS_FORMAT_IDS_1, xfer_id);
     }
   }
   else
@@ -159,6 +162,7 @@ struct transfer {
 
 static size_t transfer_count = 1;
 static struct transfer *transfers;
+static int forbid_reuse = 0;
 
 static struct transfer *get_transfer_for_easy(CURL *easy)
 {
@@ -180,8 +184,7 @@ static size_t my_write_cb(char *buf, size_t nitems, size_t buflen,
   fprintf(stderr, "[t-%d] RECV %ld bytes, total=%ld, pause_at=%ld\n",
           t->idx, (long)blen, (long)t->recv_size, (long)t->pause_at);
   if(!t->out) {
-    curl_msnprintf(t->filename, sizeof(t->filename)-1, "download_%u.data",
-                   t->idx);
+    snprintf(t->filename, sizeof(t->filename)-1, "download_%u.data", t->idx);
     t->out = fopen(t->filename, "wb");
     if(!t->out)
       return 0;
@@ -239,6 +242,8 @@ static int setup(CURL *hnd, const char *url, struct transfer *t,
   curl_easy_setopt(hnd, CURLOPT_NOPROGRESS, 0L);
   curl_easy_setopt(hnd, CURLOPT_XFERINFOFUNCTION, my_progress_cb);
   curl_easy_setopt(hnd, CURLOPT_XFERINFODATA, t);
+  if(forbid_reuse)
+    curl_easy_setopt(hnd, CURLOPT_FORBID_REUSE, 1L);
 
   /* please be verbose */
   if(verbose) {
@@ -269,12 +274,14 @@ static void usage(const char *msg)
     "  -V http_version (http/1.1, h2, h3) http version to use\n"
   );
 }
+#endif /* !_MSC_VER */
 
 /*
  * Download a file over HTTP/2, take care of server push.
  */
 int main(int argc, char *argv[])
 {
+#ifndef _MSC_VER
   CURLM *multi_handle;
   struct CURLMsg *m;
   const char *url;
@@ -288,13 +295,16 @@ int main(int argc, char *argv[])
   int http_version = CURL_HTTP_VERSION_2_0;
   int ch;
 
-  while((ch = getopt(argc, argv, "ahm:n:A:F:P:V:")) != -1) {
+  while((ch = getopt(argc, argv, "afhm:n:A:F:P:V:")) != -1) {
     switch(ch) {
     case 'h':
       usage(NULL);
       return 2;
     case 'a':
       abort_paused = 1;
+      break;
+    case 'f':
+      forbid_reuse = 1;
       break;
     case 'm':
       max_parallel = (size_t)strtol(optarg, NULL, 10);
@@ -380,7 +390,6 @@ int main(int argc, char *argv[])
     if(still_running) {
       /* wait for activity, timeout or "nothing" */
       mc = curl_multi_poll(multi_handle, NULL, 0, 1000, NULL);
-      fprintf(stderr, "curl_multi_poll() -> %d\n", mc);
     }
 
     if(mc)
@@ -472,4 +481,10 @@ int main(int argc, char *argv[])
   curl_multi_cleanup(multi_handle);
 
   return 0;
+#else
+  (void)argc;
+  (void)argv;
+  fprintf(stderr, "Not supported with this compiler.\n");
+  return 1;
+#endif /* !_MSC_VER */
 }

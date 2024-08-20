@@ -620,7 +620,7 @@ static curl_socket_t sockit(curl_socket_t fd)
   memcpy(&response[SOCKS5_BNDADDR + len],
          &buffer[SOCKS5_DSTADDR + len], sizeof(socksport));
 
-  rc = (send)(fd, (char *)response, (size_t)(len + 6), 0);
+  rc = (send)(fd, (char *)response, (SEND_TYPE_ARG3)(len + 6), 0);
   if(rc != (len + 6)) {
     logmsg("Sending connect response failed!");
     return CURL_SOCKET_BAD;
@@ -1117,7 +1117,7 @@ int main(int argc, char *argv[])
 
 #ifdef USE_UNIX_SOCKETS
   if(socket_domain == AF_UNIX)
-    logmsg("Listening on unix socket %s", unix_socket);
+    logmsg("Listening on Unix socket %s", unix_socket);
   else
 #endif
   logmsg("Listening on port %hu", port);

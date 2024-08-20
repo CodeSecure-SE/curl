@@ -2323,7 +2323,7 @@ sub responsive_httptls_server {
 sub startservers {
     my @what = @_;
     my ($pid, $pid2);
-    my $serr;  # error while starting a server (as as the return enumerations)
+    my $serr;  # error while starting a server (as of the return enumerations)
     for(@what) {
         my (@whatlist) = split(/\s+/,$_);
         my $what = lc($whatlist[0]);
@@ -2970,6 +2970,8 @@ sub subvariables {
     $$thing =~ s/${prefix}PWD/$pwd/g;
     $$thing =~ s/${prefix}POSIX_PWD/$posix_pwd/g;
     $$thing =~ s/${prefix}VERSION/$CURLVERSION/g;
+    $$thing =~ s/${prefix}VERNUM/$CURLVERNUM/g;
+    $$thing =~ s/${prefix}DATE/$DATE/g;
     $$thing =~ s/${prefix}TESTNUMBER/$testnum/g;
 
     my $file_pwd = $pwd;

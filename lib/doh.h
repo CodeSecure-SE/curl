@@ -60,7 +60,7 @@ typedef enum {
 
 /* one of these for each DoH request */
 struct dnsprobe {
-  CURL *easy;
+  curl_off_t easy_mid; /* multi id of easy handle doing the lookup */
   DNStype dnstype;
   unsigned char dohbuffer[512];
   size_t dohlen;
@@ -87,8 +87,6 @@ struct Curl_addrinfo *Curl_doh(struct Curl_easy *data,
 
 CURLcode Curl_doh_is_resolved(struct Curl_easy *data,
                               struct Curl_dns_entry **dns);
-
-int Curl_doh_getsock(struct connectdata *conn, curl_socket_t *socks);
 
 #define DOH_MAX_ADDR 24
 #define DOH_MAX_CNAME 4
@@ -118,7 +116,7 @@ struct dohaddr {
 #define HTTPS_RR_CODE_IPV6            0x06
 
 /*
- * These may need escaping when found within an alpn string
+ * These may need escaping when found within an ALPN string
  * value.
  */
 #define COMMA_CHAR                    ','
@@ -142,19 +140,22 @@ struct dohentry {
 #endif
 };
 
+void Curl_doh_close(struct Curl_easy *data);
+void Curl_doh_cleanup(struct Curl_easy *data);
 
-#ifdef DEBUGBUILD
-DOHcode doh_encode(const char *host,
-                   DNStype dnstype,
-                   unsigned char *dnsp, /* buffer */
-                   size_t len,  /* buffer size */
-                   size_t *olen); /* output length */
-DOHcode doh_decode(const unsigned char *doh,
-                   size_t dohlen,
-                   DNStype dnstype,
-                   struct dohentry *d);
-void de_init(struct dohentry *d);
-void de_cleanup(struct dohentry *d);
+#ifdef UNITTESTS
+UNITTEST DOHcode doh_encode(const char *host,
+                            DNStype dnstype,
+                            unsigned char *dnsp,  /* buffer */
+                            size_t len,  /* buffer size */
+                            size_t *olen);  /* output length */
+UNITTEST DOHcode doh_decode(const unsigned char *doh,
+                            size_t dohlen,
+                            DNStype dnstype,
+                            struct dohentry *d);
+
+UNITTEST void de_init(struct dohentry *d);
+UNITTEST void de_cleanup(struct dohentry *d);
 #endif
 
 extern struct curl_trc_feat Curl_doh_trc;

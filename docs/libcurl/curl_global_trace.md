@@ -9,6 +9,7 @@ See-also:
   - libcurl (3)
 Protocol:
   - All
+Added-in: 8.3
 ---
 
 # NAME
@@ -74,6 +75,10 @@ Tracing of TCP socket handling: connect, sends, receives.
 
 Tracing of SSL/TLS operations, whichever SSL backend is used in your build.
 
+## `ftp`
+
+Tracing of FTP operations when this protocol is enabled in your build.
+
 ## `http/2`
 
 Details about HTTP/2 handling: frames, events, I/O, etc.
@@ -100,9 +105,40 @@ Tracing of DNS-over-HTTP operations to resolve hostnames.
 
 Traces reading of upload data from the application in order to send it to the server.
 
+## `smtp`
+
+Tracing of SMTP operations when this protocol is enabled in your build.
+
 ## `write`
 
 Traces writing of download data, received from the server, to the application.
+
+## `ws`
+
+Tracing of WebSocket operations when this protocol is enabled in your build.
+
+# TRACE GROUPS
+
+Besides the specific component names there are the following group names
+defined:
+
+## `all`
+
+## `network`
+
+All components involved in bare network I/O, including the SSL layer.
+
+All components that your libcurl is built with.
+
+## `protocol`
+
+All components involved in transfer protocols, such as 'ftp' and 'http/2'.
+
+## `proxy`
+
+All components involved in use of proxies.
+
+# %PROTOCOLS%
 
 # EXAMPLE
 
@@ -127,9 +163,7 @@ of an enabled component appears at the beginning in brackets.
 ...
 ~~~
 
-# AVAILABILITY
-
-Added in 8.3
+# %AVAILABILITY%
 
 # RETURN VALUE
 

@@ -67,10 +67,6 @@ jobs:
         with:
           name: SARIF results summary
           path: diff.sarif
-      - name: Get report
-        run: |
-           $CSONAR_CSHOME/codesonar/bin/codesonar get -auth password -hubuser $CSONAR_HUB_USER \
-           -hubpwfile hubpwfile $CSONAR_HUB_URL/report/aid-$(cat $PROJECT_NAME.prj_files/aid.txt)-3.html -o report.html
       - name: Email results
         uses: dawidd6/action-send-mail@v3
         with:

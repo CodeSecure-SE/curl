@@ -2556,12 +2556,10 @@ dnl ----------------------------
 want_winuni="no"
 if test "$curl_cv_native_windows" = "yes"; then
   AC_MSG_CHECKING([whether to enable Windows Unicode (Windows native builds only)])
-  OPT_WINUNI="default"
-  AC_ARG_WITH(windows-unicode,
-AS_HELP_STRING([--with-windows-unicode],[enable Windows Unicode])
-AS_HELP_STRING([--without-windows-unicode], [disable Windows Unicode (default)]),
-    OPT_WINUNI=$withval)
-  case "$OPT_WINUNI" in
+  AC_ARG_ENABLE(windows-unicode,
+AS_HELP_STRING([--enable-windows-unicode],[Enable Windows Unicode])
+AS_HELP_STRING([--disable-windows-unicode],[Disable Windows Unicode (default)]),
+  [ case "$enableval" in
     yes)
       CPPFLAGS="${CPPFLAGS} -DUNICODE -D_UNICODE"
       want_winuni="yes"
@@ -2570,7 +2568,9 @@ AS_HELP_STRING([--without-windows-unicode], [disable Windows Unicode (default)])
     *)
       AC_MSG_RESULT([no])
       ;;
-  esac
+    esac ],
+      AC_MSG_RESULT([no])
+  )
 fi
 
 AM_CONDITIONAL([USE_UNICODE], [test "$want_winuni" = "yes"])
@@ -4638,6 +4638,25 @@ AS_HELP_STRING([--disable-progress-meter],[Disable progress-meter]),
   no)
     AC_MSG_RESULT(no)
     AC_DEFINE(CURL_DISABLE_PROGRESS_METER, 1, [disable progress-meter])
+    ;;
+  *)
+    AC_MSG_RESULT(yes)
+    ;;
+  esac ],
+    AC_MSG_RESULT(yes)
+)
+
+dnl ************************************************************
+dnl disable SHA-512/256 hash algorithm
+dnl
+AC_MSG_CHECKING([whether to support the SHA-512/256 hash algorithm])
+AC_ARG_ENABLE(sha512-256,
+AS_HELP_STRING([--enable-sha512-256],[Enable SHA-512/256 hash algorithm (default)])
+AS_HELP_STRING([--disable-sha512-256],[Disable SHA-512/256 hash algorithm]),
+[ case "$enableval" in
+  no)
+    AC_MSG_RESULT(no)
+    AC_DEFINE(CURL_DISABLE_SHA512_256, 1, [disable SHA-512/256 hash algorithm])
     ;;
   *)
     AC_MSG_RESULT(yes)

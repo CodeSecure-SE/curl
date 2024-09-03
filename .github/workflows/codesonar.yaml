@@ -21,7 +21,7 @@ jobs:
       TOKEN: "${{ secrets.GITHUB_TOKEN }}"
       API_URL: https://api.github.com
       REQUEST_NUMBER: ${{ github.event.pull_request.number }}
-      ROOT_TREE: "OSS-Projects/curl-GitHub" 
+      ROOT_TREE: "OSS-Projects/Curl-GitHub" 
       PROJECT_NAME: "curl"
       BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
       CSONAR_HUB_URL: "https://partnerdemo.codesonar.com" 

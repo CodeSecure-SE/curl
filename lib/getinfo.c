@@ -77,10 +77,9 @@ CURLcode Curl_initinfo(struct Curl_easy *data)
   free(info->wouldredirect);
   info->wouldredirect = NULL;
 
-  info->primary.remote_ip[0] = '\0';
-  info->primary.local_ip[0] = '\0';
-  info->primary.remote_port = 0;
-  info->primary.local_port = 0;
+  memset(&info->primary, 0, sizeof(info->primary));
+  info->primary.remote_port = -1;
+  info->primary.local_port = -1;
   info->retry_after = 0;
 
   info->conn_scheme = 0;
@@ -253,11 +252,13 @@ static CURLcode getinfo_long(struct Curl_easy *data, CURLINFO info,
   case CURLINFO_SSL_VERIFYRESULT:
     *param_longp = data->set.ssl.certverifyresult;
     break;
-#ifndef CURL_DISABLE_PROXY
   case CURLINFO_PROXY_SSL_VERIFYRESULT:
+#ifndef CURL_DISABLE_PROXY
     *param_longp = data->set.proxy_ssl.certverifyresult;
-    break;
+#else
+    *param_longp = 0;
 #endif
+    break;
   case CURLINFO_REDIRECT_COUNT:
     *param_longp = data->state.followlocation;
     break;
@@ -314,6 +315,12 @@ static CURLcode getinfo_long(struct Curl_easy *data, CURLINFO info,
     break;
   case CURLINFO_RTSP_CSEQ_RECV:
     *param_longp = data->state.rtsp_CSeq_recv;
+    break;
+#else
+  case CURLINFO_RTSP_CLIENT_CSEQ:
+  case CURLINFO_RTSP_SERVER_CSEQ:
+  case CURLINFO_RTSP_CSEQ_RECV:
+    *param_longp = 0;
     break;
 #endif
   case CURLINFO_HTTP_VERSION:

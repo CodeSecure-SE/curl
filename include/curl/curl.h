@@ -721,6 +721,8 @@ typedef enum {
    with them. */
 #define CURLOPT_WRITEINFO CURLOPT_OBSOLETE40
 #define CURLOPT_CLOSEPOLICY CURLOPT_OBSOLETE72
+#define CURLOPT_OBSOLETE72 9999
+#define CURLOPT_OBSOLETE40 9999
 
 #endif /* !CURL_NO_OLDIES */
 
@@ -1250,8 +1252,7 @@ typedef enum {
   /* send linked-list of post-transfer QUOTE commands */
   CURLOPT(CURLOPT_POSTQUOTE, CURLOPTTYPE_SLISTPOINT, 39),
 
-   /* OBSOLETE, do not use! */
-  CURLOPT(CURLOPT_OBSOLETE40, CURLOPTTYPE_OBJECTPOINT, 40),
+  /* 40 is not used */
 
   /* talk a lot */
   CURLOPT(CURLOPT_VERBOSE, CURLOPTTYPE_LONG, 41),
@@ -1352,9 +1353,7 @@ typedef enum {
   /* Max amount of cached alive connections */
   CURLOPT(CURLOPT_MAXCONNECTS, CURLOPTTYPE_LONG, 71),
 
-  /* OBSOLETE, do not use! */
-  CURLOPT(CURLOPT_OBSOLETE72, CURLOPTTYPE_LONG, 72),
-
+  /* 72 = OBSOLETE */
   /* 73 = OBSOLETE */
 
   /* Set to explicitly use a new connection for the upcoming transfer.
@@ -2203,7 +2202,7 @@ typedef enum {
   /* specify which protocols that libcurl is allowed to follow directs to */
   CURLOPT(CURLOPT_REDIR_PROTOCOLS_STR, CURLOPTTYPE_STRINGPOINT, 319),
 
-  /* websockets options */
+  /* WebSockets options */
   CURLOPT(CURLOPT_WS_OPTIONS, CURLOPTTYPE_LONG, 320),
 
   /* CA cache timeout */
@@ -3237,7 +3236,9 @@ CURL_EXTERN CURLcode curl_easy_pause(CURL *handle, int bitmask);
 #include "options.h"
 #include "header.h"
 #include "websockets.h"
+#ifndef CURL_SKIP_INCLUDE_MPRINTF
 #include "mprintf.h"
+#endif
 
 /* the typechecker does not work in C++ (yet) */
 #if defined(__GNUC__) && defined(__GNUC_MINOR__) && \

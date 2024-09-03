@@ -511,32 +511,37 @@ void Curl_sndbuf_init(curl_socket_t sockfd)
  *
  * Returns CURLE_OK on success.
  */
-CURLcode Curl_parse_interface(const char *input, size_t len,
+CURLcode Curl_parse_interface(const char *input,
                               char **dev, char **iface, char **host)
 {
   static const char if_prefix[] = "if!";
   static const char host_prefix[] = "host!";
   static const char if_host_prefix[] = "ifhost!";
+  size_t len;
 
   DEBUGASSERT(dev);
   DEBUGASSERT(iface);
   DEBUGASSERT(host);
 
-  if(strncmp(if_prefix, input, strlen(if_prefix)) == 0) {
+  len = strlen(input);
+  if(len > 512)
+    return CURLE_BAD_FUNCTION_ARGUMENT;
+
+  if(!strncmp(if_prefix, input, strlen(if_prefix))) {
     input += strlen(if_prefix);
     if(!*input)
       return CURLE_BAD_FUNCTION_ARGUMENT;
     *iface = Curl_memdup0(input, len - strlen(if_prefix));
     return *iface ? CURLE_OK : CURLE_OUT_OF_MEMORY;
   }
-  if(strncmp(host_prefix, input, strlen(host_prefix)) == 0) {
+  else if(!strncmp(host_prefix, input, strlen(host_prefix))) {
     input += strlen(host_prefix);
     if(!*input)
       return CURLE_BAD_FUNCTION_ARGUMENT;
     *host = Curl_memdup0(input, len - strlen(host_prefix));
     return *host ? CURLE_OK : CURLE_OUT_OF_MEMORY;
   }
-  if(strncmp(if_host_prefix, input, strlen(if_host_prefix)) == 0) {
+  else if(!strncmp(if_host_prefix, input, strlen(if_host_prefix))) {
     const char *host_part;
     input += strlen(if_host_prefix);
     len -= strlen(if_host_prefix);
@@ -1609,6 +1614,18 @@ static ssize_t cf_socket_recv(struct Curl_cfilter *cf, struct Curl_easy *data,
   return nread;
 }
 
+static void cf_socket_update_data(struct Curl_cfilter *cf,
+                                  struct Curl_easy *data)
+{
+  /* Update the IP info held in the transfer, if we have that. */
+  if(cf->connected && (cf->sockindex == FIRSTSOCKET)) {
+    struct cf_socket_ctx *ctx = cf->ctx;
+    data->info.primary = ctx->ip;
+    /* not sure if this is redundant... */
+    data->info.conn_remote_port = cf->conn->remote_port;
+  }
+}
+
 static void cf_socket_active(struct Curl_cfilter *cf, struct Curl_easy *data)
 {
   struct cf_socket_ctx *ctx = cf->ctx;
@@ -1616,17 +1633,15 @@ static void cf_socket_active(struct Curl_cfilter *cf, struct Curl_easy *data)
   /* use this socket from now on */
   cf->conn->sock[cf->sockindex] = ctx->sock;
   set_local_ip(cf, data);
-  if(cf->sockindex == SECONDARYSOCKET)
-    cf->conn->secondary = ctx->ip;
-  else
-    cf->conn->primary = ctx->ip;
-  /* the first socket info gets some specials */
   if(cf->sockindex == FIRSTSOCKET) {
+    cf->conn->primary = ctx->ip;
     cf->conn->remote_addr = &ctx->addr;
   #ifdef USE_IPV6
     cf->conn->bits.ipv6 = (ctx->addr.family == AF_INET6)? TRUE : FALSE;
   #endif
-    Curl_persistconninfo(data, cf->conn, &ctx->ip);
+  }
+  else {
+    cf->conn->secondary = ctx->ip;
   }
   ctx->active = TRUE;
 }
@@ -1642,9 +1657,10 @@ static CURLcode cf_socket_cntrl(struct Curl_cfilter *cf,
   switch(event) {
   case CF_CTRL_CONN_INFO_UPDATE:
     cf_socket_active(cf, data);
+    cf_socket_update_data(cf, data);
     break;
   case CF_CTRL_DATA_SETUP:
-    Curl_persistconninfo(data, cf->conn, &ctx->ip);
+    cf_socket_update_data(cf, data);
     break;
   case CF_CTRL_FORGET_SOCKET:
     ctx->sock = CURL_SOCKET_BAD;
@@ -1727,6 +1743,10 @@ static CURLcode cf_socket_query(struct Curl_cfilter *cf,
     }
     return CURLE_OK;
   }
+  case CF_QUERY_IP_INFO:
+    *pres1 = (ctx->addr.family == AF_INET6)? TRUE : FALSE;
+    *(struct ip_quadruple *)pres2 = ctx->ip;
+    return CURLE_OK;
   default:
     break;
   }

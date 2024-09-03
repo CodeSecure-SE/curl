@@ -558,7 +558,7 @@ static ssize_t ws_enc_write_head(struct Curl_easy *data,
 
   if(enc->payload_remain > 0) {
     /* trying to write a new frame before the previous one is finished */
-    failf(data, "WS: starting new frame with %zd bytes from last one"
+    failf(data, "WS: starting new frame with %zd bytes from last one "
                 "remaining to be sent", (ssize_t)enc->payload_remain);
     *err = CURLE_SEND_ERROR;
     return -1;
@@ -1276,7 +1276,7 @@ static void ws_free(struct connectdata *conn)
 static CURLcode ws_setup_conn(struct Curl_easy *data,
                               struct connectdata *conn)
 {
-  /* websockets is 1.1 only (for now) */
+  /* WebSockets is 1.1 only (for now) */
   data->state.httpwant = CURL_HTTP_VERSION_1_1;
   return Curl_http_setup_conn(data, conn);
 }

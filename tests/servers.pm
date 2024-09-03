@@ -501,18 +501,6 @@ sub stopserver {
     my $result = 0;
     foreach my $server (@killservers) {
         my $pidfile = $serverpidfile{$server};
-        my $pid = processexists($pidfile);
-        if($pid > 0) {
-            if($err_unexpected) {
-                logmsg "ERROR: ";
-                $result = -1;
-            }
-            else {
-                logmsg "Warning: ";
-            }
-            logmsg "$server server unexpectedly alive\n";
-            killpid($verbose, $pid);
-        }
         unlink($pidfile) if(-f $pidfile);
     }
 
@@ -2432,8 +2420,9 @@ sub startservers {
             }
         }
         elsif($what eq "http") {
-            if($torture && $run{'http'} &&
+            if($run{'http'} &&
                !responsive_http_server("http", $verbose, 0, protoport('http'))) {
+                logmsg "* restarting unresponsive HTTP server\n";
                 if(stopserver('http')) {
                     return ("failed stopping unresponsive HTTP server", 3);
                 }

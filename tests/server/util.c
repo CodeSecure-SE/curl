@@ -40,9 +40,6 @@
 #include <sys/poll.h>
 #endif
 
-#define ENABLE_CURLX_PRINTF
-/* make the curlx header define all printf() functions to use the curlx_*
-   versions instead */
 #include "curlx.h" /* from the private lib dir */
 #include "getpart.h"
 #include "util.h"
@@ -468,6 +465,13 @@ long timediff(struct timeval newer, struct timeval older)
 /* vars used to keep around previous signal handlers */
 
 typedef void (*SIGHANDLER_T)(int);
+
+#if defined(_MSC_VER) && _MSC_VER == 1600
+/* Workaround for warning C4306:
+   'type cast' : conversion from 'int' to 'void (__cdecl *)(int)' */
+#undef SIG_ERR
+#define SIG_ERR  ((SIGHANDLER_T)(size_t)-1)
+#endif
 
 #ifdef SIGHUP
 static SIGHANDLER_T old_sighup_handler  = SIG_ERR;

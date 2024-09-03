@@ -47,9 +47,6 @@
 #include <netinet/tcp.h> /* for TCP_NODELAY */
 #endif
 
-#define ENABLE_CURLX_PRINTF
-/* make the curlx header define all printf() functions to use the curlx_*
-   versions instead */
 #include "curlx.h" /* from the private lib dir */
 #include "getpart.h"
 #include "inet_pton.h"
@@ -2243,7 +2240,7 @@ int main(int argc, char *argv[])
          protocol_type, socket_type, location_str);
 
   /* start accepting connections */
-  rc = listen(sock, 5);
+  rc = listen(sock, 50);
   if(0 != rc) {
     error = SOCKERRNO;
     logmsg("listen() failed with error: (%d) %s", error, sstrerror(error));

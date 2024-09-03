@@ -33,6 +33,8 @@
 # LIBSSH_FOUND         System has libssh
 # LIBSSH_INCLUDE_DIRS  The libssh include directories
 # LIBSSH_LIBRARIES     The libssh library names
+# LIBSSH_LIBRARY_DIRS  The libssh library directories
+# LIBSSH_CFLAGS        Required compiler flags
 # LIBSSH_VERSION       Version of libssh
 
 if(CURL_USE_PKGCONFIG AND
@@ -43,11 +45,8 @@ if(CURL_USE_PKGCONFIG AND
 endif()
 
 if(LIBSSH_FOUND)
-  if(NOT DEFINED LIBSSH_LINK_LIBRARIES)
-    set(LIBSSH_LINK_LIBRARIES ${LIBSSH_LIBRARIES})  # Workaround for some systems (seen on Old Linux CI)
-  endif()
-  set(LIBSSH_LIBRARIES ${LIBSSH_LINK_LIBRARIES})
-  message(STATUS "Found Libssh (via pkg-config): ${LIBSSH_INCLUDE_DIRS} (Found version \"${LIBSSH_VERSION}\")")
+  string(REPLACE ";" " " LIBSSH_CFLAGS "${LIBSSH_CFLAGS}")
+  message(STATUS "Found Libssh (via pkg-config): ${LIBSSH_INCLUDE_DIRS} (found version \"${LIBSSH_VERSION}\")")
 else()
   find_path(LIBSSH_INCLUDE_DIR NAMES "libssh/libssh.h")
   find_library(LIBSSH_LIBRARY NAMES "ssh" "libssh")
@@ -86,4 +85,8 @@ else()
   endif()
 
   mark_as_advanced(LIBSSH_INCLUDE_DIR LIBSSH_LIBRARY)
+endif()
+
+if(LIBSSH_FOUND AND WIN32)
+  list(APPEND LIBSSH_LIBRARIES "iphlpapi")  # for if_nametoindex
 endif()

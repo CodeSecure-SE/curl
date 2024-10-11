@@ -37,6 +37,7 @@
 
 #include "memdebug.h" /* keep this as LAST include */
 
+
 void set_binmode(FILE *stream)
 {
 #ifdef O_BINARY

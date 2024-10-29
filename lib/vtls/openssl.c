@@ -2683,9 +2683,7 @@ static void ossl_trace(int direction, int ssl_ver, int content_type,
                         "%s (%s), %s, %s (%d):\n",
                         verstr, direction ? "OUT" : "IN",
                         tls_rt_name, msg_name, msg_type);
-    if(0 <= txt_len && (unsigned)txt_len < sizeof(ssl_buf)) {
-      Curl_debug(data, CURLINFO_TEXT, ssl_buf, (size_t)txt_len);
-    }
+    Curl_debug(data, CURLINFO_TEXT, ssl_buf, (size_t)txt_len);
   }
 
   Curl_debug(data, (direction == 1) ? CURLINFO_SSL_DATA_OUT :
@@ -5134,9 +5132,8 @@ static CURLcode ossl_get_channel_binding(struct Curl_easy *data, int sockindex,
   } while(cf->next);
 
   if(!octx) {
-    failf(data,
-          "Failed to find SSL backend for endpoint");
-    return CURLE_SSL_ENGINE_INITFAILED;
+    failf(data, "Failed to find the SSL filter");
+    return CURLE_BAD_FUNCTION_ARGUMENT;
   }
 
   cert = SSL_get1_peer_certificate(octx->ssl);

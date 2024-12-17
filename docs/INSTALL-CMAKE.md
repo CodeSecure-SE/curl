@@ -182,8 +182,8 @@ assumes that CMake generates `Makefile`:
 
 - `CURL_ENABLE_SSL`:                        Enable SSL support. Default: `ON`
 - `CURL_WINDOWS_SSPI`:                      Enable SSPI on Windows. Default: =`CURL_USE_SCHANNEL`
-- `ENABLE_IPV6`:                            Enable IPv6 support. Default: `ON`
-- `ENABLE_THREADED_RESOLVER`:               Enable threaded DNS lookup. Default: `ON` if c-ares is not enabled
+- `ENABLE_IPV6`:                            Enable IPv6 support. Default: `ON` if target supports IPv6.
+- `ENABLE_THREADED_RESOLVER`:               Enable threaded DNS lookup. Default: `ON` if c-ares is not enabled and target supports threading.
 - `ENABLE_UNICODE`:                         Use the Unicode version of the Windows API functions. Default: `OFF`
 - `ENABLE_UNIX_SOCKETS`:                    Enable Unix domain sockets support. Default: `ON`
 - `USE_ECH`:                                Enable ECH support. Default: `OFF`
@@ -265,7 +265,7 @@ Details via CMake
 
 ## Dependencies
 
-- `CURL_BROTLI`:                            Use brotli. Default: `OFF`
+- `CURL_BROTLI`:                            Use brotli (`ON`, `OFF` or `AUTO`). Default: `AUTO`
 - `CURL_USE_BEARSSL`:                       Enable BearSSL for SSL/TLS. Default: `OFF`
 - `CURL_USE_GNUTLS`:                        Enable GnuTLS for SSL/TLS. Default: `OFF`
 - `CURL_USE_GSASL`:                         Use libgsasl. Default: `OFF`
@@ -283,7 +283,7 @@ Details via CMake
 - `CURL_USE_WOLFSSH`:                       Use wolfSSH. Default: `OFF`
 - `CURL_USE_WOLFSSL`:                       Enable wolfSSL for SSL/TLS. Default: `OFF`
 - `CURL_ZLIB`:                              Use zlib (`ON`, `OFF` or `AUTO`). Default: `AUTO`
-- `CURL_ZSTD`:                              Use zstd. Default: `OFF`
+- `CURL_ZSTD`:                              Use zstd (`ON`, `OFF` or `AUTO`). Default: `AUTO`
 - `ENABLE_ARES`:                            Enable c-ares support. Default: `OFF`
 - `USE_APPLE_IDN`:                          Use Apple built-in IDN support. Default: `OFF`
 - `USE_LIBIDN2`:                            Use libidn2 for IDN support. Default: `ON`
@@ -304,6 +304,9 @@ Details via CMake
 ## Dependency options
 
 - `PERL_EXECUTABLE`                         Perl binary used throughout the build and tests.
+- `AMISSL_INCLUDE_DIR`:                     The AmiSSL include directory.
+- `AMISSL_STUBS_LIBRARY`:                   Path to `amisslstubs` library.
+- `AMISSL_AUTO_LIBRARY`:                    Path to `amisslauto` library.
 - `BEARSSL_INCLUDE_DIR`:                    The BearSSL include directory.
 - `BEARSSL_LIBRARY`:                        Path to `bearssl` library.
 - `BROTLI_INCLUDE_DIR`:                     The brotli include directory.
@@ -345,6 +348,7 @@ Details via CMake
 - `QUICHE_LIBRARY`:                         Path to `quiche` library.
 - `RUSTLS_INCLUDE_DIR`:                     The Rustls include directory.
 - `RUSTLS_LIBRARY`:                         Path to `rustls` library.
+- `WATT_ROOT`:                              Set this variable to the root installation of Watt-32.
 - `WOLFSSH_INCLUDE_DIR`:                    The wolfSSH include directory.
 - `WOLFSSH_LIBRARY`:                        Path to `wolfssh` library.
 - `WOLFSSL_INCLUDE_DIR`:                    The wolfSSL include directory.

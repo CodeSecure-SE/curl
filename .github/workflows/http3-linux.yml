@@ -450,6 +450,8 @@ jobs:
         name: 'build quiche and boringssl'
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
 
       - run: autoreconf -fi
         if: ${{ matrix.build.configure }}
@@ -464,7 +466,6 @@ jobs:
             cmake -B . -G Ninja \
               -DCMAKE_C_COMPILER_TARGET=$(uname -m)-pc-linux-gnu -DBUILD_STATIC_LIBS=ON \
               -DCMAKE_UNITY_BUILD=ON -DCURL_TEST_BUNDLES=ON -DCURL_WERROR=ON \
-              -DCURL_BROTLI=ON -DCURL_ZSTD=ON \
               ${{ matrix.build.generate }}
           else
             ./configure --disable-dependency-tracking --enable-unity --enable-test-bundles --enable-warnings --enable-werror \

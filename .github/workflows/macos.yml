@@ -159,23 +159,23 @@ jobs:
             macos-version-min: '10.15'
           - name: 'wolfSSL !ldap brotli zstd'
             install: brotli wolfssl zstd
-            generate: -DCURL_USE_WOLFSSL=ON -DCURL_BROTLI=ON -DCURL_ZSTD=ON -DCURL_DISABLE_LDAP=ON -DUSE_ECH=ON
+            generate: -DCURL_USE_WOLFSSL=ON -DCURL_DISABLE_LDAP=ON -DUSE_ECH=ON
             macos-version-min: '10.15'
           - name: 'mbedTLS !ldap brotli zstd'
             install: brotli mbedtls zstd
-            generate: -DCURL_USE_MBEDTLS=ON -DCURL_BROTLI=ON -DCURL_ZSTD=ON -DCURL_DISABLE_LDAP=ON
+            generate: -DCURL_USE_MBEDTLS=ON -DCURL_DISABLE_LDAP=ON
             macos-version-min: '10.15'
           - name: 'GnuTLS !ldap krb5'
             install: gnutls nettle krb5
             generate: -DCURL_USE_GNUTLS=ON -DCURL_USE_OPENSSL=OFF -DCURL_USE_GSSAPI=ON -DGSS_ROOT_DIR=$(brew --prefix krb5) -DCURL_DISABLE_LDAP=ON
             macos-version-min: '10.15'
           - name: 'OpenSSL torture !FTP'
-            generate: -DENABLE_DEBUG=ON -DBUILD_SHARED_LIBS=OFF -DENABLE_THREADED_RESOLVER=OFF -DOPENSSL_ROOT_DIR=$(brew --prefix openssl) -DCURL_BROTLI=ON -DCURL_ZSTD=ON
+            generate: -DENABLE_DEBUG=ON -DBUILD_SHARED_LIBS=OFF -DENABLE_THREADED_RESOLVER=OFF -DOPENSSL_ROOT_DIR=$(brew --prefix openssl)
             tflags: -t --shallow=25 !FTP
             macos-version-min: '10.9'
             torture: true
           - name: 'OpenSSL torture FTP'
-            generate: -DENABLE_DEBUG=ON -DBUILD_SHARED_LIBS=OFF -DENABLE_THREADED_RESOLVER=OFF -DOPENSSL_ROOT_DIR=$(brew --prefix openssl) -DCURL_BROTLI=ON -DCURL_ZSTD=ON
+            generate: -DENABLE_DEBUG=ON -DBUILD_SHARED_LIBS=OFF -DENABLE_THREADED_RESOLVER=OFF -DOPENSSL_ROOT_DIR=$(brew --prefix openssl)
             tflags: -t --shallow=20 FTP
             macos-version-min: '10.9'
             torture: true
@@ -208,6 +208,8 @@ jobs:
           fi
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
 
       - name: 'toolchain versions'
         run: |
@@ -416,6 +418,8 @@ jobs:
           while [[ $? == 0 ]]; do for i in 1 2 3; do brew update && brew bundle install --no-lock --file /tmp/Brewfile && break 2 || { echo Error: wait to try again; sleep 10; } done; false Too many retries; done
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
 
       - name: 'toolchain versions'
         run: |

@@ -225,7 +225,7 @@ cmake_dependent_option(ENABLE_THREADED_RESOLVER "Enable threaded DNS lookup"
 
 include(PickyWarnings)
 
-if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")  # Required for sendmmsg()
 endif()
 
@@ -525,9 +525,9 @@ include(CheckSymbolExists)
 include(CheckTypeSize)
 include(CheckCSourceCompiles)
 
-# Preload settings on Windows
 if(WIN32)
-  include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/Platforms/WindowsCache.cmake")
+  # Preload settings on Windows
+  include("${CMAKE_CURRENT_SOURCE_DIR}/CMake/win32-cache.cmake")
 elseif(APPLE)
   # Fast-track predictable feature detections
   set(HAVE_EVENTFD 0)

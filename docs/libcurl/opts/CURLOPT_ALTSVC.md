@@ -35,6 +35,12 @@ CURLOPT_ALTSVC_CTRL(3).
 
 Specify a blank filename ("") to make libcurl not load from a file at all.
 
+The application does not have to keep the string around after setting this
+option.
+
+Using this option multiple times makes the last set string override the
+previous ones. Set it to NULL to disable its use again.
+
 # DEFAULT
 
 NULL. The alt-svc cache is not read nor written to file.
@@ -107,4 +113,7 @@ Integer priority value (not currently used)
 
 # RETURN VALUE
 
-Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
+curl_easy_setopt(3) returns a CURLcode indicating success or error.
+
+CURLE_OK (0) means everything was OK, non-zero means an error occurred, see
+libcurl-errors(3).

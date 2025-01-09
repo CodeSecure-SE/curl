@@ -33,13 +33,13 @@
 #endif
 
 #ifdef HAVE_BROTLI
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 /* Ignore -Wvla warnings in brotli headers */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wvla"
 #endif
 #include <brotli/decode.h>
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
 #endif
@@ -79,12 +79,14 @@
 #define GZIP_MAGIC_1 0x8b
 
 /* gzip flag byte */
-#define ASCII_FLAG   0x01 /* bit 0 set: file probably ASCII text */
-#define HEAD_CRC     0x02 /* bit 1 set: header CRC present */
-#define EXTRA_FIELD  0x04 /* bit 2 set: extra field present */
-#define ORIG_NAME    0x08 /* bit 3 set: original filename present */
-#define COMMENT      0x10 /* bit 4 set: file comment present */
-#define RESERVED     0xE0 /* bits 5..7: reserved */
+#define CURL_GZIPFLAG_ASCII        0x01 /* bit 0 set: file probably ASCII
+                                           text */
+#define CURL_GZIPFLAG_HEAD_CRC     0x02 /* bit 1 set: header CRC present */
+#define CURL_GZIPFLAG_EXTRA_FIELD  0x04 /* bit 2 set: extra field present */
+#define CURL_GZIPFLAG_ORIG_NAME    0x08 /* bit 3 set: original filename
+                                           present */
+#define CURL_GZIPFLAG_COMMENT      0x10 /* bit 4 set: file comment present */
+#define CURL_GZIPFLAG_RESERVED     0xE0 /* bits 5..7: reserved */
 
 typedef enum {
   ZLIB_UNINIT,               /* uninitialized */
@@ -154,7 +156,7 @@ static CURLcode process_trailer(struct Curl_easy *data,
 {
   z_stream *z = &zp->z;
   CURLcode result = CURLE_OK;
-  uInt len = z->avail_in < zp->trailerlen? z->avail_in: zp->trailerlen;
+  uInt len = z->avail_in < zp->trailerlen ? z->avail_in : zp->trailerlen;
 
   /* Consume expected trailer bytes. Terminate stream if exhausted.
      Issue an error if unexpected bytes follow. */
@@ -387,7 +389,7 @@ static gzip_status check_gzip_header(unsigned char const *data, ssize_t len,
   method = data[2];
   flags = data[3];
 
-  if(method != Z_DEFLATED || (flags & RESERVED) != 0) {
+  if(method != Z_DEFLATED || (flags & CURL_GZIPFLAG_RESERVED) != 0) {
     /* cannot handle this compression method or unknown flag */
     return GZIP_BAD;
   }
@@ -396,7 +398,7 @@ static gzip_status check_gzip_header(unsigned char const *data, ssize_t len,
   len -= 10;
   data += 10;
 
-  if(flags & EXTRA_FIELD) {
+  if(flags & CURL_GZIPFLAG_EXTRA_FIELD) {
     ssize_t extra_len;
 
     if(len < 2)
@@ -411,7 +413,7 @@ static gzip_status check_gzip_header(unsigned char const *data, ssize_t len,
     data += (extra_len + 2);
   }
 
-  if(flags & ORIG_NAME) {
+  if(flags & CURL_GZIPFLAG_ORIG_NAME) {
     /* Skip over NUL-terminated filename */
     while(len && *data) {
       --len;
@@ -425,7 +427,7 @@ static gzip_status check_gzip_header(unsigned char const *data, ssize_t len,
     ++data;
   }
 
-  if(flags & COMMENT) {
+  if(flags & CURL_GZIPFLAG_COMMENT) {
     /* Skip over NUL-terminated comment */
     while(len && *data) {
       --len;
@@ -438,7 +440,7 @@ static gzip_status check_gzip_header(unsigned char const *data, ssize_t len,
     --len;
   }
 
-  if(flags & HEAD_CRC) {
+  if(flags & CURL_GZIPFLAG_HEAD_CRC) {
     if(len < 2)
       return GZIP_UNDERFLOW;
 
@@ -654,7 +656,7 @@ static CURLcode brotli_do_init(struct Curl_easy *data,
   (void) data;
 
   bp->br = BrotliDecoderCreateInstance(NULL, NULL, NULL);
-  return bp->br? CURLE_OK: CURLE_OUT_OF_MEMORY;
+  return bp->br ? CURLE_OK : CURLE_OUT_OF_MEMORY;
 }
 
 static CURLcode brotli_do_write(struct Curl_easy *data,
@@ -909,18 +911,18 @@ static CURLcode error_do_write(struct Curl_easy *data,
                                      struct Curl_cwriter *writer, int type,
                                      const char *buf, size_t nbytes)
 {
-  char all[256];
-  (void)Curl_all_content_encodings(all, sizeof(all));
-
   (void) writer;
   (void) buf;
   (void) nbytes;
 
   if(!(type & CLIENTWRITE_BODY) || !nbytes)
     return Curl_cwriter_write(data, writer->next, type, buf, nbytes);
-
-  failf(data, "Unrecognized content encoding type. "
-        "libcurl understands %s content encodings.", all);
+  else {
+    char all[256];
+    (void)Curl_all_content_encodings(all, sizeof(all));
+    failf(data, "Unrecognized content encoding type. "
+          "libcurl understands %s content encodings.", all);
+  }
   return CURLE_BAD_CONTENT_ENCODING;
 }
 
@@ -971,8 +973,8 @@ static const struct Curl_cwtype *find_unencode_writer(const char *name,
 CURLcode Curl_build_unencoding_stack(struct Curl_easy *data,
                                      const char *enclist, int is_transfer)
 {
-  Curl_cwriter_phase phase = is_transfer?
-                             CURL_CW_TRANSFER_DECODE:CURL_CW_CONTENT_DECODE;
+  Curl_cwriter_phase phase = is_transfer ?
+    CURL_CW_TRANSFER_DECODE : CURL_CW_CONTENT_DECODE;
   CURLcode result;
 
   do {
@@ -995,7 +997,7 @@ CURLcode Curl_build_unencoding_stack(struct Curl_easy *data,
       struct Curl_cwriter *writer;
 
       CURL_TRC_WRITE(data, "looking for %s decoder: %.*s",
-                     is_transfer? "transfer" : "content", (int)namelen, name);
+                     is_transfer ? "transfer" : "content", (int)namelen, name);
       is_chunked = (is_transfer && (namelen == 7) &&
                     strncasecompare(name, "chunked", 7));
       /* if we skip the decoding in this phase, do not look further.
@@ -1046,7 +1048,7 @@ CURLcode Curl_build_unencoding_stack(struct Curl_easy *data,
 
       result = Curl_cwriter_create(&writer, data, cwt, phase);
       CURL_TRC_WRITE(data, "added %s decoder %s -> %d",
-                     is_transfer? "transfer" : "content", cwt->name, result);
+                     is_transfer ? "transfer" : "content", cwt->name, result);
       if(result)
         return result;
 

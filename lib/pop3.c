@@ -215,7 +215,7 @@ static const struct pop3_cmd pop3cmds[] = {
   { "AUTH", 4, FALSE, FALSE },
   { "CAPA", 4, TRUE, TRUE },
   { "DELE", 4, FALSE, FALSE },
-  { "LIST", 4, TRUE, TRUE },
+  { "LIST", 4, TRUE, FALSE },
   { "MSG",  3, TRUE, TRUE },
   { "NOOP", 4, FALSE, FALSE },
   { "PASS", 4, FALSE, FALSE },
@@ -504,7 +504,7 @@ static CURLcode pop3_perform_apop(struct Curl_easy *data,
   }
 
   /* Create the digest */
-  ctxt = Curl_MD5_init(Curl_DIGEST_MD5);
+  ctxt = Curl_MD5_init(&Curl_DIGEST_MD5);
   if(!ctxt)
     return CURLE_OUT_OF_MEMORY;
 
@@ -1119,7 +1119,7 @@ static CURLcode pop3_multi_statemach(struct Curl_easy *data, bool *done)
   }
 
   result = Curl_pp_statemach(data, &pop3c->pp, FALSE, FALSE);
-  *done = (pop3c->state == POP3_STOP) ? TRUE : FALSE;
+  *done = (pop3c->state == POP3_STOP);
 
   return result;
 }

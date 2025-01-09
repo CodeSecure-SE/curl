@@ -53,8 +53,7 @@ authentication:
               lib/http_aws*,\
               lib/http_digest.*,\
               lib/http_negotiate.*,\
-              lib/vauth/**,\
-              tests/server/fake_ntlm.c\
+              lib/vauth/**\
               }"
 
 build:
@@ -64,7 +63,6 @@ build:
               **/CMakeLists.txt,\
               **/Makefile.am,\
               **/Makefile.inc,\
-              **/Makefile.mk,\
               **/*.m4,\
               **/*.mk,\
               *.m4,\
@@ -80,14 +78,13 @@ build:
               plan9/**,\
               projects/**,\
               winbuild/**,\
-              libcurl.def\
+              lib/libcurl.def\
               }"
 
 CI:
   - all:
       - changed-files:
           - any-glob-to-any-file:
-              - '.azure-pipelines.yml'
               - '.circleci/**'
               - '.github/**'
               - 'appveyor.*'
@@ -117,7 +114,7 @@ connecting & proxies:
   - all:
       - changed-files:
           - any-glob-to-all-files: "{\
-              docs/CONNECTION-FILTERS.md,\
+              docs/internals/CONNECTION-FILTERS.md,\
               docs/examples/ipv6.c,\
               docs/libcurl/opts/CURLINFO_CONNECT*,\
               docs/libcurl/opts/CURLINFO_PROXY*,\
@@ -238,7 +235,6 @@ HTTP:
               docs/examples/httpput*,\
               docs/examples/https*,\
               docs/examples/*post*,\
-              docs/HSTS.md,\
               docs/HTTP-COOKIES.md,\
               docs/libcurl/opts/CURLINFO_COOKIE*,\
               docs/libcurl/opts/CURLOPT_COOKIE*,\
@@ -273,7 +269,6 @@ HTTP/2:
           - any-glob-to-all-files: "{\
               CMake/FindNGHTTP2.cmake,\
               CMake/FindQuiche.cmake,\
-              docs/HTTP2.md,\
               docs/libcurl/opts/CURLOPT_STREAM*,\
               docs/examples/http2*,\
               lib/http2*,\
@@ -295,14 +290,6 @@ HTTP/3:
               lib/vquic/**,\
               tests/http3-server.pl,\
               tests/nghttpx.conf\
-              }"
-
-Hyper:
-  - all:
-      - changed-files:
-          - any-glob-to-all-files: "{\
-              docs/HYPER.md,\
-              lib/c-hyper.*\
               }"
 
 IMAP:
@@ -355,7 +342,6 @@ MQTT:
   - all:
       - changed-files:
           - any-glob-to-all-files: "{\
-              docs/MQTT.md,\
               lib/mqtt*,\
               tests/server/mqttd.c\
               }"
@@ -391,6 +377,7 @@ RTMP:
   - all:
       - changed-files:
           - any-glob-to-all-files: "{\
+              CMake/FindLibrtmp.cmake,\
               lib/curl_rtmp.*\
               }"
 
@@ -511,7 +498,7 @@ WebSocket:
   - all:
       - changed-files:
           - any-glob-to-all-files: "{\
-              docs/WEBSOCKET.md*,\
+              docs/internals/WEBSOCKET.md*,\
               docs/examples/websocket*,\
               docs/libcurl/curl_ws_*,\
               docs/libcurl/libcurl-ws*,\
@@ -528,9 +515,8 @@ Windows:
       - changed-files:
           - any-glob-to-all-files: "{\
               appveyor.*,\
-              .github/workflows/cygwin.yml,\
               .github/workflows/windows.yml,\
-              CMake/Platforms/WindowsCache.cmake,\
+              CMake/win32-cache.cmake,\
               lib/*win32*,\
               lib/curl_multibyte.*,\
               lib/rename.*,\
@@ -539,5 +525,5 @@ Windows:
               projects/**,\
               src/tool_doswin.c,\
               winbuild/**,\
-              libcurl.def\
+              lib/libcurl.def\
               }"

@@ -121,10 +121,9 @@ CMakeLists
 CNA
 CNAME
 CNAMEs
-CodeQL
-codeql
 CODESET
 codeset
+CodeSonar
 Comcast
 commit's
 Config
@@ -364,7 +363,7 @@ ifdefs
 ifhost
 IIS
 ILE
-Illumos
+illumos
 IMAP
 imap
 IMAPS
@@ -598,6 +597,7 @@ Orbis
 ORing
 Osipov
 OSS
+PaaS
 pac
 pacman
 parser's
@@ -688,7 +688,6 @@ RETR
 retransmit
 retrigger
 RHEL
-RICS
 Rikard
 rmdir
 ROADMAP
@@ -702,6 +701,7 @@ RRtype
 RSA
 RTMP
 rtmp
+rtmpdump
 RTMPE
 RTMPS
 RTMPT
@@ -769,6 +769,7 @@ SOCKSv
 Solaris
 SONAME
 Soref
+SOVERSION
 SPARC
 SPDX
 SPNEGO
@@ -778,6 +779,7 @@ src
 SRP
 SRWLOCK
 SSL
+SSLS
 ssl
 SSLeay
 SSLKEYLOGFILE
@@ -889,6 +891,7 @@ unsanitized
 Unshare
 unsharing
 untrusted
+unwrite
 UPN
 upstreaming
 URI
@@ -911,6 +914,7 @@ VC
 vcpkg
 vexxhost
 Viktor
+Virtuozzo
 VLAN
 VM
 VMS

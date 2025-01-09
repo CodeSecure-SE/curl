@@ -34,12 +34,6 @@ Experimental support in curl means:
 
 ## Experimental features right now
 
-### The Hyper HTTP backend
-
-Graduation requirements:
-
-- HTTP/1 and HTTP/2 support, including multiplexing
-
 ###  HTTP/3 support (non-ngtcp2 backends)
 
 Graduation requirements:
@@ -55,15 +49,6 @@ Graduation requirements:
 
 - a reasonable expectation of a stable API going forward.
 
-### WebSocket
-
-Graduation requirements:
-
-- feedback from users saying that the API works for their specific use cases
-
-- unless the above happens, we consider WebSocket silently working by
-  September 2024 when it has been stewing as EXPERIMENTAL for two years.
-
 ## ECH
 
 Use of the HTTPS resource record and Encrypted Client Hello (ECH) when using
@@ -78,3 +63,15 @@ Graduation requirements:
 
 - it has been given time to mature, so no earlier than April 2025 (twelve
   months after being added here)
+
+## SSL session import/export
+
+Import/Export of SSL sessions tickets in libcurl and curl command line
+option '--ssl-session <filename>' for faster TLS handshakes and use
+of TLSv1.3/QUIC Early Data (0-RTT).
+
+Graduation requirements:
+
+- the implementation is considered safe
+
+- feedback from users saying that session export works for their use cases

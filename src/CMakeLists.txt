@@ -30,18 +30,15 @@ if(ENABLE_CURL_MANUAL AND HAVE_MANUAL_TOOLS)
     OUTPUT "tool_hugehelp.c"
     COMMAND ${CMAKE_COMMAND} -E echo "#include \"tool_setup.h\"" > "tool_hugehelp.c"
     COMMAND ${CMAKE_COMMAND} -E echo "#ifndef HAVE_LIBZ" >> "tool_hugehelp.c"
-    COMMAND "${PERL_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/mkhelp.pl"
-      < "${CURL_BINARY_DIR}/docs/cmdline-opts/curl.txt" >> "tool_hugehelp.c"
-
+    COMMAND "${PERL_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/mkhelp.pl"    < "${CURL_ASCIIPAGE}" >> "tool_hugehelp.c"
     COMMAND ${CMAKE_COMMAND} -E echo "#else" >> "tool_hugehelp.c"
-    COMMAND "${PERL_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/mkhelp.pl" -c
-      < "${CURL_BINARY_DIR}/docs/cmdline-opts/curl.txt" >> "tool_hugehelp.c"
+    COMMAND "${PERL_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/mkhelp.pl" -c < "${CURL_ASCIIPAGE}" >> "tool_hugehelp.c"
     COMMAND ${CMAKE_COMMAND} -E echo "#endif /* HAVE_LIBZ */" >> "tool_hugehelp.c"
     DEPENDS
-      "generate-curl.1"
-      "${CURL_BINARY_DIR}/docs/cmdline-opts/curl.1"
+      generate-curl.1
       "${CMAKE_CURRENT_SOURCE_DIR}/mkhelp.pl"
       "${CMAKE_CURRENT_SOURCE_DIR}/tool_hugehelp.h"
+      "${CURL_ASCIIPAGE}"
     VERBATIM)
 else()
   add_custom_command(
@@ -53,7 +50,7 @@ else()
 endif()
 
 # Get 'CURL_CFILES', 'CURLX_CFILES', 'CURL_HFILES', 'CURLTOOL_LIBCURL_CFILES' variables
-transform_makefile_inc("Makefile.inc" "${CMAKE_CURRENT_BINARY_DIR}/Makefile.inc.cmake")
+curl_transform_makefile_inc("Makefile.inc" "${CMAKE_CURRENT_BINARY_DIR}/Makefile.inc.cmake")
 include("${CMAKE_CURRENT_BINARY_DIR}/Makefile.inc.cmake")
 
 if(CURL_CA_EMBED_SET)
@@ -64,8 +61,8 @@ if(CURL_CA_EMBED_SET)
       COMMAND "${PERL_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/mk-file-embed.pl" --var curl_ca_embed
         < "${CURL_CA_EMBED}" > "tool_ca_embed.c"
       DEPENDS
-        "${CURL_CA_EMBED}"
         "${CMAKE_CURRENT_SOURCE_DIR}/mk-file-embed.pl"
+        "${CURL_CA_EMBED}"
       VERBATIM)
     list(APPEND CURL_CFILES "tool_ca_embed.c")
   else()
@@ -107,9 +104,7 @@ target_compile_definitions(curltool PUBLIC "UNITTESTS" "CURL_STATICLIB")
 target_link_libraries(curltool PRIVATE ${CURL_LIBS})
 
 if(CURL_HAS_LTO)
-  set_target_properties(${EXE_NAME} PROPERTIES
-    INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
-    INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE)
+  set_target_properties(${EXE_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 if(ENABLE_UNICODE AND MINGW)
@@ -121,10 +116,10 @@ source_group("curl source files" FILES ${CURL_CFILES})
 source_group("curl header files" FILES ${CURL_HFILES})
 
 include_directories(
-  "${CURL_BINARY_DIR}/lib"  # for "curl_config.h"
-  "${CURL_SOURCE_DIR}/lib"  # for "curl_setup.h"
+  "${PROJECT_BINARY_DIR}/lib"  # for "curl_config.h"
+  "${PROJECT_SOURCE_DIR}/lib"  # for "curl_setup.h"
   # This is needed as tool_hugehelp.c is generated in the binary dir
-  "${CURL_SOURCE_DIR}/src"  # for "tool_hugehelp.h"
+  "${PROJECT_SOURCE_DIR}/src"  # for "tool_hugehelp.h"
 )
 
 # Build curl executable

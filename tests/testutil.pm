@@ -56,6 +56,7 @@ use MIME::Base64;
 use globalconfig qw(
     $torture
     $verbose
+    $dev_null
 );
 
 my $logfunc;      # optional reference to function for logging
@@ -149,13 +150,6 @@ sub subnewlines {
         return;
     }
 
-    # When curl is built with Hyper, it gets all response headers delivered as
-    # name/value pairs and curl "invents" the newlines when it saves the
-    # headers. Therefore, curl will always save headers with CRLF newlines
-    # when built to use Hyper. By making sure we deliver all tests using CRLF
-    # as well, all test comparisons will survive without knowing about this
-    # little quirk.
-
     if(($$thing =~ /^HTTP\/(1.1|1.0|2|3) [1-5][^\x0d]*\z/) ||
        ($$thing =~ /^(GET|POST|PUT|DELETE) \S+ HTTP\/\d+(\.\d+)?/) ||
        (($$thing =~ /^[a-z0-9_-]+: [^\x0d]*\z/i) &&
@@ -195,7 +189,7 @@ sub runclient {
 #
 sub runclientoutput {
     my ($cmd)=@_;
-    return `$cmd 2>/dev/null`;
+    return `$cmd 2>$dev_null`;
 
 # This is one way to test curl on a remote machine
 #    my @out = `ssh $CLIENTIP cd \'$pwd\' \\; \'$cmd\'`;
@@ -210,10 +204,15 @@ sub runclientoutput {
 #
 sub shell_quote {
     my ($s)=@_;
-    if($s !~ m/^[-+=.,_\/:a-zA-Z0-9]+$/) {
-        # string contains a "dangerous" character--quote it
-        $s =~ s/'/'"'"'/g;
-        $s = "'" . $s . "'";
+    if($^O eq 'MSWin32') {
+        $s = '"' . $s . '"';
+    }
+    else {
+        if($s !~ m/^[-+=.,_\/:a-zA-Z0-9]+$/) {
+            # string contains a "dangerous" character--quote it
+            $s =~ s/'/'"'"'/g;
+            $s = "'" . $s . "'";
+        }
     }
     return $s;
 }

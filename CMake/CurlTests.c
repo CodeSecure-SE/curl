@@ -50,6 +50,7 @@ int main(void)
   int flags = 0;
   if(0 != fcntl(0, F_SETFL, flags | O_NONBLOCK))
     return 1;
+  ;
   return 0;
 }
 #endif
@@ -146,28 +147,23 @@ int main(void) { return 0; }
 #endif
 
 #ifdef HAVE_FILE_OFFSET_BITS
-#ifdef _FILE_OFFSET_BITS
 #undef _FILE_OFFSET_BITS
-#endif
 #define _FILE_OFFSET_BITS 64
 #include <sys/types.h>
- /* Check that off_t can represent 2**63 - 1 correctly.
-    We cannot simply define LARGE_OFF_T to be 9223372036854775807,
-    since some C++ compilers masquerading as C compilers
-    incorrectly reject 9223372036854775807.  */
+/* Check that off_t can represent 2**63 - 1 correctly.
+   We cannot simply define LARGE_OFF_T to be 9223372036854775807,
+   since some C++ compilers masquerading as C compilers
+   incorrectly reject 9223372036854775807. */
 #define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
-  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
-                       && LARGE_OFF_T % 2147483647 == 1)
-                      ? 1 : -1];
-int main(void) { ; return 0; }
+int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+                     && LARGE_OFF_T % 2147483647 == 1)
+                    ? 1 : -1];
+int main(void) { return 0; }
 #endif
 
 #ifdef HAVE_IOCTLSOCKET
 /* includes start */
 #ifdef _WIN32
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
 #  include <winsock2.h>
 #endif
 int main(void)
@@ -183,12 +179,7 @@ int main(void)
 
 #ifdef HAVE_IOCTLSOCKET_CAMEL
 /* includes start */
-#ifdef _WIN32
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
-#  include <winsock2.h>
-#endif
+#include <proto/bsdsocket.h>
 int main(void)
 {
   /* IoctlSocket source code */
@@ -201,11 +192,9 @@ int main(void)
 
 #ifdef HAVE_IOCTLSOCKET_CAMEL_FIONBIO
 /* includes start */
-#ifdef _WIN32
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
-#  include <winsock2.h>
+#include <proto/bsdsocket.h>
+#ifdef HAVE_SYS_IOCTL_H
+#  include <sys/ioctl.h>
 #endif
 int main(void)
 {
@@ -221,9 +210,6 @@ int main(void)
 #ifdef HAVE_IOCTLSOCKET_FIONBIO
 /* includes start */
 #ifdef _WIN32
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
 #  include <winsock2.h>
 #endif
 int main(void)
@@ -296,9 +282,6 @@ int main(void)
 #ifdef HAVE_SETSOCKOPT_SO_NONBLOCK
 /* includes start */
 #ifdef _WIN32
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
 #  include <winsock2.h>
 #endif
 /* includes start */
@@ -409,9 +392,6 @@ int main(void)
 #ifdef HAVE_WIN32_WINNT
 /* includes start */
 #ifdef _WIN32
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
 #  ifndef NOGDI
 #    define NOGDI
 #  endif

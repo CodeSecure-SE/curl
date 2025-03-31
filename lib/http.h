@@ -42,6 +42,24 @@ typedef enum {
   HTTPREQ_HEAD
 } Curl_HttpReq;
 
+
+/* When redirecting transfers. */
+typedef enum {
+  FOLLOW_NONE,  /* not used within the function, just a placeholder to
+                   allow initing to this */
+  FOLLOW_FAKE,  /* only records stuff, not actually following */
+  FOLLOW_RETRY, /* set if this is a request retry as opposed to a real
+                   redirect following */
+  FOLLOW_REDIR /* a full true redirect */
+} followtype;
+
+#define CURL_HTTP_V1x   (1 << 0)
+#define CURL_HTTP_V2x   (1 << 1)
+#define CURL_HTTP_V3x   (1 << 2)
+/* bitmask of CURL_HTTP_V* values */
+typedef unsigned char http_majors;
+
+
 #ifndef CURL_DISABLE_HTTP
 
 #if defined(USE_HTTP3)
@@ -55,6 +73,18 @@ extern const struct Curl_handler Curl_handler_https;
 #endif
 
 struct dynhds;
+
+struct http_negotiation {
+  unsigned char rcvd_min; /* minimum version seen in responses, 09, 10, 11 */
+  http_majors wanted;  /* wanted major versions when talking to server */
+  http_majors allowed; /* allowed major versions when talking to server */
+  BIT(h2_upgrade);  /* Do HTTP Upgrade from 1.1 to 2 */
+  BIT(h2_prior_knowledge); /* Directly do HTTP/2 without ALPN/SSL */
+  BIT(accept_09); /* Accept an HTTP/0.9 response */
+  BIT(only_10); /* When using major version 1x, use only 1.0 */
+};
+
+void Curl_http_neg_init(struct Curl_easy *data, struct http_negotiation *neg);
 
 CURLcode Curl_bump_headersize(struct Curl_easy *data,
                               size_t delta,
@@ -76,7 +106,7 @@ char *Curl_checkProxyheaders(struct Curl_easy *data,
 
 CURLcode Curl_add_timecondition(struct Curl_easy *data, struct dynbuf *req);
 CURLcode Curl_add_custom_headers(struct Curl_easy *data, bool is_connect,
-                                 struct dynbuf *req);
+                                 int httpversion, struct dynbuf *req);
 CURLcode Curl_dynhds_add_custom(struct Curl_easy *data, bool is_connect,
                                 struct dynhds *hds);
 
@@ -101,7 +131,12 @@ CURLcode Curl_http_write_resp_hd(struct Curl_easy *data,
 /* These functions are in http.c */
 CURLcode Curl_http_input_auth(struct Curl_easy *data, bool proxy,
                               const char *auth);
+
 CURLcode Curl_http_auth_act(struct Curl_easy *data);
+
+/* follow a redirect or not */
+CURLcode Curl_http_follow(struct Curl_easy *data, const char *newurl,
+                          followtype type);
 
 /* If only the PICKNONE bit is set, there has been a round-trip and we
    selected to use no auth at all. Ie, we actively select no auth, as opposed
@@ -183,12 +218,12 @@ CURLcode Curl_http_decode_status(int *pstatus, const char *s, size_t len);
  * All about a core HTTP request, excluding body and trailers
  */
 struct httpreq {
-  char method[24];
+  struct dynhds headers;
+  struct dynhds trailers;
   char *scheme;
   char *authority;
   char *path;
-  struct dynhds headers;
-  struct dynhds trailers;
+  char method[1];
 };
 
 /**

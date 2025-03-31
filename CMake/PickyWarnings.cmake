@@ -26,7 +26,7 @@ include(CheckCCompilerFlag)
 set(_picky "")
 
 if(CURL_WERROR AND
-   ((CMAKE_COMPILER_IS_GNUCC AND
+   ((CMAKE_C_COMPILER_ID STREQUAL "GNU" AND
      NOT DOS AND  # Watt-32 headers use the '#include_next' GCC extension
      NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 5.0 AND
      NOT CMAKE_VERSION VERSION_LESS 3.23.0) OR  # to avoid check_symbol_exists() conflicting with GCC -pedantic-errors
@@ -40,12 +40,21 @@ if(APPLE AND
   list(APPEND _picky "-Werror=partial-availability")  # clang 3.6  appleclang 6.3
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
   list(APPEND _picky "-Werror-implicit-function-declaration")  # clang 1.0  gcc 2.95
 endif()
 
+if(MSVC)
+  if(CMAKE_C_FLAGS MATCHES "[/-]W[0-4]")
+    string(REGEX REPLACE "[/-]W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+  endif()
+  list(APPEND _picky "-W4")
+elseif(BORLAND)
+  list(APPEND _picky "-w-")  # Disable warnings on Borland to avoid changing 3rd party code.
+endif()
+
 if(PICKY_COMPILER)
-  if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
+  if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 
     # https://clang.llvm.org/docs/DiagnosticsReference.html
     # https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
@@ -93,6 +102,7 @@ if(PICKY_COMPILER)
       -Waddress                            # clang  2.7  gcc  4.3
       -Wattributes                         # clang  2.7  gcc  4.1
       -Wcast-align                         # clang  1.0  gcc  4.2
+      -Wcast-qual                          # clang  3.0  gcc  3.4.6
       -Wdeclaration-after-statement        # clang  1.0  gcc  3.4
       -Wdiv-by-zero                        # clang  2.7  gcc  4.1
       -Wempty-body                         # clang  2.7  gcc  4.3
@@ -103,17 +113,17 @@ if(PICKY_COMPILER)
       -Wmissing-field-initializers         # clang  2.7  gcc  4.1
       -Wmissing-noreturn                   # clang  2.7  gcc  4.1
       -Wno-format-nonliteral               # clang  1.0  gcc  2.96 (3.0)
+      -Wno-sign-conversion                 # clang  2.9  gcc  4.3
       -Wno-system-headers                  # clang  1.0  gcc  3.0
     # -Wpadded                             # clang  2.9  gcc  4.1               # Not used: We cannot change public structs
       -Wold-style-definition               # clang  2.7  gcc  3.4
       -Wredundant-decls                    # clang  2.7  gcc  4.1
-      -Wsign-conversion                    # clang  2.9  gcc  4.3
-        -Wno-error=sign-conversion
       -Wstrict-prototypes                  # clang  1.0  gcc  3.3
     # -Wswitch-enum                        # clang  2.7  gcc  4.1               # Not used: It basically disallows default case
       -Wtype-limits                        # clang  2.7  gcc  4.3
       -Wunreachable-code                   # clang  2.7  gcc  4.1
     # -Wunused-macros                      # clang  2.7  gcc  4.1               # Not practical
+    #   -Wno-error=unused-macros           # clang  2.7  gcc  4.1
       -Wunused-parameter                   # clang  2.7  gcc  4.1
       -Wvla                                # clang  2.8  gcc  4.3
     )
@@ -173,12 +183,19 @@ if(PICKY_COMPILER)
           -Wold-style-declaration          #             gcc  4.3
           -Wpragmas                        # clang  3.5  gcc  4.1  appleclang  6.0
           -Wstrict-aliasing=3              #             gcc  4.0
+          -ftree-vrp                       #             gcc  4.3 (required for -Warray-bounds, included in -Wall)
         )
       endif()
-      if(NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 4.5 AND MINGW)
+      if(NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 4.5)
         list(APPEND _picky_enable
-          -Wno-pedantic-ms-format          #             gcc  4.5 (MinGW-only)
+          -Wjump-misses-init               #             gcc  4.5
         )
+
+        if(MINGW)
+          list(APPEND _picky_enable
+            -Wno-pedantic-ms-format        #             gcc  4.5 (MinGW-only)
+          )
+        endif()
       endif()
       if(NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 4.8)
         list(APPEND _picky_enable
@@ -189,7 +206,7 @@ if(PICKY_COMPILER)
       endif()
       if(NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 5.0)
         list(APPEND _picky_enable
-          -Warray-bounds=2 -ftree-vrp      # clang  3.0  gcc  5.0 (clang default: -Warray-bounds)
+          -Warray-bounds=2                 # clang  3.0  gcc  5.0 (clang default: -Warray-bounds)
         )
       endif()
       if(NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 6.0)
@@ -236,6 +253,27 @@ if(PICKY_COMPILER)
         list(APPEND _picky "${_ccopt}")
       endif()
     endforeach()
+
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+      if(CMAKE_C_COMPILER_VERSION VERSION_LESS 4.5)
+        # Avoid false positives
+        list(APPEND _picky "-Wno-shadow")
+        list(APPEND _picky "-Wno-unreachable-code")
+      endif()
+      if(NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 4.2 AND CMAKE_C_COMPILER_VERSION VERSION_LESS 4.6)
+        # GCC <4.6 do not support #pragma to suppress warnings locally. Disable them globally instead.
+        list(APPEND _picky "-Wno-overlength-strings")
+      endif()
+      if(NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 4.0 AND CMAKE_C_COMPILER_VERSION VERSION_LESS 4.7)
+        list(APPEND _picky "-Wno-missing-field-initializers")  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=36750
+      endif()
+      if(NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 4.3 AND CMAKE_C_COMPILER_VERSION VERSION_LESS 4.8)
+        list(APPEND _picky "-Wno-type-limits")  # Avoid false positives
+      endif()
+      if(NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 5.1 AND CMAKE_C_COMPILER_VERSION VERSION_LESS 5.5)
+        list(APPEND _picky "-Wno-conversion")  # Avoid false positives
+      endif()
+    endif()
   endif()
 endif()
 
@@ -249,7 +287,7 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Clang" AND MSVC)
     if(_ccopt MATCHES "^-W" AND NOT _ccopt STREQUAL "-Wall")
       list(APPEND _picky_tmp ${_ccopt})
     else()
-      list(APPEND _picky_tmp "/clang:${_ccopt}")
+      list(APPEND _picky_tmp "-clang:${_ccopt}")
     endif()
   endforeach()
   set(_picky ${_picky_tmp})
@@ -257,6 +295,6 @@ endif()
 
 if(_picky)
   string(REPLACE ";" " " _picky "${_picky}")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${_picky}")
+  string(APPEND CMAKE_C_FLAGS " ${_picky}")
   message(STATUS "Picky compiler options: ${_picky}")
 endif()

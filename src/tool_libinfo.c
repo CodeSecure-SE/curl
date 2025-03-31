@@ -77,6 +77,7 @@ bool feature_http2 = FALSE;
 bool feature_http3 = FALSE;
 bool feature_httpsproxy = FALSE;
 bool feature_libz = FALSE;
+bool feature_libssh2 = FALSE;
 bool feature_ntlm = FALSE;
 bool feature_ntlm_wb = FALSE;
 bool feature_spnego = FALSE;
@@ -126,7 +127,7 @@ static struct feature_name_presentp {
   {NULL,             NULL,                0}
 };
 
-static const char *fnames[sizeof(maybe_feature) / sizeof(maybe_feature[0])];
+static const char *fnames[CURL_ARRAYSIZE(maybe_feature)];
 const char * const *feature_names = fnames;
 size_t feature_count;
 
@@ -190,6 +191,8 @@ CURLcode get_libcurl_info(void)
     ++feature_count;
   }
 
+  feature_libssh2 = curlinfo->libssh_version &&
+    !strncmp("libssh2", curlinfo->libssh_version, 7);
   return CURLE_OK;
 }
 

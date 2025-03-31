@@ -48,6 +48,7 @@ if(CURL_USE_PKGCONFIG AND
 endif()
 
 if(CARES_FOUND)
+  set(Cares_FOUND TRUE)
   string(REPLACE ";" " " CARES_CFLAGS "${CARES_CFLAGS}")
   message(STATUS "Found Cares (via pkg-config): ${CARES_INCLUDE_DIRS} (found version \"${CARES_VERSION}\")")
 else()
@@ -89,4 +90,8 @@ else()
   endif()
 
   mark_as_advanced(CARES_INCLUDE_DIR CARES_LIBRARY)
+endif()
+
+if(CARES_FOUND AND WIN32)
+  list(APPEND CARES_LIBRARIES "iphlpapi")  # for if_indextoname and others
 endif()

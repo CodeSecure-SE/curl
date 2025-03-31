@@ -58,14 +58,12 @@ CFGSET=true
 !ENDIF
 
 !INCLUDE "../lib/Makefile.inc"
+CSOURCES=$(CSOURCES:  = )
 LIBCURL_OBJS=$(CSOURCES:.c=.obj)
 
 !INCLUDE "../src/Makefile.inc"
-
-# tool_hugehelp has a special rule
-CURL_OBJS=$(CURL_CFILES:tool_hugehelp.c=)
-
-CURL_OBJS=$(CURL_OBJS:.c=.obj)
+CURL_CFILES=$(CURL_CFILES:  = )
+CURL_OBJS=$(CURL_CFILES:.c=.obj)
 
 
 # backwards compatible check for USE_SSPI

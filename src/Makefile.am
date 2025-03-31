@@ -51,7 +51,12 @@ bin_PROGRAMS = curl
 if USE_CPPFLAG_CURL_STATICLIB
 AM_CPPFLAGS += -DCURL_STATICLIB
 endif
-AM_CPPFLAGS += -DBUILDING_CURL
+if DEBUGBUILD
+AM_CPPFLAGS += -DDEBUGBUILD
+endif
+if CURLDEBUG
+AM_CPPFLAGS += -DCURLDEBUG
+endif
 
 AM_LDFLAGS =
 if USE_UNICODE
@@ -60,11 +65,13 @@ endif
 
 include Makefile.inc
 
+curl_cfiles_gen =
+curl_hfiles_gen =
 CLEANFILES =
 
 if USE_UNITY
 curl_EXCLUDE =
-if DEBUGBUILD
+if CURLDEBUG
 # We must compile this source separately to avoid memdebug.h redefinitions
 # applying to them.
 curl_EXCLUDE += ../lib/curl_multibyte.c
@@ -74,15 +81,15 @@ curl_CURLX = $(CURLTOOL_LIBCURL_CFILES)
 else
 curl_CURLX = $(CURLX_CFILES)
 endif
-curltool_unity.c: $(top_srcdir)/scripts/mk-unity.pl $(CURL_CFILES) $(curl_CURLX)
-	@PERL@  $(top_srcdir)/scripts/mk-unity.pl $(srcdir) $(CURL_CFILES) $(curl_CURLX) --exclude $(curl_EXCLUDE) > curltool_unity.c
+curltool_unity.c: $(top_srcdir)/scripts/mk-unity.pl $(CURL_CFILES) $(curl_cfiles_gen) $(curl_CURLX)
+	@PERL@ $(top_srcdir)/scripts/mk-unity.pl $(srcdir) $(CURL_CFILES) $(curl_cfiles_gen) $(curl_CURLX) --exclude $(curl_EXCLUDE) > curltool_unity.c
 
 nodist_curl_SOURCES = curltool_unity.c
 curl_SOURCES = $(curl_EXCLUDE)
 CLEANFILES += curltool_unity.c
 else
 # CURL_FILES comes from Makefile.inc
-curl_SOURCES = $(CURL_FILES)
+curl_SOURCES = $(CURL_FILES) $(curl_cfiles_gen) $(curl_hfiles_gen)
 endif
 if HAVE_WINDRES
 curl_SOURCES += $(CURL_RCFILES)
@@ -127,9 +134,11 @@ HUGEIT_0 = @echo "  HUGE    " $@;
 HUGEIT_1 =
 HUGEIT_ = $(HUGEIT_0)
 
+curl_CPPFLAGS = $(AM_CPPFLAGS)
+
 if USE_MANUAL
 # Here are the stuff to create a built-in manual
-AM_CPPFLAGS += -DUSE_MANUAL
+curl_CPPFLAGS += -DUSE_MANUAL
 
 $(ASCIIPAGE):
 	cd $(top_builddir)/docs && $(MAKE)
@@ -157,13 +166,15 @@ $(HUGE):
 	echo '#include "tool_hugehelp.h"' >> $(HUGE)
 endif
 
+curl_cfiles_gen += $(HUGE)
+curl_hfiles_gen += tool_hugehelp.h
 CLEANFILES += $(HUGE)
 
 CA_EMBED_CSOURCE = tool_ca_embed.c
-CURL_CFILES += $(CA_EMBED_CSOURCE)
+curl_cfiles_gen += $(CA_EMBED_CSOURCE)
 CLEANFILES += $(CA_EMBED_CSOURCE)
 if CURL_CA_EMBED_SET
-AM_CPPFLAGS += -DCURL_CA_EMBED
+curl_CPPFLAGS += -DCURL_CA_EMBED
 MK_FILE_EMBED = $(top_srcdir)/src/mk-file-embed.pl
 $(CA_EMBED_CSOURCE): $(MK_FILE_EMBED) $(CURL_CA_EMBED)
 	$(PERL) $(MK_FILE_EMBED) --var curl_ca_embed < $(CURL_CA_EMBED) > $(CA_EMBED_CSOURCE)
@@ -182,6 +193,8 @@ checksrc:
 	$(CHECKSRC)(@PERL@ $(top_srcdir)/scripts/checksrc.pl -D$(srcdir) \
 	  -W$(srcdir)/$(HUGE) \
 	  -W$(srcdir)/$(CA_EMBED_CSOURCE) \
+	  -W$(srcdir)/curltool_unity.c \
+	  -W$(srcdir)/libcurltool_unity.c \
 	  $(srcdir)/*.[ch])
 
 if DEBUGBUILD
@@ -198,14 +211,15 @@ endif
 TIDY := clang-tidy
 
 tidy: $(HUGE) $(CA_EMBED_CSOURCE)
-	$(TIDY) $(CURL_CFILES) $(TIDYFLAGS) $(CURL_CLANG_TIDYFLAGS) -- $(curl_CPPFLAGS) $(CPPFLAGS) $(AM_CPPFLAGS) -DHAVE_CONFIG_H
+	(_curl_cfiles=`echo ' $(CURL_CFILES)' | sed -e 's/ +/ /g' -e 's| | $(srcdir)/|g'`; \
+	$(TIDY) $$_curl_cfiles $(curl_cfiles_gen) $(TIDYFLAGS) $(CURL_CLANG_TIDYFLAGS) -- $(curl_CPPFLAGS) $(CPPFLAGS) $(AM_CPPFLAGS) -DHAVE_CONFIG_H)
 
 listhelp:
 	(cd $(top_srcdir)/docs/cmdline-opts && make listhelp)
 
 if HAVE_WINDRES
 .rc.o:
-	$(RC) -I$(top_srcdir)/include -DCURL_EMBED_MANIFEST $(RCFLAGS) -i $< -o $@
+	$(RC) -I$(top_srcdir)/include $(RCFLAGS) -i $< -o $@
 endif
 
 dist-hook:

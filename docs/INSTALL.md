@@ -367,6 +367,15 @@ make -j8
 make install
 ```
 
+With CMake:
+
+```bash
+cmake . \
+  -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=10.8 \
+  -DCMAKE_OSX_SYSROOT="$(xcrun --sdk macosx --show-sdk-path)"
+```
+
 The above command lines build curl for macOS platform with `x86_64`
 architecture and `10.8` as deployment target.
 
@@ -381,6 +390,15 @@ export CFLAGS="-arch $ARCH -isysroot $(xcrun -sdk $SDK --show-sdk-path) -m$SDK-v
 ./configure --host=$ARCH-apple-darwin --prefix $(pwd)/artifacts --with-secure-transport
 make -j8
 make install
+```
+
+With CMake (3.16 or upper recommended):
+
+```bash
+cmake . \
+  -DCMAKE_SYSTEM_NAME=iOS \
+  -DCMAKE_OSX_ARCHITECTURES=arm64 \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
 ```
 
 Another example for watchOS simulator for macs with Apple Silicon:
@@ -517,11 +535,8 @@ export NM=ppc_405-nm
     --exec-prefix=/usr/local
 ```
 
-You may also need to provide a parameter like `--with-random=/dev/urandom` to
-configure as it cannot detect the presence of a random number generating
-device for a target system. The `--prefix` parameter specifies where curl gets
-installed. If `configure` completes successfully, do `make` and `make install`
-as usual.
+The `--prefix` parameter specifies where curl gets installed. If `configure`
+completes successfully, do `make` and `make install` as usual.
 
 In some cases, you may be able to simplify the above commands to as little as:
 

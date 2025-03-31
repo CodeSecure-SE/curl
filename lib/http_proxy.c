@@ -43,6 +43,7 @@
 #include "transfer.h"
 #include "multiif.h"
 #include "vauth/vauth.h"
+#include "strparse.h"
 
 /* The last 3 #include files should be in this order */
 #include "curl_printf.h"
@@ -56,11 +57,11 @@ static bool hd_name_eq(const char *n1, size_t n1len,
 }
 
 static CURLcode dynhds_add_custom(struct Curl_easy *data,
-                                  bool is_connect,
+                                  bool is_connect, int httpversion,
                                   struct dynhds *hds)
 {
   struct connectdata *conn = data->conn;
-  char *ptr;
+  const char *ptr;
   struct curl_slist *h[2];
   struct curl_slist *headers;
   int numlists = 1; /* by default */
@@ -108,8 +109,7 @@ static CURLcode dynhds_add_custom(struct Curl_easy *data,
         name = headers->data;
         namelen = ptr - headers->data;
         ptr++; /* pass the colon */
-        while(*ptr && ISSPACE(*ptr))
-          ptr++;
+        Curl_str_passblanks(&ptr);
         if(*ptr) {
           value = ptr;
           valuelen = strlen(value);
@@ -131,8 +131,7 @@ static CURLcode dynhds_add_custom(struct Curl_easy *data,
         name = headers->data;
         namelen = ptr - headers->data;
         ptr++; /* pass the semicolon */
-        while(*ptr && ISSPACE(*ptr))
-          ptr++;
+        Curl_str_passblanks(&ptr);
         if(!*ptr) {
           /* quirk #2, send an empty header */
           value = "";
@@ -169,9 +168,9 @@ static CURLcode dynhds_add_custom(struct Curl_easy *data,
                  Connection: */
               hd_name_eq(name, namelen, STRCONST("Connection:")))
         ;
-      else if((conn->httpversion >= 20) &&
+      else if((httpversion >= 20) &&
               hd_name_eq(name, namelen, STRCONST("Transfer-Encoding:")))
-        /* HTTP/2 does not support chunked requests */
+        /* HTTP/2 and HTTP/3 do not support chunked requests */
         ;
       else if((hd_name_eq(name, namelen, STRCONST("Authorization:")) ||
                hd_name_eq(name, namelen, STRCONST("Cookie:"))) &&
@@ -221,11 +220,18 @@ CURLcode Curl_http_proxy_get_destination(struct Curl_cfilter *cf,
   return CURLE_OK;
 }
 
+struct cf_proxy_ctx {
+  /* the protocol specific sub-filter we install during connect */
+  struct Curl_cfilter *cf_protocol;
+  int httpversion; /* HTTP version used to CONNECT */
+};
+
 CURLcode Curl_http_proxy_create_CONNECT(struct httpreq **preq,
                                         struct Curl_cfilter *cf,
                                         struct Curl_easy *data,
                                         int http_version_major)
 {
+  struct cf_proxy_ctx *ctx = cf->ctx;
   const char *hostname = NULL;
   char *authority = NULL;
   int port;
@@ -286,7 +292,7 @@ CURLcode Curl_http_proxy_create_CONNECT(struct httpreq **preq,
       goto out;
   }
 
-  result = dynhds_add_custom(data, TRUE, &req->headers);
+  result = dynhds_add_custom(data, TRUE, ctx->httpversion, &req->headers);
 
 out:
   if(result && req) {
@@ -298,15 +304,9 @@ out:
   return result;
 }
 
-
-struct cf_proxy_ctx {
-  /* the protocol specific sub-filter we install during connect */
-  struct Curl_cfilter *cf_protocol;
-};
-
 static CURLcode http_proxy_cf_connect(struct Curl_cfilter *cf,
                                       struct Curl_easy *data,
-                                      bool blocking, bool *done)
+                                      bool *done)
 {
   struct cf_proxy_ctx *ctx = cf->ctx;
   CURLcode result;
@@ -318,13 +318,14 @@ static CURLcode http_proxy_cf_connect(struct Curl_cfilter *cf,
 
   CURL_TRC_CF(data, cf, "connect");
 connect_sub:
-  result = cf->next->cft->do_connect(cf->next, data, blocking, done);
+  result = cf->next->cft->do_connect(cf->next, data, done);
   if(result || !*done)
     return result;
 
   *done = FALSE;
   if(!ctx->cf_protocol) {
     struct Curl_cfilter *cf_protocol = NULL;
+    int httpversion = 0;
     int alpn = Curl_conn_cf_is_ssl(cf->next) ?
       cf->conn->proxy_alpn : CURL_HTTP_VERSION_1_1;
 
@@ -340,6 +341,7 @@ connect_sub:
       if(result)
         goto out;
       cf_protocol = cf->next;
+      httpversion = (alpn == CURL_HTTP_VERSION_1_0) ? 10 : 11;
       break;
 #ifdef USE_NGHTTP2
     case CURL_HTTP_VERSION_2:
@@ -349,6 +351,7 @@ connect_sub:
       if(result)
         goto out;
       cf_protocol = cf->next;
+      httpversion = 20;
       break;
 #endif
     default:
@@ -358,6 +361,7 @@ connect_sub:
     }
 
     ctx->cf_protocol = cf_protocol;
+    ctx->httpversion = httpversion;
     /* after we installed the filter "below" us, we call connect
      * on out sub-chain again.
      */

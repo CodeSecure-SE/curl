@@ -57,6 +57,7 @@ if(CURL_USE_PKGCONFIG AND
 endif()
 
 if(WOLFSSL_FOUND)
+  set(WolfSSL_FOUND TRUE)
   string(REPLACE ";" " " WOLFSSL_CFLAGS "${WOLFSSL_CFLAGS}")
   message(STATUS "Found WolfSSL (via pkg-config): ${WOLFSSL_INCLUDE_DIRS} (found version \"${WOLFSSL_VERSION}\")")
 else()
@@ -90,7 +91,7 @@ else()
   mark_as_advanced(WOLFSSL_INCLUDE_DIR WOLFSSL_LIBRARY)
 endif()
 
-if(NOT WIN32)
+if(WOLFSSL_FOUND AND NOT WIN32)
   find_library(MATH_LIBRARY NAMES "m")
   if(MATH_LIBRARY)
     list(APPEND WOLFSSL_LIBRARIES ${MATH_LIBRARY})  # for log and pow

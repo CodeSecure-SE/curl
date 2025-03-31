@@ -90,7 +90,7 @@ CURLcode test(char *URL)
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = htons(port);
 
-  if(Curl_inet_pton(AF_INET, libtest_arg2, &serv_addr.sin_addr) <= 0) {
+  if(curlx_inet_pton(AF_INET, libtest_arg2, &serv_addr.sin_addr) <= 0) {
     fprintf(stderr, "inet_pton failed\n");
     goto test_cleanup;
   }
@@ -121,9 +121,9 @@ CURLcode test(char *URL)
   res = curl_easy_perform(curl);
 
 test_cleanup:
+  curl_easy_cleanup(curl);
   if(client_fd != CURL_SOCKET_BAD)
     sclose(client_fd);
-  curl_easy_cleanup(curl);
   curl_global_cleanup();
 
   return res;

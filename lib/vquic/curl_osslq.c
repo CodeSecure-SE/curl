@@ -583,15 +583,12 @@ struct h3_stream_ctx {
   curl_off_t upload_left; /* number of request bytes left to upload */
   curl_off_t download_recvd; /* number of response DATA bytes received */
   int status_code; /* HTTP status code */
-  bool resp_hds_complete; /* we have a complete, final response */
-  bool closed; /* TRUE on stream close */
-  bool reset;  /* TRUE on stream reset */
-  bool send_closed; /* stream is local closed */
+  BIT(resp_hds_complete); /* we have a complete, final response */
+  BIT(closed); /* TRUE on stream close */
+  BIT(reset);  /* TRUE on stream reset */
+  BIT(send_closed); /* stream is local closed */
   BIT(quic_flow_blocked); /* stream is blocked by QUIC flow control */
 };
-
-#define H3_STREAM_CTX(ctx,data)   ((struct h3_stream_ctx *)(\
-            data? Curl_uint_hash_get(&(ctx)->streams, (data)->mid) : NULL))
 
 static void h3_stream_ctx_free(struct h3_stream_ctx *stream)
 {
@@ -1567,10 +1564,13 @@ static CURLcode cf_osslq_check_and_unblock(struct Curl_cfilter *cf,
           idx_count++) {
         if(ctx->poll_items[idx_count].revents & SSL_POLL_EVENT_W) {
           stream = H3_STREAM_CTX(ctx, ctx->curl_items[idx_count]);
-          nghttp3_conn_unblock_stream(ctx->h3.conn, stream->s.id);
-          stream->s.send_blocked = FALSE;
-          h3_drain_stream(cf, ctx->curl_items[idx_count]);
-          CURL_TRC_CF(ctx->curl_items[idx_count], cf, "unblocked");
+          DEBUGASSERT(stream);  /* should still exist */
+          if(stream) {
+            nghttp3_conn_unblock_stream(ctx->h3.conn, stream->s.id);
+            stream->s.send_blocked = FALSE;
+            h3_drain_stream(cf, ctx->curl_items[idx_count]);
+            CURL_TRC_CF(ctx->curl_items[idx_count], cf, "unblocked");
+          }
           result_count--;
         }
       }

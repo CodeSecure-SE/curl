@@ -39,9 +39,6 @@ if(CURL_TEST_BUNDLES)
   set(units_SOURCES "unit_bundle.c")
 endif()
 
-# unit tests are small pretend-libcurl-programs
-list(APPEND CURL_DEBUG_MACROS "BUILDING_LIBCURL")
-
 foreach(_target IN LISTS UNITPROGS)
   set(_target_name "${_target}")
   add_executable(${_target_name} EXCLUDE_FROM_ALL ${${_target}_SOURCES})
@@ -50,10 +47,13 @@ foreach(_target IN LISTS UNITPROGS)
   target_include_directories(${_target_name} PRIVATE
     "${PROJECT_BINARY_DIR}/lib"            # for "curl_config.h"
     "${PROJECT_SOURCE_DIR}/lib"            # for "curl_setup.h"
+    "${PROJECT_SOURCE_DIR}/lib/curlx"      # for curlx
     "${PROJECT_SOURCE_DIR}/src"
     "${PROJECT_SOURCE_DIR}/tests/libtest"
   )
   set_property(TARGET ${_target_name} APPEND PROPERTY COMPILE_DEFINITIONS "${CURL_DEBUG_MACROS}")
+  # unit tests are small pretend-libcurl-programs
+  set_property(TARGET ${_target_name} APPEND PROPERTY COMPILE_DEFINITIONS "BUILDING_LIBCURL")
   if(CURL_TEST_BUNDLES)
     target_include_directories(${_target_name} PRIVATE "${PROJECT_SOURCE_DIR}/tests/unit")
   endif()

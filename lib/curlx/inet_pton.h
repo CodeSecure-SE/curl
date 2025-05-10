@@ -1,5 +1,5 @@
-#ifndef HEADER_CURL_STRERROR_H
-#define HEADER_CURL_STRERROR_H
+#ifndef HEADER_CURL_INET_PTON_H
+#define HEADER_CURL_INET_PTON_H
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |
@@ -24,13 +24,25 @@
  *
  ***************************************************************************/
 
-#include "urldata.h"
+#include "../curl_setup.h"
 
-#define STRERROR_LEN 256 /* a suitable length */
+int curlx_inet_pton(int, const char *, void *);
 
-const char *Curl_strerror(int err, char *buf, size_t buflen);
-#ifdef USE_WINDOWS_SSPI
-const char *Curl_sspi_strerror(int err, char *buf, size_t buflen);
+#ifdef HAVE_INET_PTON
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+#ifdef __AMIGA__
+#define curlx_inet_pton(x,y,z) inet_pton(x,(unsigned char *)CURL_UNCONST(y),z)
+#else
+#define curlx_inet_pton(x,y,z) inet_pton(x,y,z)
+#endif
 #endif
 
-#endif /* HEADER_CURL_STRERROR_H */
+#endif /* HEADER_CURL_INET_PTON_H */

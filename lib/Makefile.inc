@@ -25,25 +25,29 @@
 LIB_CURLX_CFILES = \
   curlx/base64.c   \
   curlx/dynbuf.c   \
+  curlx/inet_pton.c \
   curlx/multibyte.c \
   curlx/nonblock.c \
   curlx/strparse.c \
   curlx/timediff.c \
   curlx/timeval.c  \
   curlx/version_win32.c \
-  curlx/warnless.c
+  curlx/warnless.c \
+  curlx/winapi.c
 
 LIB_CURLX_HFILES = \
   curlx/base64.h   \
   curlx/curlx.h    \
   curlx/dynbuf.h   \
+  curlx/inet_pton.h \
   curlx/multibyte.h \
   curlx/nonblock.h \
   curlx/strparse.h \
   curlx/timediff.h \
   curlx/timeval.h  \
   curlx/version_win32.h \
-  curlx/warnless.h
+  curlx/warnless.h \
+  curlx/winapi.h
 
 LIB_VAUTH_CFILES =      \
   vauth/cleartext.c     \
@@ -205,7 +209,6 @@ LIB_CFILES =         \
   if2ip.c            \
   imap.c             \
   inet_ntop.c        \
-  inet_pton.c        \
   krb5.c             \
   ldap.c             \
   llist.c            \
@@ -343,7 +346,6 @@ LIB_HFILES =         \
   if2ip.h            \
   imap.h             \
   inet_ntop.h        \
-  inet_pton.h        \
   llist.h            \
   macos.h            \
   memdebug.h         \

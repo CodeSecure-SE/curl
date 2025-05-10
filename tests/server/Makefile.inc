@@ -38,7 +38,6 @@ CURLX_SRCS = \
   ../../lib/curlx/timeval.c \
   ../../lib/curlx/dynbuf.c \
   ../../lib/strcase.c \
-  ../../lib/strdup.c \
   ../../lib/curlx/multibyte.c \
   ../../lib/curlx/version_win32.c
 
@@ -52,7 +51,6 @@ CURLX_HDRS = \
   ../../lib/curlx/timeval.h \
   ../../lib/curlx/dynbuf.h \
   ../../lib/strcase.h \
-  ../../lib/strdup.h \
   ../../lib/curlx/multibyte.h \
   ../../lib/curlx/version_win32.h
 
@@ -64,15 +62,15 @@ UTIL = \
   server_setup.h \
   ../../lib/curlx/base64.c \
   ../../lib/curlx/base64.h \
-  ../../lib/strerror.c \
-  ../../lib/strerror.h
+  ../../lib/curlx/winapi.c \
+  ../../lib/curlx/winapi.h
 
 FIRSTFILES = \
   first.c \
   first.h
 
 INET_PTON = \
-  ../../lib/inet_pton.c
+  ../../lib/curlx/inet_pton.c
 
 resolve_SOURCES = $(MEMDEBUG) $(CURLX_SRCS) $(CURLX_HDRS) $(UTIL) \
   resolve.c

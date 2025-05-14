@@ -202,22 +202,38 @@ static const struct testcase get_parts_list[] ={
    "| [16] | [17]",
    0, CURLU_URLDECODE, CURLUE_OK },
 #ifdef USE_IDN
-  {"https://räksmörgås.se",
+  /*
+    https://sv.wikipedia.org/wiki/R%c3%a4ksm%c3%b6rg%c3%a5s
+    https://codepoints.net/U+00E4 Latin Small Letter A with Diaeresis
+    https://codepoints.net/U+00F6 Latin Small Letter O with Diaeresis
+    https://codepoints.net/U+00E5 Latin Small Letter A with Ring Above
+  */
+  {"https://r\xc3\xa4ksm\xc3\xb6rg\xc3\xa5s.se",
    "https | [11] | [12] | [13] | xn--rksmrgs-5wao1o.se | "
    "[15] | / | [16] | [17]", 0, CURLU_PUNYCODE, CURLUE_OK},
   {"https://xn--rksmrgs-5wao1o.se",
-   "https | [11] | [12] | [13] | räksmörgås.se | "
+   "https | [11] | [12] | [13] | r\xc3\xa4ksm\xc3\xb6rg\xc3\xa5s.se | "
    "[15] | / | [16] | [17]", 0, CURLU_PUNY2IDN, CURLUE_OK},
 #else
-  {"https://räksmörgås.se",
+  {"https://r\xc3\xa4ksm\xc3\xb6rg\xc3\xa5s.se",
    "https | [11] | [12] | [13] | [30] | [15] | / | [16] | [17]",
    0, CURLU_PUNYCODE, CURLUE_OK},
 #endif
-  /* https://ℂᵤⓇℒ。𝐒🄴 */
+  /*
+    https://codepoints.net/U+2102  Double-Struck Capital C
+    https://codepoints.net/U+1d64  Latin Subscript Small Letter U
+    https://codepoints.net/U+24c7  Circled Latin Capital Letter R
+    https://codepoints.net/U+2112  Script Capital L
+    https://codepoints.net/U+3002  Ideographic Full Stop
+    https://codepoints.net/U+1d412 Mathematical Bold Capital S
+    https://codepoints.net/U+1f134 Squared Latin Capital Letter E
+  */
   {"https://"
    "%e2%84%82%e1%b5%a4%e2%93%87%e2%84%92%e3%80%82%f0%9d%90%92%f0%9f%84%b4",
-   "https | [11] | [12] | [13] | ℂᵤⓇℒ。𝐒🄴 | [15] |"
-   " / | [16] | [17]",
+   "https | [11] | [12] | [13] | "
+   "\xe2\x84\x82\xe1\xb5\xa4\xe2\x93\x87\xe2\x84\x92"
+   "\xe3\x80\x82\xf0\x9d\x90\x92\xf0\x9f\x84\xb4"
+   " | [15] | / | [16] | [17]",
    0, 0, CURLUE_OK},
   {"https://"
    "%e2%84%82%e1%b5%a4%e2%93%87%e2%84%92%e3%80%82%f0%9d%90%92%f0%9f%84%b4",
@@ -609,7 +625,7 @@ static const struct urltestcase get_url_list[] = {
    "",
    0, 0, CURLUE_BAD_PORT_NUMBER},
 #ifdef USE_IDN
-  {"https://räksmörgås.se/path?q#frag",
+  {"https://r\xc3\xa4ksm\xc3\xb6rg\xc3\xa5s.se/path?q#frag",
    "https://xn--rksmrgs-5wao1o.se/path?q#frag", 0, CURLU_PUNYCODE, CURLUE_OK},
 #endif
   /* unsupported schemes with no guessing enabled */

@@ -91,3 +91,5 @@ unsigned int get_terminal_columns(void)
     width = 79;
   return width; /* 79 for unknown, might also be very small or very big */
 }
+
+

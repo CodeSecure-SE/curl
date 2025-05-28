@@ -11,7 +11,7 @@ on:
 jobs:
   CodeSonar_Analyze:
     permissions: write-all
-    runs-on: codesecure-runner-set
+    runs-on: jeff-local
     container:
       image: ghcr.io/codesecure-se/gnu-sdk:latest
       credentials:

@@ -5,8 +5,7 @@ on:
       - 'release/**'               # Feature Branches
   pull_request:
     branches:
-      - 'release/**'       
-      
+      - 'release/**'            
 
 jobs:
   CodeSonar_Analyze:
@@ -73,4 +72,3 @@ jobs:
         with:
           sarif_file: warnings.sarif
           category: "CodeSecure CodeSonar"    
-                  

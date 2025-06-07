@@ -31,6 +31,7 @@
 #include "tool_cfgable.h"
 #include "tool_doswin.h"
 #include "tool_operhlp.h"
+#include "tool_msgs.h"
 
 #include "memdebug.h" /* keep this as LAST include */
 
@@ -65,8 +66,7 @@ bool output_expected(const char *url, const char *uploadfile)
 
 bool stdin_upload(const char *uploadfile)
 {
-  return (!strcmp(uploadfile, "-") ||
-          !strcmp(uploadfile, ".")) ? TRUE : FALSE;
+  return (!strcmp(uploadfile, "-") || !strcmp(uploadfile, "."));
 }
 
 /* Convert a CURLUcode into a CURLcode */
@@ -122,7 +122,7 @@ CURLcode add_file_name_to_url(CURL *curl, char **inurlp, const char *filename)
       /* We only want the part of the local path that is on the right
          side of the rightmost slash and backslash. */
       const char *filep = strrchr(filename, '/');
-      char *file2 = strrchr(filep?filep:filename, '\\');
+      char *file2 = strrchr(filep ? filep : filename, '\\');
       char *encfile;
 
       if(file2)
@@ -178,7 +178,8 @@ fail:
  * Returns a pointer to a heap-allocated string or NULL if
  * no name part, at location indicated by first argument.
  */
-CURLcode get_url_file_name(char **filename, const char *url)
+CURLcode get_url_file_name(struct GlobalConfig *global,
+                           char **filename, const char *url)
 {
   CURLU *uh = curl_url();
   char *path = NULL;
@@ -212,9 +213,11 @@ CURLcode get_url_file_name(char **filename, const char *url)
       if(pc)
         /* duplicate the string beyond the slash */
         pc++;
-      else
-        /* no slash => empty string */
-        pc = (char *)"";
+      else {
+        /* no slash => empty string, use default */
+        pc = (char *)"curl_response";
+        warnf(global, "No remote file name, uses \"%s\"", pc);
+      }
 
       *filename = strdup(pc);
       curl_free(path);
@@ -235,23 +238,6 @@ CURLcode get_url_file_name(char **filename, const char *url)
       }
 #endif /* _WIN32 || MSDOS */
 
-      /* in case we built debug enabled, we allow an environment variable
-       * named CURL_TESTDIR to prefix the given filename to put it into a
-       * specific directory
-       */
-#ifdef DEBUGBUILD
-      {
-        char *tdir = curl_getenv("CURL_TESTDIR");
-        if(tdir) {
-          char *alt = aprintf("%s/%s", tdir, *filename);
-          Curl_safefree(*filename);
-          *filename = alt;
-          curl_free(tdir);
-          if(!*filename)
-            return CURLE_OUT_OF_MEMORY;
-        }
-      }
-#endif
       return CURLE_OK;
     }
   }

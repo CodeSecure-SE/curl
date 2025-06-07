@@ -24,14 +24,11 @@
 #
 ###########################################################################
 #
-import difflib
-import filecmp
 import logging
 import os
-from datetime import timedelta
 import pytest
 
-from testenv import Env, CurlClient, LocalClient, ExecResult
+from testenv import Env, CurlClient
 
 
 log = logging.getLogger(__name__)
@@ -142,12 +139,12 @@ class TestInfo:
         # check timings reported on a transfer for consistency
         url = s['url_effective']
         # all stat keys which reporting timings
-        all_keys = set([
+        all_keys = {
             'time_appconnect', 'time_connect', 'time_redirect',
             'time_pretransfer', 'time_starttransfer', 'time_total'
-        ])
+        }
         # stat keys where we expect a positive value
-        pos_keys = set(['time_pretransfer', 'time_starttransfer', 'time_total'])
+        pos_keys = {'time_pretransfer', 'time_starttransfer', 'time_total', 'time_queue'}
         if s['num_connects'] > 0:
             pos_keys.add('time_connect')
             if url.startswith('https:'):
@@ -170,3 +167,9 @@ class TestInfo:
         # assert that transfer start is before total
         assert s['time_starttransfer'] <= s['time_total'], f'"time_starttransfer" '\
             f'greater than "time_total", {s}'
+        if s['num_redirects'] > 0:
+            assert s['time_queue'] < s['time_starttransfer'], f'"time_queue" '\
+                f'greater/equal than "time_starttransfer", {s}'
+        else:
+            assert s['time_queue'] <= s['time_starttransfer'], f'"time_queue" '\
+                f'greater than "time_starttransfer", {s}'

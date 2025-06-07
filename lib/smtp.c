@@ -723,7 +723,7 @@ static CURLcode smtp_perform_mail(struct Curl_easy *data)
 
   /* Calculate the optional SIZE parameter */
   if(conn->proto.smtpc.size_supported && data->state.infilesize > 0) {
-    size = aprintf("%" CURL_FORMAT_CURL_OFF_T, data->state.infilesize);
+    size = aprintf("%" FMT_OFF_T, data->state.infilesize);
 
     if(!size) {
       result = CURLE_OUT_OF_MEMORY;
@@ -1100,12 +1100,11 @@ static CURLcode smtp_state_rcpt_resp(struct Curl_easy *data,
 
   (void)instate; /* no use for this yet */
 
-  is_smtp_err = (smtpcode/100 != 2) ? TRUE : FALSE;
+  is_smtp_err = (smtpcode/100 != 2);
 
   /* If there is multiple RCPT TO to be issued, it is possible to ignore errors
      and proceed with only the valid addresses. */
-  is_smtp_blocking_err =
-    (is_smtp_err && !data->set.mail_rcpt_allowfails) ? TRUE : FALSE;
+  is_smtp_blocking_err = (is_smtp_err && !data->set.mail_rcpt_allowfails);
 
   if(is_smtp_err) {
     /* Remembering the last failure which we can report if all "RCPT TO" have
@@ -1296,7 +1295,7 @@ static CURLcode smtp_multi_statemach(struct Curl_easy *data, bool *done)
   }
 
   result = Curl_pp_statemach(data, &smtpc->pp, FALSE, FALSE);
-  *done = (smtpc->state == SMTP_STOP) ? TRUE : FALSE;
+  *done = (smtpc->state == SMTP_STOP);
 
   return result;
 }

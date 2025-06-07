@@ -22,7 +22,7 @@
 #
 ###########################################################################
 
-noinst_PROGRAMS = getpart resolve rtspd sockfilt sws tftpd fake_ntlm    \
+noinst_PROGRAMS = getpart resolve rtspd sockfilt sws tftpd    \
  socksd disabled mqttd
 
 CURLX_SRCS = \
@@ -34,6 +34,7 @@ CURLX_SRCS = \
  ../../lib/dynbuf.c \
  ../../lib/strdup.c \
  ../../lib/strcase.c \
+ ../../lib/curl_get_line.c \
  ../../lib/curl_multibyte.c
 
 CURLX_HDRS = \
@@ -45,6 +46,7 @@ CURLX_HDRS = \
  ../../lib/curl_ctype.h \
  ../../lib/dynbuf.h \
  ../../lib/strdup.h \
+ ../../lib/curl_get_line.h \
  ../../lib/curl_multibyte.h
 
 USEFUL = \
@@ -108,10 +110,5 @@ tftpd_SOURCES = $(CURLX_SRCS) $(CURLX_HDRS) $(USEFUL) $(UTIL) \
  tftp.h
 tftpd_LDADD = @CURL_NETWORK_AND_TIME_LIBS@
 tftpd_CFLAGS = $(AM_CFLAGS)
-
-fake_ntlm_SOURCES = $(CURLX_SRCS) $(CURLX_HDRS) $(USEFUL) $(UTIL) \
- fake_ntlm.c
-fake_ntlm_LDADD = @CURL_NETWORK_AND_TIME_LIBS@
-fake_ntlm_CFLAGS = $(AM_CFLAGS)
 
 disabled_SOURCES = disabled.c

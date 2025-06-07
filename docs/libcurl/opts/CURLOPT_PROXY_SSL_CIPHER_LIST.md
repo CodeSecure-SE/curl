@@ -46,7 +46,7 @@ strings separated by colons.
 For setting TLS 1.3 ciphers see CURLOPT_PROXY_TLS13_CIPHERS(3).
 
 A valid example of a cipher list is:
-~~~c
+~~~
 "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:"
 "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305"
 ~~~
@@ -60,6 +60,9 @@ Find more details about cipher lists on this URL:
 
 The application does not have to keep the string around after setting this
 option.
+
+Using this option multiple times makes the last set string override the
+previous ones. Set it to NULL to disable its use again.
 
 # DEFAULT
 
@@ -99,4 +102,7 @@ Since curl 8.10.0 returns CURLE_NOT_BUILT_IN when not supported.
 
 # RETURN VALUE
 
-Returns CURLE_OK if supported, CURLE_NOT_BUILT_IN otherwise.
+curl_easy_setopt(3) returns a CURLcode indicating success or error.
+
+CURLE_OK (0) means everything was OK, non-zero means an error occurred, see
+libcurl-errors(3).

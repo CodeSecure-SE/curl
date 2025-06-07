@@ -36,10 +36,6 @@
 
 #include "memdebug.h" /* keep this as LAST include */
 
-#ifdef MSDOS
-#  define USE_WATT32
-#endif
-
 #ifndef ARRAYSIZE
 #define ARRAYSIZE(A) (sizeof(A)/sizeof((A)[0]))
 #endif
@@ -331,6 +327,7 @@ void tool_version_info(void)
   printf("Release-Date: %s\n", LIBCURL_TIMESTAMP);
 #endif
   if(built_in_protos[0]) {
+#ifndef CURL_DISABLE_IPFS
     const char *insert = NULL;
     /* we have ipfs and ipns support if libcurl has http support */
     for(builtin = built_in_protos; *builtin; ++builtin) {
@@ -345,16 +342,19 @@ void tool_version_info(void)
         insert = *builtin;
       }
     }
+#endif /* !CURL_DISABLE_IPFS */
     printf("Protocols:");
     for(builtin = built_in_protos; *builtin; ++builtin) {
       /* Special case: do not list rtmp?* protocols.
          They may only appear together with "rtmp" */
       if(!curl_strnequal(*builtin, "rtmp", 4) || !builtin[0][4])
         printf(" %s", *builtin);
+#ifndef CURL_DISABLE_IPFS
       if(insert && insert == *builtin) {
         printf(" ipfs ipns");
         insert = NULL;
       }
+#endif /* !CURL_DISABLE_IPFS */
     }
     puts(""); /* newline */
   }

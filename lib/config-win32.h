@@ -44,9 +44,6 @@
 /* Define if you have the <locale.h> header file. */
 #define HAVE_LOCALE_H 1
 
-/* Define if you need <malloc.h> header even with <stdlib.h> header file. */
-#define NEED_MALLOC_H 1
-
 /* Define if you have the <netdb.h> header file. */
 /* #define HAVE_NETDB_H 1 */
 
@@ -155,19 +152,14 @@
 /* Define if you have the setmode function. */
 #define HAVE_SETMODE 1
 
+/* Define if you have the _setmode function. */
+#define HAVE__SETMODE 1
+
 /* Define if you have the socket function. */
 #define HAVE_SOCKET 1
 
-/* Define if you have the strcasecmp function. */
-#if defined(__MINGW32__)
-#define HAVE_STRCASECMP 1
-#endif
-
 /* Define if you have the strdup function. */
 #define HAVE_STRDUP 1
-
-/* Define if you have the stricmp function. */
-#define HAVE_STRICMP 1
 
 /* Define if you have the strtoll function. */
 #if (defined(_MSC_VER) && (_MSC_VER >= 1800)) || defined(__MINGW32__)
@@ -402,7 +394,7 @@ Vista
 /* ---------------------------------------------------------------- */
 
 #if defined(_MSC_VER) && !defined(_WIN32_WCE)
-#  if (_MSC_VER >= 900) && (_INTEGRAL_MAX_BITS >= 64)
+#  if (_INTEGRAL_MAX_BITS >= 64)
 #    define USE_WIN32_LARGE_FILES
 #  else
 #    define USE_WIN32_SMALL_FILES
@@ -422,10 +414,6 @@ Vista
 #  ifndef _FILE_OFFSET_BITS
 #  define _FILE_OFFSET_BITS 64
 #  endif
-#endif
-
-#ifdef USE_WIN32_LARGE_FILES
-#define HAVE__FSEEKI64
 #endif
 
 /* Define to the size of `off_t', as computed by sizeof. */
@@ -475,7 +463,7 @@ Vista
 #endif
 
 /* Define to use the Windows crypto library. */
-#if !defined(CURL_WINDOWS_APP)
+#if !defined(CURL_WINDOWS_UWP)
 #define USE_WIN32_CRYPTO
 #endif
 
@@ -487,19 +475,19 @@ Vista
 /* ---------------------------------------------------------------- */
 
 /* Define cpu-machine-OS */
-#ifndef OS
+#ifndef CURL_OS
 #if defined(_M_IX86) || defined(__i386__) /* x86 (MSVC or gcc) */
-#define OS "i386-pc-win32"
+#define CURL_OS "i386-pc-win32"
 #elif defined(_M_X64) || defined(__x86_64__) /* x86_64 (MSVC >=2005 or gcc) */
-#define OS "x86_64-pc-win32"
+#define CURL_OS "x86_64-pc-win32"
 #elif defined(_M_IA64) || defined(__ia64__) /* Itanium */
-#define OS "ia64-pc-win32"
+#define CURL_OS "ia64-pc-win32"
 #elif defined(_M_ARM_NT) || defined(__arm__) /* ARMv7-Thumb2 (Windows RT) */
-#define OS "thumbv7a-pc-win32"
+#define CURL_OS "thumbv7a-pc-win32"
 #elif defined(_M_ARM64) || defined(__aarch64__) /* ARM64 (Windows 10) */
-#define OS "aarch64-pc-win32"
+#define CURL_OS "aarch64-pc-win32"
 #else
-#define OS "unknown-pc-win32"
+#define CURL_OS "unknown-pc-win32"
 #endif
 #endif
 

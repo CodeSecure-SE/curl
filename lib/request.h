@@ -32,6 +32,9 @@
 
 /* forward declarations */
 struct UserDefined;
+#ifndef CURL_DISABLE_DOH
+struct doh_probes;
+#endif
 
 enum expect100 {
   EXP100_SEND_DATA,           /* enough waiting, just send the body now */
@@ -114,7 +117,7 @@ struct SingleRequest {
     struct TELNET *telnet;
   } p;
 #ifndef CURL_DISABLE_DOH
-  struct dohdata *doh; /* DoH specific data for this request */
+  struct doh_probes *doh; /* DoH specific data for this request */
 #endif
 #ifndef CURL_DISABLE_COOKIES
   unsigned char setcookies;
@@ -127,6 +130,7 @@ struct SingleRequest {
   BIT(download_done); /* set to TRUE when download is complete */
   BIT(eos_written);   /* iff EOS has been written to client */
   BIT(eos_read);      /* iff EOS has been read from the client */
+  BIT(eos_sent);      /* iff EOS has been sent to the server */
   BIT(rewind_read);   /* iff reader needs rewind at next start */
   BIT(upload_done);   /* set to TRUE when all request data has been sent */
   BIT(upload_aborted); /* set to TRUE when upload was aborted. Will also
@@ -147,9 +151,7 @@ struct SingleRequest {
                         negotiation. */
   BIT(sendbuf_init); /* sendbuf is initialized */
   BIT(shutdown);     /* request end will shutdown connection */
-#ifdef USE_HYPER
-  BIT(bodywritten);
-#endif
+  BIT(shutdown_err_ignore); /* errors in shutdown will not fail request */
 };
 
 /**
@@ -191,7 +193,6 @@ void Curl_req_free(struct SingleRequest *req, struct Curl_easy *data);
  */
 void Curl_req_hard_reset(struct SingleRequest *req, struct Curl_easy *data);
 
-#ifndef USE_HYPER
 /**
  * Send request headers. If not all could be sent
  * they will be buffered. Use `Curl_req_flush()` to make sure
@@ -201,8 +202,6 @@ void Curl_req_hard_reset(struct SingleRequest *req, struct Curl_easy *data);
  * @return CURLE_OK (on blocking with *pnwritten == 0) or error.
  */
 CURLcode Curl_req_send(struct Curl_easy *data, struct dynbuf *buf);
-
-#endif /* !USE_HYPER */
 
 /**
  * TRUE iff the request has sent all request headers and data.

@@ -52,7 +52,11 @@ CURLcode Curl_req_soft_reset(struct SingleRequest *req,
 
   req->done = FALSE;
   req->upload_done = FALSE;
+  req->upload_aborted = FALSE;
   req->download_done = FALSE;
+  req->eos_written = FALSE;
+  req->eos_read = FALSE;
+  req->eos_sent = FALSE;
   req->ignorebody = FALSE;
   req->shutdown = FALSE;
   req->bytecount = 0;
@@ -146,6 +150,7 @@ void Curl_req_hard_reset(struct SingleRequest *req, struct Curl_easy *data)
   req->download_done = FALSE;
   req->eos_written = FALSE;
   req->eos_read = FALSE;
+  req->eos_sent = FALSE;
   req->upload_done = FALSE;
   req->upload_aborted = FALSE;
   req->ignorebody = FALSE;
@@ -157,9 +162,6 @@ void Curl_req_hard_reset(struct SingleRequest *req, struct Curl_easy *data)
   req->no_body = data->set.opt_no_body;
   req->authneg = FALSE;
   req->shutdown = FALSE;
-#ifdef USE_HYPER
-  req->bodywritten = FALSE;
-#endif
 }
 
 void Curl_req_free(struct SingleRequest *req, struct Curl_easy *data)
@@ -214,15 +216,19 @@ static CURLcode xfer_send(struct Curl_easy *data,
     eos = TRUE;
   }
   result = Curl_xfer_send(data, buf, blen, eos, pnwritten);
-  if(!result && *pnwritten) {
-    if(hds_len)
-      Curl_debug(data, CURLINFO_HEADER_OUT, (char *)buf,
-                 CURLMIN(hds_len, *pnwritten));
-    if(*pnwritten > hds_len) {
-      size_t body_len = *pnwritten - hds_len;
-      Curl_debug(data, CURLINFO_DATA_OUT, (char *)buf + hds_len, body_len);
-      data->req.writebytecount += body_len;
-      Curl_pgrsSetUploadCounter(data, data->req.writebytecount);
+  if(!result) {
+    if(eos && (blen == *pnwritten))
+      data->req.eos_sent = TRUE;
+    if(*pnwritten) {
+      if(hds_len)
+        Curl_debug(data, CURLINFO_HEADER_OUT, (char *)buf,
+                   CURLMIN(hds_len, *pnwritten));
+      if(*pnwritten > hds_len) {
+        size_t body_len = *pnwritten - hds_len;
+        Curl_debug(data, CURLINFO_DATA_OUT, (char *)buf + hds_len, body_len);
+        data->req.writebytecount += body_len;
+        Curl_pgrsSetUploadCounter(data, data->req.writebytecount);
+      }
     }
   }
   return result;
@@ -252,7 +258,7 @@ static CURLcode req_send_buffer_flush(struct Curl_easy *data)
   return result;
 }
 
-CURLcode Curl_req_set_upload_done(struct Curl_easy *data)
+static CURLcode req_set_upload_done(struct Curl_easy *data)
 {
   DEBUGASSERT(!data->req.upload_done);
   data->req.upload_done = TRUE;
@@ -264,19 +270,19 @@ CURLcode Curl_req_set_upload_done(struct Curl_easy *data)
   if(data->req.upload_aborted) {
     Curl_bufq_reset(&data->req.sendbuf);
     if(data->req.writebytecount)
-      infof(data, "abort upload after having sent %" CURL_FORMAT_CURL_OFF_T
-            " bytes", data->req.writebytecount);
+      infof(data, "abort upload after having sent %" FMT_OFF_T " bytes",
+            data->req.writebytecount);
     else
       infof(data, "abort upload");
   }
   else if(data->req.writebytecount)
-    infof(data, "upload completely sent off: %" CURL_FORMAT_CURL_OFF_T
-          " bytes", data->req.writebytecount);
+    infof(data, "upload completely sent off: %" FMT_OFF_T " bytes",
+          data->req.writebytecount);
   else if(!data->req.download_done) {
     DEBUGASSERT(Curl_bufq_is_empty(&data->req.sendbuf));
-    infof(data, Curl_creader_total_length(data)?
-                "We are completely uploaded and fine" :
-                "Request completely sent off");
+    infof(data, Curl_creader_total_length(data) ?
+          "We are completely uploaded and fine" :
+          "Request completely sent off");
   }
 
   return Curl_xfer_send_close(data);
@@ -304,17 +310,33 @@ static CURLcode req_flush(struct Curl_easy *data)
     return Curl_xfer_flush(data);
   }
 
-  if(!data->req.upload_done && data->req.eos_read &&
-     Curl_bufq_is_empty(&data->req.sendbuf)) {
+  if(data->req.eos_read && !data->req.eos_sent) {
+    char tmp;
+    size_t nwritten;
+    result = xfer_send(data, &tmp, 0, 0, &nwritten);
+    if(result)
+      return result;
+    DEBUGASSERT(data->req.eos_sent);
+  }
+
+  if(!data->req.upload_done && data->req.eos_read && data->req.eos_sent) {
+    DEBUGASSERT(Curl_bufq_is_empty(&data->req.sendbuf));
     if(data->req.shutdown) {
       bool done;
       result = Curl_xfer_send_shutdown(data, &done);
+      if(result && data->req.shutdown_err_ignore) {
+        infof(data, "Shutdown send direction error: %d. Broken server? "
+              "Proceeding as if everything is ok.", result);
+        result = CURLE_OK;
+        done = TRUE;
+      }
+
       if(result)
         return result;
       if(!done)
         return CURLE_AGAIN;
     }
-    return Curl_req_set_upload_done(data);
+    return req_set_upload_done(data);
   }
   return CURLE_OK;
 }
@@ -334,8 +356,6 @@ static ssize_t add_from_client(void *reader_ctx,
     data->req.eos_read = TRUE;
   return (ssize_t)nread;
 }
-
-#ifndef USE_HYPER
 
 static CURLcode req_send_buffer_add(struct Curl_easy *data,
                                     const char *buf, size_t blen,
@@ -386,7 +406,6 @@ CURLcode Curl_req_send(struct Curl_easy *data, struct dynbuf *req)
   }
   return CURLE_OK;
 }
-#endif /* !USE_HYPER */
 
 bool Curl_req_sendbuf_empty(struct Curl_easy *data)
 {
@@ -439,7 +458,7 @@ CURLcode Curl_req_abort_sending(struct Curl_easy *data)
     data->req.upload_aborted = TRUE;
     /* no longer KEEP_SEND and KEEP_SEND_PAUSE */
     data->req.keepon &= ~KEEP_SENDBITS;
-    return Curl_req_set_upload_done(data);
+    return req_set_upload_done(data);
   }
   return CURLE_OK;
 }

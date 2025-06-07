@@ -26,6 +26,11 @@
 
 #if !defined(CURL_DISABLE_LDAP) && !defined(USE_OPENLDAP)
 
+#if defined(__GNUC__) && defined(__APPLE__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 /*
  * Notice that USE_OPENLDAP is only a source code selection switch. When
  * libcurl is built with USE_OPENLDAP defined the libcurl source code that
@@ -148,7 +153,7 @@ static void _ldap_free_urldesc(LDAPURLDesc *ludp);
 #define ldap_err2string ldap_err2stringA
 #endif
 
-#if defined(USE_WIN32_LDAP) && defined(_MSC_VER) && (_MSC_VER <= 1600)
+#if defined(USE_WIN32_LDAP) && defined(_MSC_VER) && (_MSC_VER <= 1700)
 /* Workaround for warning:
    'type cast' : conversion from 'int' to 'void *' of greater size */
 #undef LDAP_OPT_ON
@@ -825,8 +830,8 @@ static bool split_str(char *str, char ***out, size_t *count)
   if(!res)
     return FALSE;
 
-  for(i = 0, s = strtok_r(str, ",", &lasts); s && i < items;
-      s = strtok_r(NULL, ",", &lasts), i++)
+  for(i = 0, s = Curl_strtok_r(str, ",", &lasts); s && i < items;
+      s = Curl_strtok_r(NULL, ",", &lasts), i++)
     res[i] = s;
 
   *out = res;
@@ -1113,4 +1118,9 @@ static void _ldap_free_urldesc(LDAPURLDesc *ludp)
   free(ludp);
 }
 #endif  /* !HAVE_LDAP_URL_PARSE */
+
+#if defined(__GNUC__) && defined(__APPLE__)
+#pragma GCC diagnostic pop
+#endif
+
 #endif  /* !CURL_DISABLE_LDAP && !USE_OPENLDAP */

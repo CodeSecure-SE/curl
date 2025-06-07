@@ -31,6 +31,7 @@
 #include "urldata.h"
 #include "sendf.h"
 #include "strdup.h"
+#include <stdlib.h>
 
 #if !defined(CURL_DISABLE_MIME) && (!defined(CURL_DISABLE_HTTP) ||      \
                                     !defined(CURL_DISABLE_SMTP) ||      \
@@ -1166,6 +1167,64 @@ static void mime_subparts_unbind(void *ptr)
 }
 
 
+
+/* BasicProj.c
+ * a sample program containing several bugs */
+
+
+
+int main()
+{
+    char buf[10];
+    char *p, *q;
+
+    switch( rand() )
+    {
+      case 1:        /* straightforward null dereference */
+        q = NULL;
+        buf[0] = q[0];
+        break;
+
+      case 2:        /* a less-obvious potential null dereference  
+                      * - the value returned by malloc may be NULL 
+                      *   and should be checked 
+                      * - also a leak, since q is never freed */
+        q = (char *) malloc(10 * sizeof(char));
+        q[0] = 'a';
+        break;
+
+      case 3:        /* return value is checked - no warning */
+        q = (char *) malloc(10 * sizeof(char));
+        if (q)
+        {
+            q[0] = 'a';
+            free( q );
+        }
+        break;
+
+      case 4:        /* rand() may return a value >= 10 */
+        buf[rand()] = 'a';
+        break;      
+    
+
+      case 5:        /* trying to free an address on the stack */
+        p = &buf[0];
+        free(p);
+        break;
+
+      case 6:        /* aliasing is taken into account
+                      * in detecting that q is used after
+                      * the memory address has been freed */
+        p = (char *) malloc(10);
+        if ( !p )
+            break;
+        q = p;
+        free(p);
+        q[0] = 'a';
+        break;    
+    }
+    return 0;
+}
 void Curl_mime_cleanpart(curl_mimepart *part)
 {
   if(part) {

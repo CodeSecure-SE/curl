@@ -246,6 +246,9 @@ static const struct group_name_map gnm[] = {
   { WOLFSSL_P256_ML_KEM_512, "P256_ML_KEM_512" },
   { WOLFSSL_P384_ML_KEM_768, "P384_ML_KEM_768" },
   { WOLFSSL_P521_ML_KEM_1024, "P521_ML_KEM_1024" },
+  { WOLFSSL_P256_ML_KEM_768, "P256_ML_KEM_768" },
+  { WOLFSSL_P384_ML_KEM_1024, "P384_ML_KEM_1024" },
+  { WOLFSSL_X25519_ML_KEM_768, "X25519_ML_KEM_768" },
   { 0, NULL }
 };
 #endif
@@ -517,7 +520,7 @@ static CURLcode wssl_on_session_reuse(struct Curl_cfilter *cf,
 #endif
 
   if(!connssl->earlydata_max) {
-    /* Seems to be GnuTLS way to signal no EarlyData in session */
+    /* Seems to be no WolfSSL way to signal no EarlyData in session */
     CURL_TRC_CF(data, cf, "SSL session does not allow earlydata");
   }
   else if(!Curl_alpn_contains_proto(alpns, scs->alpn)) {
@@ -961,6 +964,7 @@ CURLcode Curl_wssl_ctx_init(struct wssl_ctx *wctx,
   size_t idx = 0;
 #endif
   CURLcode result = CURLE_FAILED_INIT;
+  unsigned char transport;
 
   DEBUGASSERT(!wctx->ssl_ctx);
   DEBUGASSERT(!wctx->ssl);
@@ -970,6 +974,8 @@ CURLcode Curl_wssl_ctx_init(struct wssl_ctx *wctx,
     goto out;
   }
   Curl_alpn_copy(&alpns, alpns_requested);
+  DEBUGASSERT(cf->next);
+  transport = Curl_conn_cf_get_transport(cf->next, data);
 
 #if LIBWOLFSSL_VERSION_HEX < 0x04002000 /* 4.2.0 (2019) */
   req_method = wolfSSLv23_client_method();
@@ -1100,7 +1106,7 @@ CURLcode Curl_wssl_ctx_init(struct wssl_ctx *wctx,
 #endif
 
   curves = conn_config->curves;
-  if(!curves && cf->conn->transport == TRNSPRT_QUIC)
+  if(!curves && (transport == TRNSPRT_QUIC))
     curves = (char *)CURL_UNCONST(QUIC_GROUPS);
 
   if(curves) {
@@ -1241,8 +1247,7 @@ CURLcode Curl_wssl_ctx_init(struct wssl_ctx *wctx,
   }
 #endif
 
-  if(ssl_config->primary.cache_session &&
-     cf->conn->transport != TRNSPRT_QUIC) {
+  if(ssl_config->primary.cache_session && (transport != TRNSPRT_QUIC)) {
     /* Register to get notified when a new session is received */
     wolfSSL_CTX_sess_set_new_cb(wctx->ssl_ctx, wssl_vtls_new_session_cb);
   }
@@ -1288,7 +1293,7 @@ CURLcode Curl_wssl_ctx_init(struct wssl_ctx *wctx,
 
   wolfSSL_set_app_data(wctx->ssl, ssl_user_data);
 #ifdef WOLFSSL_QUIC
-  if(cf->conn->transport == TRNSPRT_QUIC)
+  if(transport == TRNSPRT_QUIC)
     wolfSSL_set_quic_use_legacy_codepoint(wctx->ssl, 0);
 #endif
 
@@ -2084,6 +2089,18 @@ static bool wssl_data_pending(struct Curl_cfilter *cf,
     return FALSE;
 }
 
+void Curl_wssl_report_handshake(struct Curl_easy *data,
+                                struct wssl_ctx *wssl)
+{
+#if (LIBWOLFSSL_VERSION_HEX >= 0x03009010)
+    infof(data, "SSL connection using %s / %s",
+          wolfSSL_get_version(wssl->ssl),
+          wolfSSL_get_cipher_name(wssl->ssl));
+#else
+    infof(data, "SSL connected");
+#endif
+}
+
 static CURLcode wssl_connect(struct Curl_cfilter *cf,
                              struct Curl_easy *data,
                              bool *done)
@@ -2157,16 +2174,9 @@ static CURLcode wssl_connect(struct Curl_cfilter *cf,
     }
 #endif /* HAVE_ALPN */
 
-#if (LIBWOLFSSL_VERSION_HEX >= 0x03009010)
-    infof(data, "SSL connection using %s / %s",
-          wolfSSL_get_version(wssl->ssl),
-          wolfSSL_get_cipher_name(wssl->ssl));
-#else
-    infof(data, "SSL connected");
-#endif
-
     connssl->connecting_state = ssl_connect_done;
     connssl->state = ssl_connection_complete;
+    Curl_wssl_report_handshake(data, wssl);
 
 #ifdef WOLFSSL_EARLY_DATA
     if(connssl->earlydata_state > ssl_earlydata_none) {

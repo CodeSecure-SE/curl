@@ -390,7 +390,6 @@ struct eyeballer {
   expire_id timeout_id;              /* ID for Curl_expire() */
   CURLcode result;
   int error;
-  BIT(rewinded);                     /* if we rewinded the addr list */
   BIT(has_started);                  /* attempts have started */
   BIT(is_done);                      /* out of addresses/time */
   BIT(connected);                    /* cf has connected */
@@ -456,7 +455,7 @@ static CURLcode eyeballer_new(struct eyeballer **pballer,
 }
 
 static void baller_close(struct eyeballer *baller,
-                          struct Curl_easy *data)
+                         struct Curl_easy *data)
 {
   if(baller && baller->cf) {
     Curl_conn_cf_discard_chain(&baller->cf, data);
@@ -464,7 +463,7 @@ static void baller_close(struct eyeballer *baller,
 }
 
 static void baller_free(struct eyeballer *baller,
-                         struct Curl_easy *data)
+                        struct Curl_easy *data)
 {
   if(baller) {
     baller_close(baller, data);
@@ -474,7 +473,6 @@ static void baller_free(struct eyeballer *baller,
 
 static void baller_rewind(struct eyeballer *baller)
 {
-  baller->rewinded = TRUE;
   baller->addr = baller->first;
   baller->inconclusive = FALSE;
 }
@@ -833,7 +831,7 @@ static CURLcode start_connect(struct Curl_cfilter *cf,
     addr1 = addr_first_match(dns->addr, ai_family1);
     /* no ip address families, probably AF_UNIX or something, use the
      * address family given to us */
-    if(!addr1  && !addr0 && dns->addr) {
+    if(!addr1 && !addr0 && dns->addr) {
       ai_family0 = dns->addr->ai_family;
       addr0 = addr_first_match(dns->addr, ai_family0);
     }
@@ -933,8 +931,8 @@ static CURLcode cf_he_shutdown(struct Curl_cfilter *cf,
 }
 
 static void cf_he_adjust_pollset(struct Curl_cfilter *cf,
-                                  struct Curl_easy *data,
-                                  struct easy_pollset *ps)
+                                 struct Curl_easy *data,
+                                 struct easy_pollset *ps)
 {
   struct cf_he_ctx *ctx = cf->ctx;
   size_t i;
@@ -1047,8 +1045,8 @@ static bool cf_he_data_pending(struct Curl_cfilter *cf,
 }
 
 static struct curltime get_max_baller_time(struct Curl_cfilter *cf,
-                                          struct Curl_easy *data,
-                                          int query)
+                                           struct Curl_easy *data,
+                                           int query)
 {
   struct cf_he_ctx *ctx = cf->ctx;
   struct curltime t, tmax;
@@ -1517,7 +1515,8 @@ CURLcode Curl_conn_setup(struct Curl_easy *data,
 
   /* Still no cfilter set, apply default. */
   if(!conn->cfilter[sockindex]) {
-    result = cf_setup_add(data, conn, sockindex, conn->transport, ssl_mode);
+    result = cf_setup_add(data, conn, sockindex,
+                          conn->transport_wanted, ssl_mode);
     if(result)
       goto out;
   }

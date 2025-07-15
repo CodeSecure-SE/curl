@@ -175,6 +175,7 @@ typedef CURLcode Curl_cft_cntrl(struct Curl_cfilter *cf,
 #define CF_QUERY_HOST_PORT         11  /* port       const char * */
 #define CF_QUERY_SSL_INFO          12  /* -    struct curl_tlssessioninfo * */
 #define CF_QUERY_SSL_CTX_INFO      13  /* -    struct curl_tlssessioninfo * */
+#define CF_QUERY_TRANSPORT         14  /* TRNSPRT_*  - * */
 
 /**
  * Query the cfilter for properties. Filters ignorant of a query will
@@ -350,6 +351,9 @@ CURLcode Curl_conn_cf_get_ip_info(struct Curl_cfilter *cf,
 bool Curl_conn_cf_needs_flush(struct Curl_cfilter *cf,
                               struct Curl_easy *data);
 
+unsigned char Curl_conn_cf_get_transport(struct Curl_cfilter *cf,
+                                         struct Curl_easy *data);
+
 #define CURL_CF_SSL_DEFAULT  -1
 #define CURL_CF_SSL_DISABLE  0
 #define CURL_CF_SSL_ENABLE   1
@@ -410,6 +414,10 @@ bool Curl_conn_is_multiplex(struct connectdata *conn, int sockindex);
 unsigned char Curl_conn_http_version(struct Curl_easy *data,
                                      struct connectdata *conn);
 
+/* Get the TRNSPRT_* the connection is using */
+unsigned char Curl_conn_get_transport(struct Curl_easy *data,
+                                      struct connectdata *conn);
+
 /**
  * Close the filter chain at `sockindex` for connection `data->conn`.
   * Filters remain in place and may be connected again afterwards.
@@ -457,7 +465,7 @@ Curl_conn_get_remote_addr(struct Curl_easy *data, int sockindex);
 void Curl_conn_forget_socket(struct Curl_easy *data, int sockindex);
 
 /**
- * Adjust the pollset for the filter chain startgin at `cf`.
+ * Adjust the pollset for the filter chain starting at `cf`.
  */
 void Curl_conn_cf_adjust_pollset(struct Curl_cfilter *cf,
                                  struct Curl_easy *data,

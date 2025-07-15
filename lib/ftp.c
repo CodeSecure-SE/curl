@@ -1065,7 +1065,8 @@ static CURLcode ftp_state_use_port(struct Curl_easy *data,
   /* step 2, create a socket for the requested address */
   error = 0;
   for(ai = res; ai; ai = ai->ai_next) {
-    if(Curl_socket_open(data, ai, NULL, conn->transport, &portsock)) {
+    if(Curl_socket_open(data, ai, NULL,
+                        Curl_conn_get_transport(data, conn), &portsock)) {
       error = SOCKERRNO;
       continue;
     }
@@ -3155,8 +3156,8 @@ static CURLcode ftp_pp_statemachine(struct Curl_easy *data,
 
 /* called repeatedly until done from multi.c */
 static CURLcode ftp_statemach(struct Curl_easy *data,
-                               struct ftp_conn *ftpc,
-                               bool *done)
+                              struct ftp_conn *ftpc,
+                              bool *done)
 {
   CURLcode result = Curl_pp_statemach(data, &ftpc->pp, FALSE, FALSE);
 

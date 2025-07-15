@@ -783,9 +783,9 @@ static int gtls_handshake_cb(gnutls_session_t session, unsigned int htype,
 }
 
 static CURLcode gtls_set_priority(struct Curl_cfilter *cf,
-                                 struct Curl_easy *data,
-                                 struct gtls_ctx *gtls,
-                                 const char *priority)
+                                  struct Curl_easy *data,
+                                  struct gtls_ctx *gtls,
+                                  const char *priority)
 {
   struct ssl_primary_config *conn_config = Curl_ssl_cf_get_primary_config(cf);
   struct dynbuf buf;
@@ -1079,7 +1079,7 @@ static CURLcode gtls_on_session_reuse(struct Curl_cfilter *cf,
   connssl->earlydata_max =
     gnutls_record_get_max_early_data_size(backend->gtls.session);
   if((!connssl->earlydata_max || connssl->earlydata_max == 0xFFFFFFFFUL)) {
-    /* Seems to be GnuTLS way to signal no EarlyData in session */
+    /* Seems to be no GnuTLS way to signal no EarlyData in session */
     CURL_TRC_CF(data, cf, "SSL session does not allow earlydata");
   }
   else if(!Curl_alpn_contains_proto(alpns, scs->alpn)) {
@@ -1307,6 +1307,28 @@ static CURLcode pkp_pin_peer_pubkey(struct Curl_easy *data,
   return result;
 }
 
+void Curl_gtls_report_handshake(struct Curl_easy *data,
+                                struct gtls_ctx *gctx)
+{
+#ifndef CURL_DISABLE_VERBOSE_STRINGS
+  if(Curl_trc_is_verbose(data)) {
+    const char *ptr;
+    gnutls_protocol_t version = gnutls_protocol_get_version(gctx->session);
+
+    /* the name of the cipher suite used, e.g. ECDHE_RSA_AES_256_GCM_SHA384. */
+    ptr = gnutls_cipher_suite_get_name(gnutls_kx_get(gctx->session),
+                                       gnutls_cipher_get(gctx->session),
+                                       gnutls_mac_get(gctx->session));
+
+    infof(data, "SSL connection using %s / %s",
+          gnutls_protocol_get_name(version), ptr);
+  }
+#else
+  (void)data;
+  (void)gctx;
+#endif
+}
+
 CURLcode
 Curl_gtls_verifyserver(struct Curl_easy *data,
                        gnutls_session_t session,
@@ -1327,22 +1349,10 @@ Curl_gtls_verifyserver(struct Curl_easy *data,
   int rc;
   CURLcode result = CURLE_OK;
 #ifndef CURL_DISABLE_VERBOSE_STRINGS
-  const char *ptr;
   int algo;
   unsigned int bits;
-  gnutls_protocol_t version = gnutls_protocol_get_version(session);
 #endif
   long * const certverifyresult = &ssl_config->certverifyresult;
-
-#ifndef CURL_DISABLE_VERBOSE_STRINGS
-  /* the name of the cipher suite used, e.g. ECDHE_RSA_AES_256_GCM_SHA384. */
-  ptr = gnutls_cipher_suite_get_name(gnutls_kx_get(session),
-                                     gnutls_cipher_get(session),
-                                     gnutls_mac_get(session));
-
-  infof(data, "SSL connection using %s / %s",
-        gnutls_protocol_get_name(version), ptr);
-#endif
 
   /* This function will return the peer's raw certificate (chain) as sent by
      the peer. These certificates are in raw format (DER encoded for
@@ -1876,6 +1886,9 @@ static CURLcode gtls_connect_common(struct Curl_cfilter *cf,
   if(connssl->connecting_state == ssl_connect_3) {
     gnutls_datum_t proto;
     int rc;
+
+    Curl_gtls_report_handshake(data, &backend->gtls);
+
     result = gtls_verifyserver(cf, data, backend->gtls.session);
     if(result)
       goto out;

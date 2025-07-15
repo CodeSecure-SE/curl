@@ -68,8 +68,8 @@ static void conn_report_connect_stats(struct Curl_easy *data,
                                       struct connectdata *conn);
 
 void Curl_cf_def_adjust_pollset(struct Curl_cfilter *cf,
-                                 struct Curl_easy *data,
-                                 struct easy_pollset *ps)
+                                struct Curl_easy *data,
+                                struct easy_pollset *ps)
 {
   /* NOP */
   (void)cf;
@@ -606,6 +606,13 @@ bool Curl_conn_is_multiplex(struct connectdata *conn, int sockindex)
   return FALSE;
 }
 
+unsigned char Curl_conn_get_transport(struct Curl_easy *data,
+                                      struct connectdata *conn)
+{
+  struct Curl_cfilter *cf = conn->cfilter[FIRSTSOCKET];
+  return Curl_conn_cf_get_transport(cf, data);
+}
+
 unsigned char Curl_conn_http_version(struct Curl_easy *data,
                                      struct connectdata *conn)
 {
@@ -757,8 +764,8 @@ void Curl_conn_get_current_host(struct Curl_easy *data, int sockindex,
 }
 
 CURLcode Curl_cf_def_cntrl(struct Curl_cfilter *cf,
-                                struct Curl_easy *data,
-                                int event, int arg1, void *arg2)
+                           struct Curl_easy *data,
+                           int event, int arg1, void *arg2)
 {
   (void)cf;
   (void)data;
@@ -792,6 +799,15 @@ curl_socket_t Curl_conn_cf_get_socket(struct Curl_cfilter *cf,
   if(cf && !cf->cft->query(cf, data, CF_QUERY_SOCKET, NULL, &sock))
     return sock;
   return CURL_SOCKET_BAD;
+}
+
+unsigned char Curl_conn_cf_get_transport(struct Curl_cfilter *cf,
+                                         struct Curl_easy *data)
+{
+  int transport = 0;
+  if(cf && !cf->cft->query(cf, data, CF_QUERY_TRANSPORT, &transport, NULL))
+    return (unsigned char)transport;
+  return (unsigned char)(data->conn ? data->conn->transport_wanted : 0);
 }
 
 static const struct Curl_sockaddr_ex *
@@ -952,8 +968,8 @@ CURLcode Curl_conn_keep_alive(struct Curl_easy *data,
 }
 
 size_t Curl_conn_get_max_concurrent(struct Curl_easy *data,
-                                     struct connectdata *conn,
-                                     int sockindex)
+                                    struct connectdata *conn,
+                                    int sockindex)
 {
   CURLcode result;
   int n = 0;
@@ -1040,8 +1056,8 @@ void Curl_pollset_reset(struct Curl_easy *data,
  *
  */
 void Curl_pollset_change(struct Curl_easy *data,
-                       struct easy_pollset *ps, curl_socket_t sock,
-                       int add_flags, int remove_flags)
+                         struct easy_pollset *ps, curl_socket_t sock,
+                         int add_flags, int remove_flags)
 {
   unsigned int i;
 

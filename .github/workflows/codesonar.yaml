@@ -48,20 +48,48 @@ jobs:
           repository: CodeSecure-SE/codesonar_ci
           path: cso-scripts
       - name: Build and Analyze
-        run: python3 cso-scripts/build_and_analyze.py codesonar.conf make -j $PARALLEL
-#      - name: Upload SARIF to GitHub #Use this if you do not have GitHub Enterprise
-#        if: ${{ github.event.pull_request }}
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: SARIF file
-#          path: warnings.sarif
-      - name: Push Summary Report
-        if: ${{ github.event.pull_request }}
-        uses: thollander/actions-comment-pull-request@v2
-        with: 
-          filePath: warnings.md
-#      - name: Upload SARIF results
-#        uses: github/codeql-action/upload-sarif@v3
-#        with:
-#          sarif_file: warnings.sarif
-#          category: "CodeSecure CodeSonar"            
+        run: python3 codesonar-scripts/build_and_analyze.py codesonar.conf make -j $PARALLEL
+      - name: Download results
+        run: |
+          echo $CSONAR_HUB_PASSWORD > hubpwfile
+          $CSONAR_CSHOME/codesonar/bin/codesonar dump_warnings.py --project-file $PROJECT_NAME.prj \
+          -auth password -hubuser $CSONAR_HUB_USER -hubpwfile hubpwfile  --hub $CSONAR_HUB_URL --gained-since-previous-analysis --visible-warnings "active" --sarif --sarif-detail brief -o diff.sarif
+          $CSONAR_CSHOME/codesonar/bin/codesonar dump_warnings.py --project-file $PROJECT_NAME.prj  \
+          -auth password -hubuser $CSONAR_HUB_USER -hubpwfile hubpwfile  --hub $CSONAR_HUB_URL \
+          --sort "ascending:priority" --sort "descending:score" --visible-warnings "active" --gained-since-previous-analysis --csv -o diff.csv
+
+          sed -i 's#/warninginstance#https://partnerdemo.codesonar.com/warninginstance#' diff.csv
+          sed -i 's#.txt$#.html#' diff.csv
+          cut -d, -f1,2,3,4,5,6,7,8,9,15 diff.csv > diff2.csv
+          csv2md diff2.csv > diff.md
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SARIF results summary
+          path: |
+            diff.sarif
+            diff.md
+      - name: Check if diff.md has more than 2 lines
+        id: check_diff
+        run: |
+          if [ $(wc -l < diff.md) -gt 2 ]; then
+            echo "send_mail=true" >> $GITHUB_OUTPUT
+          else
+            echo "send_mail=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Email results
+        if: steps.check_diff.outputs.send_mail == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_PASSWORD }}
+          subject: CodeSonar results for ${{ github.repository }}
+          body: file://diff.md
+          convert_markdown: true
+          from: "CodeSonar Analyzer"
+          to: "mark@hermeling.org"
+          reply_to: "mark@hermeling.org"
+      - name: cleanup
+        run: rm hubpwfile

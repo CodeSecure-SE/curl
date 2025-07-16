@@ -82,7 +82,6 @@ int Curl_socket_check(curl_socket_t readfd, curl_socket_t readfd2,
   Curl_socket_check(CURL_SOCKET_BAD, CURL_SOCKET_BAD, x, z)
 
 int Curl_poll(struct pollfd ufds[], unsigned int nfds, timediff_t timeout_ms);
-int Curl_wait_ms(timediff_t timeout_ms);
 
 /*
    With Winsock the valid range is [0..INVALID_SOCKET-1] according to
@@ -93,7 +92,7 @@ int Curl_wait_ms(timediff_t timeout_ms);
 #define FDSET_SOCK(x) 1
 #define VERIFY_SOCK(x) do { \
   if(!VALID_SOCK(x)) { \
-    SET_SOCKERRNO(WSAEINVAL); \
+    SET_SOCKERRNO(SOCKEINVAL); \
     return -1; \
   } \
 } while(0)
@@ -105,7 +104,7 @@ int Curl_wait_ms(timediff_t timeout_ms);
 
 #define VERIFY_SOCK(x) do {                     \
     if(!VALID_SOCK(x) || !FDSET_SOCK(x)) {      \
-      SET_SOCKERRNO(EINVAL);                    \
+      SET_SOCKERRNO(SOCKEINVAL);                \
       return -1;                                \
     }                                           \
   } while(0)
@@ -122,6 +121,8 @@ void Curl_pollfds_init(struct curl_pollfds *cpfds,
                        struct pollfd *static_pfds,
                        unsigned int static_count);
 
+void Curl_pollfds_reset(struct curl_pollfds *cpfds);
+
 void Curl_pollfds_cleanup(struct curl_pollfds *cpfds);
 
 CURLcode Curl_pollfds_add_ps(struct curl_pollfds *cpfds,
@@ -130,18 +131,17 @@ CURLcode Curl_pollfds_add_ps(struct curl_pollfds *cpfds,
 CURLcode Curl_pollfds_add_sock(struct curl_pollfds *cpfds,
                                curl_socket_t sock, short events);
 
-struct curl_waitfds {
+struct Curl_waitfds {
   struct curl_waitfd *wfds;
   unsigned int n;
   unsigned int count;
 };
 
-void Curl_waitfds_init(struct curl_waitfds *cwfds,
+void Curl_waitfds_init(struct Curl_waitfds *cwfds,
                        struct curl_waitfd *static_wfds,
                        unsigned int static_count);
 
-CURLcode Curl_waitfds_add_ps(struct curl_waitfds *cwfds,
-                             struct easy_pollset *ps);
-
+unsigned int Curl_waitfds_add_ps(struct Curl_waitfds *cwfds,
+                                 struct easy_pollset *ps);
 
 #endif /* HEADER_CURL_SELECT_H */

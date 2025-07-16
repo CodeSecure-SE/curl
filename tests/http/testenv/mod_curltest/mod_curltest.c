@@ -252,7 +252,11 @@ static int curltest_echo_handler(request_rec *r)
   apr_table_setn(r->subprocess_env, "no-gzip", "1");
 
   ct = apr_table_get(r->headers_in, "content-type");
-  ap_set_content_type(r, ct? ct : "application/octet-stream");
+  ap_set_content_type(r, ct ? ct : "application/octet-stream");
+
+  if(apr_table_get(r->headers_in, "TE"))
+    apr_table_setn(r->headers_out, "Request-TE",
+                   apr_table_get(r->headers_in, "TE"));
 
   bb = apr_brigade_create(r->pool, c->bucket_alloc);
   /* copy any request body into the response */
@@ -335,6 +339,7 @@ static int curltest_tweak_handler(request_rec *r)
   int http_status = 200;
   apr_status_t error = APR_SUCCESS, body_error = APR_SUCCESS;
   int close_conn = 0, with_cl = 0;
+  int x_hd_len = 0, x_hd1_len = 0;
 
   if(strcmp(r->handler, "curltest-tweak")) {
     return DECLINED;
@@ -418,6 +423,14 @@ static int curltest_tweak_handler(request_rec *r)
             continue;
           }
         }
+        else if(!strcmp("x-hd", arg)) {
+          x_hd_len = (int)apr_atoi64(val);
+          continue;
+        }
+        else if(!strcmp("x-hd1", arg)) {
+          x_hd1_len = (int)apr_atoi64(val);
+          continue;
+        }
       }
       else if(!strcmp("close", arg)) {
         /* we are asked to close the connection */
@@ -439,7 +452,7 @@ static int curltest_tweak_handler(request_rec *r)
   ap_log_rerror(APLOG_MARK, APLOG_TRACE1, 0, r, "error_handler: processing "
                 "request, %s", r->args? r->args : "(no args)");
   r->status = http_status;
-  r->clength = with_cl? (chunks * chunk_size) : -1;
+  r->clength = with_cl ? (chunks * chunk_size) : -1;
   r->chunked = (r->proto_num >= HTTP_VERSION(1, 1)) && !with_cl;
   apr_table_setn(r->headers_out, "request-id", request_id);
   if(r->clength >= 0) {
@@ -450,9 +463,31 @@ static int curltest_tweak_handler(request_rec *r)
     apr_table_unset(r->headers_out, "Content-Length");
   /* Discourage content-encodings */
   apr_table_unset(r->headers_out, "Content-Encoding");
+  if(x_hd_len > 0) {
+    int i, hd_len = (16 * 1024);
+    int n = (x_hd_len / hd_len);
+    char *hd_val = apr_palloc(r->pool, x_hd_len);
+    memset(hd_val, 'X', hd_len);
+    hd_val[hd_len - 1] = 0;
+    for(i = 0; i < n; ++i) {
+      apr_table_setn(r->headers_out,
+                     apr_psprintf(r->pool, "X-Header-%d", i), hd_val);
+    }
+    if(x_hd_len % hd_len) {
+      hd_val[(x_hd_len % hd_len)] = 0;
+      apr_table_setn(r->headers_out,
+                     apr_psprintf(r->pool, "X-Header-%d", i), hd_val);
+    }
+  }
+  if(x_hd1_len > 0) {
+    char *hd_val = apr_palloc(r->pool, x_hd1_len);
+    memset(hd_val, 'Y', x_hd1_len);
+    hd_val[x_hd1_len - 1] = 0;
+    apr_table_setn(r->headers_out, "X-Mega-Header", hd_val);
+  }
+
   apr_table_setn(r->subprocess_env, "no-brotli", "1");
   apr_table_setn(r->subprocess_env, "no-gzip", "1");
-
   ap_set_content_type(r, "application/octet-stream");
   bb = apr_brigade_create(r->pool, c->bucket_alloc);
 
@@ -534,6 +569,7 @@ static int curltest_put_handler(request_rec *r)
   char buffer[128*1024];
   const char *ct;
   apr_off_t rbody_len = 0;
+  apr_off_t rbody_max_len = -1;
   const char *s_rbody_len;
   const char *request_id = "none";
   apr_time_t read_delay = 0, chunk_delay = 0;
@@ -573,6 +609,10 @@ static int curltest_put_handler(request_rec *r)
             continue;
           }
         }
+        else if(!strcmp("max_upload", arg)) {
+          rbody_max_len = (int)apr_atoi64(val);
+          continue;
+        }
       }
       ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "query parameter not "
                     "understood: '%s' in %s",
@@ -593,7 +633,7 @@ static int curltest_put_handler(request_rec *r)
   apr_table_setn(r->subprocess_env, "no-gzip", "1");
 
   ct = apr_table_get(r->headers_in, "content-type");
-  ap_set_content_type(r, ct? ct : "text/plain");
+  ap_set_content_type(r, ct ? ct : "text/plain");
 
   if(read_delay) {
     apr_sleep(read_delay);
@@ -611,6 +651,10 @@ static int curltest_put_handler(request_rec *r)
         apr_sleep(chunk_delay);
       }
       rbody_len += l;
+      if((rbody_max_len > 0) && (rbody_len > rbody_max_len)) {
+        r->status = 413;
+        break;
+      }
     }
   }
   /* we are done */
@@ -624,6 +668,10 @@ static int curltest_put_handler(request_rec *r)
   ap_log_rerror(APLOG_MARK, APLOG_TRACE1, 0, r, "put_handler: request read");
 
   rv = ap_pass_brigade(r->output_filters, bb);
+
+  if(r->status == 413) {
+    apr_sleep(apr_time_from_sec(1));
+  }
 
 cleanup:
   if(rv == APR_SUCCESS
@@ -675,7 +723,7 @@ static int curltest_1_1_required(request_rec *r)
   apr_table_setn(r->subprocess_env, "no-gzip", "1");
 
   ct = apr_table_get(r->headers_in, "content-type");
-  ap_set_content_type(r, ct? ct : "text/plain");
+  ap_set_content_type(r, ct ? ct : "text/plain");
 
   bb = apr_brigade_create(r->pool, c->bucket_alloc);
   /* flush response */

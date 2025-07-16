@@ -63,6 +63,7 @@ BearSSL
 Benoit
 BeOS
 bitmask
+bitset
 bitwise
 Björn
 Bjørn
@@ -121,10 +122,9 @@ CMakeLists
 CNA
 CNAME
 CNAMEs
-CodeQL
-codeql
 CODESET
 codeset
+CodeSonar
 Comcast
 commit's
 Config
@@ -176,6 +176,7 @@ DELE
 DER
 dereference
 dereferences
+DES
 deselectable
 deserialization
 Deserialized
@@ -186,6 +187,7 @@ devcpp
 DevOps
 devtools
 DHCP
+DHE
 dir
 distro
 distro's
@@ -203,6 +205,7 @@ DoT
 doxygen
 drftpd
 dsa
+dtrace
 Dudka
 Dymond
 dynbuf
@@ -252,8 +255,10 @@ Feltzing
 ffi
 filesize
 filesystem
+FindCURL
 FLOSS
 fnmatch
+footguns
 formpost
 formposts
 Fortnite
@@ -347,6 +352,7 @@ httpget
 HttpGet
 HTTPS
 https
+HTTPSRR
 hyper's
 Högskolan
 IANA
@@ -364,7 +370,7 @@ ifdefs
 ifhost
 IIS
 ILE
-Illumos
+illumos
 IMAP
 imap
 IMAPS
@@ -444,6 +450,8 @@ librtmp
 libs
 libssh
 libssh2
+libtest
+libtests
 Libtool
 libtool
 libuv
@@ -598,6 +606,7 @@ Orbis
 ORing
 Osipov
 OSS
+PaaS
 pac
 pacman
 parser's
@@ -688,7 +697,6 @@ RETR
 retransmit
 retrigger
 RHEL
-RICS
 Rikard
 rmdir
 ROADMAP
@@ -702,6 +710,7 @@ RRtype
 RSA
 RTMP
 rtmp
+rtmpdump
 RTMPE
 RTMPS
 RTMPT
@@ -718,6 +727,7 @@ Ruslan
 rustc
 Rustls
 rustls
+rustup
 Sagula
 SanDisk
 SAS
@@ -769,6 +779,7 @@ SOCKSv
 Solaris
 SONAME
 Soref
+SOVERSION
 SPARC
 SPDX
 SPNEGO
@@ -781,6 +792,7 @@ SSL
 ssl
 SSLeay
 SSLKEYLOGFILE
+SSLS
 sslv
 SSLv
 SSLVERSION
@@ -812,12 +824,14 @@ subdirectory
 submitters
 substring
 substrings
+sudo
 SunOS
 SunSSH
 superset
 svc
 svcb
 SVCB
+SVG
 Svyatoslav
 Swisscom
 sws
@@ -863,6 +877,7 @@ typedef
 typedefed
 Ubuntu
 ucLinux
+UCRT
 UDP
 UI
 UID
@@ -889,6 +904,7 @@ unsanitized
 Unshare
 unsharing
 untrusted
+unwrite
 UPN
 upstreaming
 URI
@@ -911,6 +927,7 @@ VC
 vcpkg
 vexxhost
 Viktor
+Virtuozzo
 VLAN
 VM
 VMS
@@ -944,7 +961,6 @@ winbuild
 WinIDN
 WinLDAP
 winsock
-winssl
 Wireshark
 wolfSSH
 wolfSSL

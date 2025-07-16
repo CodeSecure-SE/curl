@@ -23,15 +23,10 @@
  ***************************************************************************/
 #include "tool_setup.h"
 
-#include "strcase.h"
-
-#include "curlx.h"
-
 #include "tool_cfgable.h"
 #include "tool_msgs.h"
 #include "tool_getparam.h"
 #include "tool_helpers.h"
-
 #include "memdebug.h" /* keep this as LAST include */
 
 /*
@@ -65,10 +60,6 @@ const char *param2text(ParameterError error)
     return "the given option cannot be reversed with a --no- prefix";
   case PARAM_NUMBER_TOO_LARGE:
     return "too large number";
-  case PARAM_NO_NOT_BOOLEAN:
-    return "used '--no-' for option that is not a boolean";
-  case PARAM_CONTDISP_SHOW_HEADER:
-    return "showing headers and --remote-header-name cannot be combined";
   case PARAM_CONTDISP_RESUME_FROM:
     return "--continue-at and --remote-header-name cannot be combined";
   case PARAM_READ_ERROR:
@@ -77,6 +68,8 @@ const char *param2text(ParameterError error)
     return "variable expansion failure";
   case PARAM_BLANK_STRING:
     return "blank argument where content is expected";
+  case PARAM_VAR_SYNTAX:
+    return "syntax error in --variable argument";
   default:
     return "unknown error";
   }
@@ -94,7 +87,7 @@ int SetHTTPrequest(struct OperationConfig *config, HttpReq req, HttpReq *store)
     "PUT (-T, --upload-file)"
   };
 
-  if((*store == HTTPREQ_UNSPEC) ||
+  if((*store == TOOL_HTTPREQ_UNSPEC) ||
      (*store == req)) {
     *store = req;
     return 0;

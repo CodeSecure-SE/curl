@@ -33,17 +33,6 @@ void Curl_init_CONNECT(struct Curl_easy *data);
 
 CURLcode Curl_pretransfer(struct Curl_easy *data);
 
-typedef enum {
-  FOLLOW_NONE,  /* not used within the function, just a placeholder to
-                   allow initing to this */
-  FOLLOW_FAKE,  /* only records stuff, not actually following */
-  FOLLOW_RETRY, /* set if this is a request retry as opposed to a real
-                   redirect following */
-  FOLLOW_REDIR /* a full true redirect */
-} followtype;
-
-CURLcode Curl_follow(struct Curl_easy *data, char *newurl,
-                     followtype type);
 CURLcode Curl_sendrecv(struct Curl_easy *data, struct curltime *nowp);
 int Curl_single_getsock(struct Curl_easy *data,
                         struct connectdata *conn, curl_socket_t *socks);
@@ -66,9 +55,11 @@ CURLcode Curl_xfer_write_resp(struct Curl_easy *data,
                               const char *buf, size_t blen,
                               bool is_eos);
 
+bool Curl_xfer_write_is_paused(struct Curl_easy *data);
+
 /**
  * Write a single "header" line from a server response.
- * @param hd0      the 0-terminated, single header line
+ * @param hd0      the null-terminated, single header line
  * @param hdlen    the length of the header line
  * @param is_eos   TRUE iff this is the end of the response
  */
@@ -100,12 +91,13 @@ void Curl_xfer_setup1(struct Curl_easy *data,
  * the amount to receive or -1 if unknown. With `shutdown` being
  * set, the transfer is only allowed to either send OR receive
  * and the socket 2 connection will be shutdown at the end of
- * the transfer. An unclean shutdown will fail the transfer.
+ * the transfer. An unclean shutdown will fail the transfer
+ * unless `shutdown_err_ignore` is TRUE.
  */
 void Curl_xfer_setup2(struct Curl_easy *data,
                       int send_recv,
                       curl_off_t recv_size,
-                      bool shutdown);
+                      bool shutdown, bool shutdown_err_ignore);
 
 /**
  * Multi has set transfer to DONE. Last chance to trigger
@@ -140,16 +132,23 @@ CURLcode Curl_xfer_send(struct Curl_easy *data,
  */
 CURLcode Curl_xfer_recv(struct Curl_easy *data,
                         char *buf, size_t blen,
-                        ssize_t *pnrcvd);
+                        size_t *pnrcvd);
 
 CURLcode Curl_xfer_send_close(struct Curl_easy *data);
 CURLcode Curl_xfer_send_shutdown(struct Curl_easy *data, bool *done);
 
-/**
- * Return TRUE iff the transfer is not done, but further progress
+/* Return TRUE if the transfer is not done, but further progress
  * is blocked. For example when it is only receiving and its writer
- * is PAUSED.
- */
+ * is PAUSED. */
 bool Curl_xfer_is_blocked(struct Curl_easy *data);
+
+/* Query if send/recv for transfer is paused. */
+bool Curl_xfer_send_is_paused(struct Curl_easy *data);
+bool Curl_xfer_recv_is_paused(struct Curl_easy *data);
+
+/* Enable/Disable pausing of send/recv for the transfer. */
+CURLcode Curl_xfer_pause_send(struct Curl_easy *data, bool enable);
+CURLcode Curl_xfer_pause_recv(struct Curl_easy *data, bool enable);
+
 
 #endif /* HEADER_CURL_TRANSFER_H */

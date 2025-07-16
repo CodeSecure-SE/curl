@@ -21,7 +21,7 @@
 # SPDX-License-Identifier: curl
 #
 ###########################################################################
-# Shared between Makefile.am and CMakeLists.txt
+# Shared between CMakeLists.txt and Makefile.am
 
 SUPPORT = \
   _AUTHORS.md \
@@ -253,6 +253,7 @@ DPAGES = \
   show-error.md \
   show-headers.md \
   silent.md \
+  sigalgs.md \
   skip-existing.md \
   socks4.md \
   socks4a.md \
@@ -269,6 +270,7 @@ DPAGES = \
   ssl-no-revoke.md \
   ssl-reqd.md \
   ssl-revoke-best-effort.md \
+  ssl-sessions.md \
   ssl.md \
   sslv2.md \
   sslv3.md \
@@ -281,6 +283,7 @@ DPAGES = \
   tftp-blksize.md \
   tftp-no-options.md \
   time-cond.md \
+  tls-earlydata.md \
   tls-max.md \
   tls13-ciphers.md \
   tlsauthtype.md \
@@ -299,6 +302,7 @@ DPAGES = \
   trace.md \
   unix-socket.md \
   upload-file.md \
+  upload-flags.md \
   url.md \
   url-query.md \
   use-ascii.md \

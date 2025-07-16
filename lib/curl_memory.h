@@ -57,7 +57,6 @@
 #ifdef HEADER_CURL_MEMDEBUG_H
 /* cleanup after memdebug.h */
 
-#ifdef MEMDEBUG_NODEFINES
 #ifdef CURLDEBUG
 
 #undef strdup
@@ -69,40 +68,28 @@
 #undef recv
 
 #ifdef _WIN32
-#  ifdef UNICODE
-#    undef wcsdup
-#    undef _wcsdup
-#    undef _tcsdup
-#  else
-#    undef _tcsdup
-#  endif
+#undef _tcsdup
 #endif
 
 #undef socket
 #undef accept
+#ifdef HAVE_ACCEPT4
+#undef accept4
+#endif
 #ifdef HAVE_SOCKETPAIR
 #undef socketpair
 #endif
 
-#ifdef HAVE_GETADDRINFO
-#if defined(getaddrinfo) && defined(__osf__)
-#undef ogetaddrinfo
-#else
-#undef getaddrinfo
-#endif
-#endif /* HAVE_GETADDRINFO */
-
-#ifdef HAVE_FREEADDRINFO
-#undef freeaddrinfo
-#endif /* HAVE_FREEADDRINFO */
-
 /* sclose is probably already defined, redefine it! */
 #undef sclose
+#define sclose(x)  CURL_SCLOSE(x)
 #undef fopen
+#ifdef CURL_FOPEN
+#define fopen(fname, mode)  CURL_FOPEN(fname, mode)
+#endif
 #undef fdopen
 #undef fclose
 
-#endif /* MEMDEBUG_NODEFINES */
 #endif /* CURLDEBUG */
 
 #undef HEADER_CURL_MEMDEBUG_H
@@ -134,9 +121,6 @@ extern curl_free_callback Curl_cfree;
 extern curl_realloc_callback Curl_crealloc;
 extern curl_strdup_callback Curl_cstrdup;
 extern curl_calloc_callback Curl_ccalloc;
-#if defined(_WIN32) && defined(UNICODE)
-extern curl_wcsdup_callback Curl_cwcsdup;
-#endif
 
 #ifndef CURLDEBUG
 
@@ -161,18 +145,13 @@ extern curl_wcsdup_callback Curl_cwcsdup;
 #define free(ptr) Curl_cfree(ptr)
 
 #ifdef _WIN32
-#  ifdef UNICODE
-#    undef wcsdup
-#    define wcsdup(ptr) Curl_cwcsdup(ptr)
-#    undef _wcsdup
-#    define _wcsdup(ptr) Curl_cwcsdup(ptr)
-#    undef _tcsdup
-#    define _tcsdup(ptr) Curl_cwcsdup(ptr)
-#  else
-#    undef _tcsdup
-#    define _tcsdup(ptr) Curl_cstrdup(ptr)
-#  endif
+#undef _tcsdup
+#ifdef UNICODE
+#define _tcsdup(ptr) Curl_wcsdup(ptr)
+#else
+#define _tcsdup(ptr) Curl_cstrdup(ptr)
 #endif
+#endif /* _WIN32 */
 
 #endif /* CURLDEBUG */
 #endif /* HEADER_CURL_MEMORY_H */

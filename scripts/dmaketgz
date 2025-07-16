@@ -40,6 +40,7 @@ if test -f Makefile; then
     make distclean
 fi
 docker build \
+       --no-cache \
        --build-arg SOURCE_DATE_EPOCH="$timestamp" \
        --build-arg UID="$(id -u)" \
        --build-arg GID="$(id -g)" \
@@ -51,4 +52,4 @@ docker run --rm -u "$(id -u):$(id -g)" \
   autoreconf -fi
   ./configure --without-ssl --without-libpsl
   make -sj8
-  ./maketgz $version"
+  ./scripts/maketgz $version"

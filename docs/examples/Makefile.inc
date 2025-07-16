@@ -21,6 +21,7 @@
 # SPDX-License-Identifier: curl
 #
 ###########################################################################
+# Shared between CMakeLists.txt and Makefile.am
 
 # These are all libcurl example programs to be test compiled
 check_PROGRAMS = \
@@ -28,6 +29,7 @@ check_PROGRAMS = \
   address-scope \
   altsvc \
   anyauthput \
+  block_ip \
   certinfo \
   chkspeed \
   connect-to \
@@ -36,6 +38,7 @@ check_PROGRAMS = \
   default-scheme \
   externalsocket \
   fileupload \
+  ftp-delete \
   ftp-wildcard \
   ftpget \
   ftpgetinfo \
@@ -81,7 +84,7 @@ check_PROGRAMS = \
   ipv6 \
   keepalive \
   localport \
-  maxconnects  \
+  maxconnects \
   multi-app \
   multi-debugcallback \
   multi-double \

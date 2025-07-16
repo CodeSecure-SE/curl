@@ -69,7 +69,16 @@ jobs:
           path: |
             diff.sarif
             diff.md
+      - name: Check if diff.md has more than 2 lines
+        id: check_diff
+        run: |
+          if [ $(wc -l < diff.md) -gt 2 ]; then
+            echo "send_mail=true" >> $GITHUB_OUTPUT
+          else
+            echo "send_mail=false" >> $GITHUB_OUTPUT
+          fi
       - name: Email results
+        if: steps.check_diff.outputs.send_mail == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com

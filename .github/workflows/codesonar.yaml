@@ -66,7 +66,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SARIF results summary
-          path: diff.sarif
+          path: |
+            diff.sarif
+            diff.md
       - name: Email results
         uses: dawidd6/action-send-mail@v3
         with:

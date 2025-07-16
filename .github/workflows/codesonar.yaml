@@ -5,7 +5,7 @@ on:
       - release/daily
   pull_request:
     branches:
-      - 'release/daily'
+      - release/daily
   #schedule:
   #  - cron: '17 2 * * *'
 

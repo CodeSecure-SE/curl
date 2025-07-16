@@ -73,6 +73,7 @@ libstandaloneengine.a
 tests/string
 tests/config
 .vscode/settings.json
+tests/ech-log/
 
 curl.prj_files/*
 curl.conf

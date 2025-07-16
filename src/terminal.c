@@ -36,6 +36,8 @@
 #  include <termio.h>
 #endif
 
+
+
 /*
  * get_terminal_columns() returns the number of columns in the current
  * terminal. It will return 79 on failure. Also, the number can be big.

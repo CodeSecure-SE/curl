@@ -1,52 +1,52 @@
-name: CodeSonar run
+name: CodeSonar
 on:
-  push:
+  push:                  # Only run onces the Pull request is created
     branches:
-      - release/daily
+      - 'release/**'               # Feature Branches
   pull_request:
     branches:
-      - 'release/daily'
-  #schedule:
-  #  - cron: '17 2 * * *'
-
+      - 'release/**'       
+  
 jobs:
   CodeSonar_Analyze:
     permissions: write-all
     runs-on: codesecure-runner-set
     container:
       image: ghcr.io/codesecure-se/curl-cso-builder:8.1p0
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.github_token }}
     env:
-      CAFILE: ".github/github.cert.pem"
+      CAFILE: ".github/github.cert.pem" 
       TOKEN: "${{ secrets.GITHUB_TOKEN }}"
       API_URL: https://api.github.com
       REQUEST_NUMBER: ${{ github.event.pull_request.number }}
-      ROOT_TREE: "Curl-Projects"
+      ROOT_TREE: "OSS-Projects/Curl-GitHub" 
       PROJECT_NAME: "curl"
-      BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-      COMMIT_HASH: $GITHUB_SHA
-      CSONAR_HUB_URL: "https://partnerdemo.codesonar.com"
-      CSONAR_HUB_USER: "${{ vars.CSONAR_HUB_USER }}"
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+      CSONAR_HUB_URL: "https://partnerdemo.codesonar.com" 
+      CSONAR_HUB_USER: "${{ secrets.CSONAR_HUB_USER }}"
       CSONAR_HUB_PASSWORD: "${{ secrets.CSONAR_HUB_PASSWORD }}"
       CSONAR_CSHOME: /opt/codesonar
-      CSO_GITHUB: /opt/codesonar-github
-      REPO_URL: "http://github.com/CodeSecure-SE/curl"
+      CS_USER_HOME: /__w/curl/curl
+      COMMIT_HASH: ${{ github.sha }}
+      REPO_URL: "https://github.com/CodeSecure-SE/curl"    # the github.repositoryUrl is not an http-link.
       TARGET: ${{ github.base_ref }}
       IS_PR: ${{ github.event_name }}
     steps:
-      - name: Set parallelism and project name
-        run: |
-          echo "PARALLEL=`nproc`" >> $GITHUB_ENV
-      - name: Checkout
+      - name: Set parallelism
+        run:  echo "PARALLEL=`nproc`" >> $GITHUB_ENV
+      - name: Checkout 
         uses: actions/checkout@v4
-      - name: Fix ownership warning
-        run: git config --global --add safe.directory /__w/wolfssl/wolfssl
+      - name: Safe directory
+        run: git config --global --add safe.directory `pwd`
       - name : configure
         run: autoreconf -fi; ./configure --with-openssl
       - name: Checkout CodeSonar CI-Script
         uses: actions/checkout@v4
         with:
           repository: CodeSecure-SE/codesonar_ci
-          path: codesonar-scripts
+          path: cso-scripts
       - name: Build and Analyze
         run: python3 codesonar-scripts/build_and_analyze.py codesonar.conf make -j $PARALLEL
       - name: Download results

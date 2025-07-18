@@ -25,6 +25,7 @@ jobs:
         run: |
           git remote add upstream https://github.com/curl/curl.git
           git fetch upstream
+          git remote -v
 
       - name: Merge upstream into fork
         run: |

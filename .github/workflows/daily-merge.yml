@@ -8,6 +8,8 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    env:
+      REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
       
     steps:
       - name: Checkout fork
@@ -25,9 +27,10 @@ jobs:
         run: |
           git remote add upstream https://github.com/curl/curl.git
           git fetch upstream
-          git remote -v
 
       - name: Merge upstream into fork
         run: |
           git merge upstream/master --no-edit 
-          git push https://x-access-token:${{ secrets.REPO_TOKEN }}@github.com/CodeSecure-SE/curl release/daily
+          git clone https://x-access-token:${REPO_TOKEN}@github.com/CodeSecure-SE/curl.git
+          git remote -v
+          git push release/daily

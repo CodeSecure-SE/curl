@@ -11,8 +11,6 @@ jobs:
  
     permissions: write-all
 
-
-      
       
     steps:
       - name: Checkout fork
@@ -20,6 +18,7 @@ jobs:
         with:
           ref: release/daily
           fetch-depth: 0
+          token: ${{ secrets.REPO_TOKEN }}
 
       - name: Setup Git
         run: |
@@ -34,5 +33,4 @@ jobs:
       - name: Merge upstream into fork
         run: |
           git merge upstream/master --no-edit 
-  
           git push

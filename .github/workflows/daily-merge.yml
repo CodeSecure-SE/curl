@@ -15,7 +15,6 @@ jobs:
       - name: Checkout fork
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
           ref: release/daily
 
       - name: Setup Git
@@ -30,6 +29,5 @@ jobs:
 
       - name: Merge upstream into fork
         run: |
-          git checkout release/daily
           git merge upstream/master --no-edit || echo "No changes to merge"
-          git push https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }} release/daily
+          git push origin release/daily

@@ -31,6 +31,6 @@ jobs:
       - name: Merge upstream into fork
         run: |
           git merge upstream/master --no-edit 
-          git clone https://x-access-token:${REPO_TOKEN}@github.com/CodeSecure-SE/curl.git
+          git remote set-url origin https://x-access-token:${REPO_TOKEN}@github.com/CodeSecure-SE/curl.git
           git remote -v
-          git push release/daily
+          git push

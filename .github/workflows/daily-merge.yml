@@ -29,4 +29,4 @@ jobs:
       - name: Merge upstream into fork
         run: |
           git merge upstream/master --no-edit 
-          git push https://x-access-token:${{ secrets.REPO_TOKEN }}@github.com/CodeSecure-SE/curl.git release/daily
+          git push https://x-access-token:${{ secrets.REPO_TOKEN }}@github.com/CodeSecure-SE/curl release/daily

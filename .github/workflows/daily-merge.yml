@@ -8,8 +8,9 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    env:
-      REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
+ 
+    permissions:
+      contents: write # to allow pushing changes to the repository
       
     steps:
       - name: Checkout fork
@@ -31,6 +32,5 @@ jobs:
       - name: Merge upstream into fork
         run: |
           git merge upstream/master --no-edit 
-          git remote set-url origin https://x-access-token:${REPO_TOKEN}@github.com/CodeSecure-SE/curl.git
-          git remote -v
+  
           git push

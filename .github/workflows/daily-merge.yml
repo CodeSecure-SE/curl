@@ -24,7 +24,7 @@ jobs:
 
       - name: Add upstream remote
         run: |
-          git remote add upstream https://github.com/wolfssl/wolfssl.git
+          git remote add upstream https://github.com/curl/curl.git
           git fetch upstream
 
       - name: Merge upstream into fork

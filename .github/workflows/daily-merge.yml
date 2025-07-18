@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: write # to allow pushing changes to the repository
       actions: write
+      workflows: write
       
     steps:
       - name: Checkout fork

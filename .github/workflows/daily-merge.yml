@@ -8,8 +8,6 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
       
     steps:
       - name: Checkout fork
@@ -29,6 +27,6 @@ jobs:
 
       - name: Merge upstream into fork
         run: |
-          git merge upstream/master --no-edit || echo "No changes to merge"
+          git merge upstream/master --no-edit 
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/CodeSecure-SE/curl.git
           git push origin release/daily

@@ -54,7 +54,7 @@ unsigned int get_terminal_columns(void)
     if((endptr != colp) && (endptr == colp + strlen(colp)) && (num > 20) &&
        (num < 10000))
       width = (unsigned int)num;
-    curl_free(colp);
+//    curl_free(colp);
   }
 
   if(!width) {

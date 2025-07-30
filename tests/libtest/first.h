@@ -34,7 +34,7 @@
 
 #include <curl/curl.h>
 
-typedef CURLcode (*entry_func_t)(char *);
+typedef CURLcode (*entry_func_t)(const char *);
 
 struct entry_s {
   const char *name;
@@ -69,20 +69,31 @@ extern int unitfail; /* for unittests */
   if((res = curl_multi_setopt((A), (B), (C))) != CURLE_OK)      \
     goto test_cleanup
 
-extern char *libtest_arg2; /* set by first.c to the argv[2] or NULL */
-extern char *libtest_arg3; /* set by first.c to the argv[3] or NULL */
-extern char *libtest_arg4; /* set by first.c to the argv[4] or NULL */
+extern const char *libtest_arg2; /* set by first.c to the argv[2] or NULL */
+extern const char *libtest_arg3; /* set by first.c to the argv[3] or NULL */
+extern const char *libtest_arg4; /* set by first.c to the argv[4] or NULL */
 
 /* argc and argv as passed in to the main() function */
 extern int test_argc;
-extern char **test_argv;
+extern const char **test_argv;
 extern int testnum;
 extern struct curltime tv_test_start; /* for test timing */
+
+extern int coptind;
+extern const char *coptarg;
+int cgetopt(int argc, const char * const argv[], const char *optstring);
 
 extern int select_wrapper(int nfds, fd_set *rd, fd_set *wr, fd_set *exc,
                           struct timeval *tv);
 
 extern char *hexdump(const unsigned char *buffer, size_t len);
+
+#ifndef CURL_DISABLE_WEBSOCKETS
+CURLcode ws_send_ping(CURL *curl, const char *send_payload);
+CURLcode ws_recv_pong(CURL *curl, const char *expected_payload);
+/* just close the connection */
+void ws_close(CURL *curl);
+#endif
 
 /*
 ** TEST_ERR_* values must within the CURLcode range to not cause compiler

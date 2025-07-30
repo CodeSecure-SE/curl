@@ -209,7 +209,7 @@ static CURLcode recv_frame(CURL *curl, bool *stop)
 }
 #endif
 
-static CURLcode test_lib2700(char *URL)
+static CURLcode test_lib2700(const char *URL)
 {
 #ifndef CURL_DISABLE_WEBSOCKETS
   CURLcode res = CURLE_OK;
@@ -222,9 +222,9 @@ static CURLcode test_lib2700(char *URL)
 
   easy_setopt(curl, CURLOPT_URL, URL);
   easy_setopt(curl, CURLOPT_USERAGENT, "client/test2700");
-  libtest_debug_config.nohex = 1;
-  libtest_debug_config.tracetime = 1;
-  easy_setopt(curl, CURLOPT_DEBUGDATA, &libtest_debug_config);
+  debug_config.nohex = 1;
+  debug_config.tracetime = 1;
+  easy_setopt(curl, CURLOPT_DEBUGDATA, &debug_config);
   easy_setopt(curl, CURLOPT_DEBUGFUNCTION, libtest_debug_cb);
   easy_setopt(curl, CURLOPT_VERBOSE, 1L);
   easy_setopt(curl, CURLOPT_CONNECT_ONLY, 2L);

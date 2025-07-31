@@ -108,7 +108,7 @@ test718 test719 test720 test721 test722 test723 test724 test725 test726 \
 test727 test728 test729 test730 test731 test732 test733 test734 test735 \
 test736 test737 test738 test739 test740 test741 test742 test743 test744 \
 test745 test746 test747 test748 test749 test750 test751 test752 test753 \
-test754 test755 test756 \
+test754 test755 test756 test757 \
 test780 test781 test782 test783 test784 test785 test786 test787 test788 \
 test789 test790 test791 test792 test793 \
 \
@@ -278,8 +278,7 @@ test3032 test3033 \
 test3100 test3101 test3102 test3103 test3104 test3105 \
 \
 test3200 test3201 test3202 test3203 test3204 test3205 test3207 test3208 \
-test3209 test3210 test3211 test3212 test3213 test3214 \
-\
+test3209 test3210 test3211 test3212 test3213 test3214 test3215 \
 test4000 test4001
 
 EXTRA_DIST = $(TESTCASES) DISABLED

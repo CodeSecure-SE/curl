@@ -73,26 +73,6 @@
 #define SCH_DEV(x) do { } while(0)
 #endif
 
-#ifndef BCRYPT_CHAIN_MODE_CCM
-#define BCRYPT_CHAIN_MODE_CCM L"ChainingModeCCM"
-#endif
-
-#ifndef BCRYPT_CHAIN_MODE_GCM
-#define BCRYPT_CHAIN_MODE_GCM L"ChainingModeGCM"
-#endif
-
-#ifndef BCRYPT_AES_ALGORITHM
-#define BCRYPT_AES_ALGORITHM L"AES"
-#endif
-
-#ifndef BCRYPT_SHA256_ALGORITHM
-#define BCRYPT_SHA256_ALGORITHM L"SHA256"
-#endif
-
-#ifndef BCRYPT_SHA384_ALGORITHM
-#define BCRYPT_SHA384_ALGORITHM L"SHA384"
-#endif
-
 #ifdef HAS_CLIENT_CERT_PATH
 #ifdef UNICODE
 #define CURL_CERT_STORE_PROV_SYSTEM CERT_STORE_PROV_SYSTEM_W
@@ -137,6 +117,7 @@
  * #define failf(x, y, ...) printf(y, __VA_ARGS__)
  */
 
+/* Offered when targeting Vista (XP SP2+) */
 #ifndef CALG_SHA_256
 #define CALG_SHA_256 0x0000800c
 #endif
@@ -147,10 +128,12 @@
 #define ALG_CLASS_DHASH ALG_CLASS_HASH
 #endif
 
+/* Offered by mingw-w64 v4+. MS SDK 6.0A+. */
 #ifndef PKCS12_NO_PERSIST_KEY
 #define PKCS12_NO_PERSIST_KEY 0x00008000
 #endif
 
+/* Offered by mingw-w64 v4+. MS SDK ~10+/~VS2017+. */
 #ifndef CERT_FIND_HAS_PRIVATE_KEY
 #define CERT_FIND_HAS_PRIVATE_KEY (21 << CERT_COMPARE_SHIFT)
 #endif
@@ -545,7 +528,7 @@ schannel_acquire_credential_handle(struct Curl_cfilter *cf,
   case CURL_SSLVERSION_TLSv1_3:
   {
     result = schannel_set_ssl_version_min_max(&enabled_protocols, cf, data);
-    if(result != CURLE_OK)
+    if(result)
       return result;
     break;
   }
@@ -843,7 +826,7 @@ schannel_acquire_credential_handle(struct Curl_cfilter *cf,
               "user set an algorithm cipher list.");
       }
       result = set_ssl_ciphers(&schannel_cred, ciphers, algIds);
-      if(CURLE_OK != result) {
+      if(result) {
         failf(data, "schannel: Failed setting algorithm cipher list");
         return result;
       }
@@ -1132,7 +1115,7 @@ schannel_connect_step1(struct Curl_cfilter *cf, struct Curl_easy *data)
                              outbuf.pvBuffer, outbuf.cbBuffer, FALSE,
                              &written);
   Curl_pSecFn->FreeContextBuffer(outbuf.pvBuffer);
-  if((result != CURLE_OK) || (outbuf.cbBuffer != written)) {
+  if(result || (outbuf.cbBuffer != written)) {
     failf(data, "schannel: failed to send initial handshake data: "
           "sent %zu of %lu bytes", written, outbuf.cbBuffer);
     return CURLE_SSL_CONNECT_ERROR;
@@ -1241,7 +1224,7 @@ schannel_connect_step2(struct Curl_cfilter *cf, struct Curl_easy *data)
                      "need more data"));
         return CURLE_OK;
       }
-      else if((result != CURLE_OK) || (nread == 0)) {
+      else if(result || (nread == 0)) {
         failf(data, "schannel: failed to receive handshake, "
               "SSL/TLS connection failed");
         return CURLE_SSL_CONNECT_ERROR;
@@ -1320,8 +1303,7 @@ schannel_connect_step2(struct Curl_cfilter *cf, struct Curl_easy *data)
           result = Curl_conn_cf_send(cf->next, data,
                                      outbuf[i].pvBuffer, outbuf[i].cbBuffer,
                                      FALSE, &written);
-          if((result != CURLE_OK) ||
-             (outbuf[i].cbBuffer != written)) {
+          if(result || (outbuf[i].cbBuffer != written)) {
             failf(data, "schannel: failed to send next handshake data: "
                   "sent %zu of %lu bytes", written, outbuf[i].cbBuffer);
             return CURLE_SSL_CONNECT_ERROR;
@@ -1693,7 +1675,7 @@ static CURLcode schannel_connect(struct Curl_cfilter *cf,
   if(ssl_connect_done == connssl->connecting_state) {
     connssl->state = ssl_connection_complete;
 
-#ifdef SECPKG_ATTR_ENDPOINT_BINDINGS
+#ifdef SECPKG_ATTR_ENDPOINT_BINDINGS  /* mingw-w64 v9+. MS SDK 7.0A+. */
     /* When SSPI is used in combination with Schannel
      * we need the Schannel context to create the Schannel
      * binding to pass the IIS extended protection checks.
@@ -1828,7 +1810,7 @@ schannel_send(struct Curl_cfilter *cf, struct Curl_easy *data,
                                   FALSE, &this_write);
       if(result == CURLE_AGAIN)
         continue;
-      else if(result != CURLE_OK) {
+      else if(result) {
         break;
       }
 

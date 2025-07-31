@@ -674,14 +674,6 @@ struct connectdata {
   struct proxy_info socks_proxy;
   struct proxy_info http_proxy;
 #endif
-  /* 'primary' and 'secondary' get filled with IP quadruple
-     (local/remote numerical ip address and port) whenever a connect is
-     *attempted*.
-     When more than one address is tried for a connection these will hold data
-     for the last attempt. When the connection is actually established
-     these are updated with data which comes directly from the socket. */
-  struct ip_quadruple primary;
-  struct ip_quadruple secondary;
   char *user;    /* username string, allocated */
   char *passwd;  /* password string, allocated */
   char *options; /* options string, allocated */
@@ -742,7 +734,7 @@ struct connectdata {
 
   /*************** Request - specific items ************/
 #if defined(USE_WINDOWS_SSPI) && defined(SECPKG_ATTR_ENDPOINT_BINDINGS)
-  CtxtHandle *sslContext;
+  CtxtHandle *sslContext;  /* mingw-w64 v9+. MS SDK 7.0A+. */
 #endif
 
 #ifdef USE_NTLM

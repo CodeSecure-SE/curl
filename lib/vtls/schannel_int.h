@@ -30,29 +30,14 @@
 
 #include "vtls.h"
 
-#if defined(CERT_CHAIN_REVOCATION_CHECK_CHAIN) && !defined(CURL_WINDOWS_UWP)
+#ifndef CURL_WINDOWS_UWP
 #define HAS_MANUAL_VERIFY_API
 #endif
 
+/* These two macros are missing from mingw-w64 in UWP mode as of v13 */
 #if defined(CryptStringToBinary) && defined(CRYPT_STRING_HEX) && \
   !defined(DISABLE_SCHANNEL_CLIENT_CERT)
 #define HAS_CLIENT_CERT_PATH
-#endif
-
-#ifndef CRYPT_DECODE_NOCOPY_FLAG
-#define CRYPT_DECODE_NOCOPY_FLAG 0x1
-#endif
-
-#ifndef CRYPT_DECODE_ALLOC_FLAG
-#define CRYPT_DECODE_ALLOC_FLAG 0x8000
-#endif
-
-#ifndef CERT_ALT_NAME_DNS_NAME
-#define CERT_ALT_NAME_DNS_NAME 3
-#endif
-
-#ifndef CERT_ALT_NAME_IP_ADDRESS
-#define CERT_ALT_NAME_IP_ADDRESS 8
 #endif
 
 #if defined(_MSC_VER) && (_MSC_VER <= 1600)
@@ -66,6 +51,7 @@
 #define CERT_STORE_PROV_SYSTEM_W  ((LPCSTR)(size_t)10)
 #endif
 
+/* Offered by mingw-w64 v8+, MS SDK ~10+/~VS2022+ */
 #ifndef SCH_CREDENTIALS_VERSION
 #define SCH_CREDENTIALS_VERSION  0x00000005
 

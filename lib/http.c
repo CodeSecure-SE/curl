@@ -1323,7 +1323,7 @@ CURLcode Curl_http_follow(struct Curl_easy *data, const char *newurl,
     data->info.wouldredirect = follow_url;
 
     if(reachedmax) {
-      failf(data, "Maximum (%ld) redirects followed", data->set.maxredirs);
+      failf(data, "Maximum (%d) redirects followed", data->set.maxredirs);
       return CURLE_TOO_MANY_REDIRECTS;
     }
     return CURLE_OK;
@@ -2704,6 +2704,8 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
       if(result)
         goto fail;
       info_version = "HTTP/2";
+      /* There is no ALPN here, but the connection is now definitely h2 */
+      conn->httpversion_seen = 20;
     }
     else
       info_version = "HTTP/1.x";
@@ -4785,7 +4787,7 @@ static CURLcode cr_exp100_read(struct Curl_easy *data,
     /* We are now waiting for a reply from the server or
      * a timeout on our side IFF the request has been fully sent. */
     DEBUGF(infof(data, "cr_exp100_read, start AWAITING_CONTINUE, "
-           "timeout %ldms", data->set.expect_100_timeout));
+           "timeout %dms", data->set.expect_100_timeout));
     ctx->state = EXP100_AWAITING_CONTINUE;
     ctx->start = curlx_now();
     Curl_expire(data, data->set.expect_100_timeout, EXPIRE_100_TIMEOUT);

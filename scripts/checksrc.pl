@@ -62,6 +62,7 @@ my %banfunc = (
     "_mbscat" => 1,
     "_mbsncat" => 1,
     "_tcscat" => 1,
+    "_tcsdup" => 1,
     "_tcsncat" => 1,
     "_wcscat" => 1,
     "_wcsncat" => 1,
@@ -73,9 +74,20 @@ my %banfunc = (
     "LoadLibraryEx" => 1,
     "LoadLibraryExA" => 1,
     "LoadLibraryExW" => 1,
+    "WSASocket" => 1,
+    "WSASocketA" => 1,
+    "WSASocketW" => 1,
     "_waccess" => 1,
     "_access" => 1,
     "access" => 1,
+    "accept" => 1,
+    "accept4" => 1,
+    "freeaddrinfo" => 1,
+    "getaddrinfo" => 1,
+    "recv" => 1,
+    "send" => 1,
+    "socket" => 1,
+    "socketpair" => 1,
     );
 
 my %warnings_extended = (
@@ -515,7 +527,7 @@ sub scanfile {
         }
 
         # detect long lines
-        if(length($l) > $max_column) {
+        if(length($l) > $max_column && $l !~ / https:\/\//) {
             checkwarn("LONGLINE", $line, length($l), $file, $l,
                       "Longer than $max_column columns");
         }
@@ -936,7 +948,6 @@ sub scanfile {
                     my $diff = $second - $first;
                     checkwarn("INDENTATION", $line, length($1), $file, $ol,
                               "not indented $indent steps (uses $diff)");
-
                 }
             }
         }

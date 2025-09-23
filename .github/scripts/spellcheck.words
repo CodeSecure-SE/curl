@@ -122,6 +122,7 @@ CMakeLists
 CNA
 CNAME
 CNAMEs
+CodeQL
 CODESET
 codeset
 CodeSonar
@@ -355,7 +356,6 @@ HTTPS
 https
 HTTPSRR
 hyper's
-Högskolan
 IANA
 Icecast
 ICONV
@@ -423,7 +423,6 @@ Krb
 krb
 Kubernetes
 Kuhrt
-Kungliga
 Largefile
 LDAP
 ldap
@@ -847,7 +846,6 @@ Tatsuhiro
 TBD
 TCP
 tcpdump
-Tekniska
 testability
 testcurl
 TFTP

@@ -121,14 +121,11 @@
 static void ossl_provider_cleanup(struct Curl_easy *data);
 #endif
 
-/*
- * AWS-LC has `SSL_CTX_set_default_read_buffer_len()?` but runs into
- * decryption failures with large buffers. Sporadic failures in
- * test_10_08 with h2 proxy uploads, increased frequency
- * with CURL_DBG_SOCK_RBLOCK=50. Looks like a bug on their part.
- */
+/* AWS-LC fixed a bug with large buffers in v1.61.0 which also introduced
+ * X509_V_ERR_EC_KEY_EXPLICIT_PARAMS. */
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && \
-  !defined(LIBRESSL_VERSION_NUMBER) && !defined(HAVE_BORINGSSL_LIKE)
+  !defined(LIBRESSL_VERSION_NUMBER) && !defined(OPENSSL_IS_BORINGSSL) && \
+  (!defined(OPENSSL_IS_AWSLC) || (defined(X509_V_ERR_EC_KEY_EXPLICIT_PARAMS)))
 #define HAVE_SSL_CTX_SET_DEFAULT_READ_BUFFER_LEN 1
 #endif
 
@@ -140,12 +137,12 @@ static void ossl_provider_cleanup(struct Curl_easy *data);
 
 #if defined(USE_OPENSSL_ENGINE) || defined(OPENSSL_HAS_PROVIDERS)
 #include <openssl/ui.h>
-#endif
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #define OSSL_UI_METHOD_CAST(x) (x)
 #else
 #define OSSL_UI_METHOD_CAST(x) CURL_UNCONST(x)
+#endif
 #endif
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L /* OpenSSL 1.1.0+ and LibreSSL */
@@ -296,20 +293,10 @@ do {                              \
 } while(0)
 #endif
 
-static int asn1_object_dump(ASN1_OBJECT *a, char *buf, size_t len)
+static int asn1_object_dump(const ASN1_OBJECT *a, char *buf, size_t len)
 {
-  int i, ilen;
-
-  ilen = (int)len;
-  if(ilen < 0)
-    return 1; /* buffer too big */
-
-  i = i2t_ASN1_OBJECT(buf, ilen, a);
-
-  if(i >= ilen)
-    return 1; /* buffer too small */
-
-  return 0;
+  int i = i2t_ASN1_OBJECT(buf, (int)len, a);
+  return (i >= (int)len);  /* buffer too small */
 }
 
 static CURLcode X509V3_ext(struct Curl_easy *data,
@@ -340,7 +327,9 @@ static CURLcode X509V3_ext(struct Curl_easy *data,
 
     obj = X509_EXTENSION_get_object(ext);
 
-    asn1_object_dump(obj, namebuf, sizeof(namebuf));
+    if(asn1_object_dump(obj, namebuf, sizeof(namebuf)))
+      /* make sure the name is null-terminated */
+      namebuf [ sizeof(namebuf) - 1] = 0;
 
     if(!X509V3_EXT_print(bio_out, ext, 0, 0))
       ASN1_STRING_print(bio_out, (ASN1_STRING *)X509_EXTENSION_get_data(ext));
@@ -1634,7 +1623,14 @@ static int pkcs12load(struct Curl_easy *data,
 fail:
   EVP_PKEY_free(pri);
   X509_free(x509);
+#if defined(__clang__) && __clang_major__ >= 16
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-function-type-strict"
+#endif
   sk_X509_pop_free(ca, X509_free);
+#if defined(__clang__) && __clang_major__ >= 16
+#pragma clang diagnostic pop
+#endif
   if(!cert_done)
     return 0; /* failure! */
   return 1;
@@ -2865,11 +2861,12 @@ static void ossl_trace(int direction, int ssl_ver, int content_type,
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L /* 1.1.0 */
 static CURLcode
-ossl_set_ssl_version_min_max(struct Curl_cfilter *cf, SSL_CTX *ctx)
+ossl_set_ssl_version_min_max(struct Curl_cfilter *cf, SSL_CTX *ctx,
+                             unsigned int ssl_version_min)
 {
   struct ssl_primary_config *conn_config = Curl_ssl_cf_get_primary_config(cf);
   /* first, TLS min version... */
-  long curl_ssl_version_min = conn_config->version;
+  long curl_ssl_version_min = (long)ssl_version_min;
   long curl_ssl_version_max;
 
   /* convert curl min SSL version option to OpenSSL constant */
@@ -3160,7 +3157,14 @@ static CURLcode load_cacert_from_memory(X509_STORE *store,
     }
   }
 
+#if defined(__clang__) && __clang_major__ >= 16
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-function-type-strict"
+#endif
   sk_X509_INFO_pop_free(inf, X509_INFO_free);
+#if defined(__clang__) && __clang_major__ >= 16
+#pragma clang diagnostic pop
+#endif
   BIO_free(cbio);
 
   /* if we did not end up importing anything, treat that as an error */
@@ -3450,8 +3454,7 @@ static CURLcode ossl_populate_x509_store(struct Curl_cfilter *cf,
        problems with server-sent legacy intermediates. Newer versions of
        OpenSSL do alternate chain checking by default but we do not know how to
        determine that in a reliable manner.
-       https://web.archive.org/web/20190422050538/
-       rt.openssl.org/Ticket/Display.html?id=3621
+       https://web.archive.org/web/20190422050538/rt.openssl.org/Ticket/Display.html?id=3621
     */
     X509_STORE_set_flags(store, X509_V_FLAG_TRUSTED_FIRST);
     if(!ssl_config->no_partialchain && !ssl_crlfile) {
@@ -4110,7 +4113,7 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     ctx_options |= SSL_OP_NO_SSLv3;
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L /* 1.1.0 */
-    result = ossl_set_ssl_version_min_max(cf, octx->ssl_ctx);
+    result = ossl_set_ssl_version_min_max(cf, octx->ssl_ctx, ssl_version_min);
 #else
     result = ossl_set_ssl_version_min_max_legacy(&ctx_options, cf, data);
 #endif
@@ -4721,8 +4724,7 @@ static CURLcode ossl_pkp_pin_peer_pubkey(struct Curl_easy *data, X509* cert,
     /* Begin Gyrations to get the subjectPublicKeyInfo     */
     /* Thanks to Viktor Dukhovni on the OpenSSL mailing list */
 
-    /* https://groups.google.com/group/mailing.openssl.users/browse_thread
-       /thread/d61858dae102c6c7 */
+    /* https://groups.google.com/group/mailing.openssl.users/browse_thread/thread/d61858dae102c6c7 */
     len1 = i2d_X509_PUBKEY(X509_get_X509_PUBKEY(cert), NULL);
     if(len1 < 1)
       break; /* failed */

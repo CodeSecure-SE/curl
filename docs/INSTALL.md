@@ -15,7 +15,8 @@ libcurl from [source code](https://curl.se/download.html).
 
 ## Building using vcpkg
 
-You can download and install curl and libcurl using the [vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager:
+You can download and install curl and libcurl using
+the [vcpkg](https://github.com/Microsoft/vcpkg) dependency manager:
 
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
@@ -30,8 +31,8 @@ or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
 ## Building from git
 
 If you get your code off a git repository instead of a release tarball, see
-the [GIT-INFO.md](https://github.com/curl/curl/blob/master/GIT-INFO.md) file in the root directory for specific instructions on how
-to proceed.
+the [GIT-INFO.md](https://github.com/curl/curl/blob/master/GIT-INFO.md) file in
+the root directory for specific instructions on how to proceed.
 
 # Unix
 
@@ -193,9 +194,9 @@ You can build curl with:
  KB140584 is a must for any Windows developer. Especially important is full
  understanding if you are not going to follow the advice given above.
 
- - [How To Use the C Runtime](https://support.microsoft.com/help/94248/how-to-use-the-c-run-time)
- - [Runtime Library Compiler Options](https://docs.microsoft.com/cpp/build/reference/md-mt-ld-use-run-time-library)
- - [Potential Errors Passing CRT Objects Across DLL Boundaries](https://docs.microsoft.com/cpp/c-runtime-library/potential-errors-passing-crt-objects-across-dll-boundaries)
+ - [How To Use the C Runtime](https://learn.microsoft.com/troubleshoot/developer/visualstudio/cpp/libraries/use-c-run-time)
+ - [Runtime Library Compiler Options](https://learn.microsoft.com/cpp/build/reference/md-mt-ld-use-run-time-library)
+ - [Potential Errors Passing CRT Objects Across DLL Boundaries](https://learn.microsoft.com/cpp/c-runtime-library/potential-errors-passing-crt-objects-across-dll-boundaries)
 
 If your app is misbehaving in some strange way, or it is suffering from memory
 corruption, before asking for further help, please try first to rebuild every
@@ -217,7 +218,7 @@ executable in `/bin/` or you see the configure fail toward the end.
 Download the setup installer from
 [`cygwin`](https://cygwin.com/) to begin. Additional `cygwin`
 packages are needed for the install. For more on installing packages visit
-[`cygwin setup`](https://www.cygwin.com/faq/faq.html#faq.setup.cli).
+[`cygwin setup`](https://cygwin.com/faq/faq.html#faq.setup.cli).
 
 Either run setup-x86_64.exe, then search and select packages individually, or try:
 
@@ -347,7 +348,6 @@ If you want to set any of these defines you have the following options:
 
  - Modify `lib/config-win32.h`
  - Modify `lib/curl_setup.h`
- - Modify `winbuild/Makefile.vc`
  - Modify the "Preprocessor Definitions" in the libcurl project
 
 Note: The pre-processor settings can be found using the Visual Studio IDE
@@ -362,7 +362,6 @@ visible to libcurl and curl compilation processes. To set this definition you
 have the following alternatives:
 
  - Modify `lib/config-win32.h`
- - Modify `winbuild/Makefile.vc`
  - Modify the "Preprocessor Definitions" in the libcurl project
 
 Note: The pre-processor settings can be found using the Visual Studio IDE

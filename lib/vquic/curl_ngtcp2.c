@@ -80,7 +80,6 @@
 
 
 #define QUIC_MAX_STREAMS (256*1024)
-#define QUIC_MAX_DATA (1*1024*1024)
 #define QUIC_HANDSHAKE_TIMEOUT (10*NGTCP2_SECONDS)
 
 /* A stream window is the maximum amount we need to buffer for
@@ -102,8 +101,6 @@
           (H3_STREAM_WINDOW_SIZE / H3_STREAM_CHUNK_SIZE ) / 2
 /* Receive and Send max number of chunks just follows from the
  * chunk size and window size */
-#define H3_STREAM_RECV_CHUNKS \
-          (H3_STREAM_WINDOW_SIZE / H3_STREAM_CHUNK_SIZE)
 #define H3_STREAM_SEND_CHUNKS \
           (H3_STREAM_WINDOW_SIZE / H3_STREAM_CHUNK_SIZE)
 
@@ -1340,7 +1337,7 @@ out:
   result = Curl_1st_err(result, cf_progress_egress(cf, data, &pktx));
   result = Curl_1st_err(result, check_and_set_expiry(cf, data, &pktx));
 
-  CURL_TRC_CF(data, cf, "[%" FMT_PRId64 "] cf_recv(blen=%zu) -> %dm, %zu",
+  CURL_TRC_CF(data, cf, "[%" FMT_PRId64 "] cf_recv(blen=%zu) -> %d, %zu",
               stream ? stream->id : -1, blen, result, *pnread);
   CF_DATA_RESTORE(cf, save);
   return result;
@@ -1444,10 +1441,6 @@ cb_h3_read_req_body(nghttp3_conn *conn, int64_t stream_id,
               stream->upload_left);
   return (nghttp3_ssize)nvecs;
 }
-
-/* Index where :authority header field will appear in request header
-   field list. */
-#define AUTHORITY_DST_IDX 3
 
 static CURLcode h3_stream_open(struct Curl_cfilter *cf,
                                struct Curl_easy *data,
@@ -2433,9 +2426,7 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
   CURLcode result;
   const struct Curl_sockaddr_ex *sockaddr = NULL;
   int qfd;
-static const struct alpn_spec ALPN_SPEC_H3 = {
-  { "h3", "h3-29" }, 2
-};
+  static const struct alpn_spec ALPN_SPEC_H3 = {{ "h3", "h3-29" }, 2};
 
   DEBUGASSERT(ctx->initialized);
   ctx->dcid.datalen = NGTCP2_MAX_CIDLEN;
@@ -2578,11 +2569,31 @@ static CURLcode cf_ngtcp2_connect(struct Curl_cfilter *cf,
 out:
   if(result == CURLE_RECV_ERROR && ctx->qconn &&
      ngtcp2_conn_in_draining_period(ctx->qconn)) {
-    /* When a QUIC server instance is shutting down, it may send us a
-     * CONNECTION_CLOSE right away. Our connection then enters the DRAINING
-     * state. The CONNECT may work in the near future again. Indicate
-     * that as a "weird" reply. */
-    result = CURLE_WEIRD_SERVER_REPLY;
+    const ngtcp2_ccerr *cerr = ngtcp2_conn_get_ccerr(ctx->qconn);
+
+    result = CURLE_COULDNT_CONNECT;
+    if(cerr) {
+      CURL_TRC_CF(data, cf, "connect error, type=%d, code=%"
+                  FMT_PRIu64,
+                  cerr->type, (curl_uint64_t)cerr->error_code);
+      switch(cerr->type) {
+      case NGTCP2_CCERR_TYPE_VERSION_NEGOTIATION:
+        CURL_TRC_CF(data, cf, "error in version negotiation");
+        break;
+      default:
+        if(cerr->error_code >= NGTCP2_CRYPTO_ERROR) {
+          CURL_TRC_CF(data, cf, "crypto error, tls alert=%u",
+                      (unsigned int)(cerr->error_code & 0xffu));
+        }
+        else if(cerr->error_code == NGTCP2_CONNECTION_REFUSED) {
+          CURL_TRC_CF(data, cf, "connection refused by server");
+          /* When a QUIC server instance is shutting down, it may send us a
+           * CONNECTION_CLOSE with this code right away. We want
+            * to keep on trying in this case. */
+          result = CURLE_WEIRD_SERVER_REPLY;
+        }
+      }
+    }
   }
 
 #ifndef CURL_DISABLE_VERBOSE_STRINGS
@@ -2749,7 +2760,7 @@ CURLcode Curl_cf_ngtcp2_create(struct Curl_cfilter **pcf,
                                const struct Curl_addrinfo *ai)
 {
   struct cf_ngtcp2_ctx *ctx = NULL;
-  struct Curl_cfilter *cf = NULL, *udp_cf = NULL;
+  struct Curl_cfilter *cf = NULL;
   CURLcode result;
 
   (void)data;
@@ -2763,23 +2774,21 @@ CURLcode Curl_cf_ngtcp2_create(struct Curl_cfilter **pcf,
   result = Curl_cf_create(&cf, &Curl_cft_http3, ctx);
   if(result)
     goto out;
+  cf->conn = conn;
 
-  result = Curl_cf_udp_create(&udp_cf, data, conn, ai, TRNSPRT_QUIC);
+  result = Curl_cf_udp_create(&cf->next, data, conn, ai, TRNSPRT_QUIC);
   if(result)
     goto out;
-
-  cf->conn = conn;
-  udp_cf->conn = cf->conn;
-  udp_cf->sockindex = cf->sockindex;
-  cf->next = udp_cf;
+  cf->next->conn = cf->conn;
+  cf->next->sockindex = cf->sockindex;
 
 out:
   *pcf = (!result) ? cf : NULL;
   if(result) {
-    if(udp_cf)
-      Curl_conn_cf_discard_sub(cf, udp_cf, data, TRUE);
-    Curl_safefree(cf);
-    cf_ngtcp2_ctx_free(ctx);
+    if(cf)
+      Curl_conn_cf_discard_chain(&cf, data);
+    else if(ctx)
+      cf_ngtcp2_ctx_free(ctx);
   }
   return result;
 }

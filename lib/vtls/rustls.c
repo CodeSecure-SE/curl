@@ -121,7 +121,7 @@ read_cb(void *userdata, uint8_t *buf, uintptr_t len, uintptr_t *out_n)
     connssl->peer_closed = TRUE;
   *out_n = (uintptr_t)nread;
   CURL_TRC_CF(io_ctx->data, io_ctx->cf, "cf->next recv(len=%zu) -> %d, %zu",
-              len, result, nread);
+              (size_t)len, result, nread);
   return ret;
 }
 
@@ -410,7 +410,7 @@ read_file_into(const char *filename,
     return 0;
   }
 
-  while(!feof(f)) {
+  for(;;) {
     uint8_t buf[256];
     const size_t rr = fread(buf, 1, sizeof(buf), f);
     if(rr == 0 ||
@@ -418,6 +418,8 @@ read_file_into(const char *filename,
       fclose(f);
       return 0;
     }
+    if(rr < sizeof(buf))
+      break;
   }
 
   return fclose(f) == 0;
@@ -432,7 +434,7 @@ cr_get_selected_ciphers(struct Curl_easy *data,
 {
   const size_t supported_len = *selected_size;
   const size_t default_len = rustls_default_crypto_provider_ciphersuites_len();
-  const struct rustls_supported_ciphersuite *entry;
+  const struct rustls_supported_ciphersuite *entry = NULL;
   const char *ciphers = ciphers12;
   size_t count = 0, default13_count = 0, i, j;
   const char *ptr, *end;
@@ -1212,13 +1214,14 @@ cr_connect(struct Curl_cfilter *cf,
       }
       if(data->set.ssl.certinfo) {
         size_t num_certs = 0;
+        size_t i;
         while(rustls_connection_get_peer_certificate(rconn, (int)num_certs)) {
           num_certs++;
         }
         result = Curl_ssl_init_certinfo(data, (int)num_certs);
         if(result)
           return result;
-        for(size_t i = 0; i < num_certs; i++) {
+        for(i = 0; i < num_certs; i++) {
           const rustls_certificate *cert;
           const unsigned char *der_data;
           size_t der_len;
@@ -1231,8 +1234,8 @@ cr_connect(struct Curl_cfilter *cf,
             size_t errorlen;
             rustls_error(rresult, errorbuf, sizeof(errorbuf), &errorlen);
             failf(data,
-              "Failed getting DER of server certificate #%ld: %.*s", i,
-              (int)errorlen, errorbuf);
+                  "Failed getting DER of server certificate #%zu: %.*s", i,
+                  (int)errorlen, errorbuf);
             return map_error(rresult);
           }
           {
@@ -1315,7 +1318,7 @@ cr_shutdown(struct Curl_cfilter *cf,
   struct rustls_ssl_backend_data *backend =
     (struct rustls_ssl_backend_data *)connssl->backend;
   CURLcode result = CURLE_OK;
-  size_t i, nread, nwritten;
+  size_t i, nread = 0, nwritten;
 
   DEBUGASSERT(backend);
   if(!backend->conn || cf->shutdown) {

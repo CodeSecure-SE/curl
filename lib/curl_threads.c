@@ -26,12 +26,8 @@
 
 #include <curl/curl.h>
 
-#ifdef USE_THREADS_POSIX
-#  ifdef HAVE_PTHREAD_H
-#    include <pthread.h>
-#  endif
-#elif defined(USE_THREADS_WIN32)
-#  include <process.h>
+#if defined(USE_THREADS_POSIX) && defined(HAVE_PTHREAD_H)
+#include <pthread.h>
 #endif
 
 #include "curl_threads.h"
@@ -100,53 +96,13 @@ int Curl_thread_join(curl_thread_t *hnd)
   return ret;
 }
 
-/* do not use pthread_cancel if:
- * - pthread_cancel seems to be absent
- * - on FreeBSD, as we see hangers in CI testing
- * - this is a -fsanitize=thread build
- *   (clang sanitizer reports false positive when functions to not return)
- */
-#if defined(PTHREAD_CANCEL_ENABLE) && !defined(__FreeBSD__)
-#if defined(__has_feature)
-#  if !__has_feature(thread_sanitizer)
-#define USE_PTHREAD_CANCEL
-#  endif
-#else /* __has_feature */
-#define USE_PTHREAD_CANCEL
-#endif /* !__has_feature */
-#endif /* PTHREAD_CANCEL_ENABLE && !__FreeBSD__ */
-
-int Curl_thread_cancel(curl_thread_t *hnd)
-{
-  (void)hnd;
-  if(*hnd != curl_thread_t_null)
-#ifdef USE_PTHREAD_CANCEL
-    return pthread_cancel(**hnd);
-#else
-    return 1; /* not supported */
-#endif
-  return 0;
-}
-
 #elif defined(USE_THREADS_WIN32)
 
 curl_thread_t Curl_thread_create(CURL_THREAD_RETURN_T
                                  (CURL_STDCALL *func) (void *), void *arg)
 {
-#if defined(CURL_WINDOWS_UWP) || defined(UNDER_CE)
-  typedef HANDLE curl_win_thread_handle_t;
-#else
-  typedef uintptr_t curl_win_thread_handle_t;
-#endif
-  curl_thread_t t;
-  curl_win_thread_handle_t thread_handle;
-#if defined(CURL_WINDOWS_UWP) || defined(UNDER_CE)
-  thread_handle = CreateThread(NULL, 0, func, arg, 0, NULL);
-#else
-  thread_handle = _beginthreadex(NULL, 0, func, arg, 0, NULL);
-#endif
-  t = (curl_thread_t)thread_handle;
-  if((t == 0) || (t == LongToHandle(-1L))) {
+  curl_thread_t t = CreateThread(NULL, 0, func, arg, 0, NULL);
+  if(!t) {
 #ifdef UNDER_CE
     DWORD gle = GetLastError();
     /* !checksrc! disable ERRNOVAR 1 */
@@ -170,7 +126,7 @@ void Curl_thread_destroy(curl_thread_t *hnd)
 
 int Curl_thread_join(curl_thread_t *hnd)
 {
-#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < _WIN32_WINNT_VISTA)
+#ifdef UNDER_CE
   int ret = (WaitForSingleObject(*hnd, INFINITE) == WAIT_OBJECT_0);
 #else
   int ret = (WaitForSingleObjectEx(*hnd, INFINITE, FALSE) == WAIT_OBJECT_0);
@@ -180,14 +136,6 @@ int Curl_thread_join(curl_thread_t *hnd)
 
 
   return ret;
-}
-
-int Curl_thread_cancel(curl_thread_t *hnd)
-{
-  if(*hnd != curl_thread_t_null) {
-    return 1; /* not supported */
-  }
-  return 0;
 }
 
 #endif /* USE_THREADS_* */

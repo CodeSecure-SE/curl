@@ -437,7 +437,6 @@ static CURLcode retrycheck(struct OperationConfig *config,
       ": FTP error"
     };
 
-    sleeptime = per->retry_sleep;
     if(RETRY_HTTP == retry) {
       curl_easy_getinfo(curl, CURLINFO_RETRY_AFTER, &retry_after);
       if(retry_after) {
@@ -464,20 +463,28 @@ static CURLcode retrycheck(struct OperationConfig *config,
         }
       }
     }
+    if(!sleeptime && !config->retry_delay_ms) {
+      if(!per->retry_sleep)
+        per->retry_sleep = RETRY_SLEEP_DEFAULT;
+      else
+        per->retry_sleep *= 2;
+      if(per->retry_sleep > RETRY_SLEEP_MAX)
+        per->retry_sleep = RETRY_SLEEP_MAX;
+    }
+    if(!sleeptime)
+      sleeptime = per->retry_sleep;
     warnf("Problem %s. "
-          "Will retry in %ld second%s. "
+          "Will retry in %ld%s%.*ld second%s. "
           "%ld retr%s left.",
           m[retry], sleeptime/1000L,
-          (sleeptime/1000L == 1 ? "" : "s"),
+          (sleeptime%1000L ? "." : ""),
+          (sleeptime%1000L ? 3 : 0),
+          sleeptime%1000L,
+          (sleeptime == 1000L ? "" : "s"),
           per->retry_remaining,
           (per->retry_remaining > 1 ? "ies" : "y"));
 
     per->retry_remaining--;
-    if(!config->retry_delay_ms) {
-      per->retry_sleep *= 2;
-      if(per->retry_sleep > RETRY_SLEEP_MAX)
-        per->retry_sleep = RETRY_SLEEP_MAX;
-    }
 
     if(outs->bytes && outs->filename && outs->stream) {
 #ifndef __MINGW32CE__
@@ -1270,8 +1277,8 @@ static CURLcode single_transfer(struct OperationConfig *config,
         config->resume_from = -1; /* -1 will then force get-it-yourself */
     }
 
-    if(output_expected(per->url, per->uploadfile) && outs->stream &&
-       isatty(fileno(outs->stream)))
+    if(!outs->out_null && output_expected(per->url, per->uploadfile) &&
+       outs->stream && isatty(fileno(outs->stream)))
       /* we send the output to a tty, therefore we switch off the progress
          meter */
       per->noprogress = global->noprogress = global->isatty = TRUE;
@@ -1927,7 +1934,7 @@ static CURLcode serial_transfers(CURLSH *share)
   return result;
 }
 
-static CURLcode is_using_schannel(int *using)
+static CURLcode is_using_schannel(int *pusing)
 {
   CURLcode result = CURLE_OK;
   static int using_schannel = -1; /* -1 = not checked
@@ -1951,7 +1958,7 @@ static CURLcode is_using_schannel(int *using)
     if(result)
       return result;
   }
-  *using = using_schannel;
+  *pusing = using_schannel;
   return result;
 }
 

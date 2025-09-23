@@ -128,9 +128,6 @@ CURLVERSION=`$SED -ne 's/^#define LIBCURL_VERSION "\(.*\)".*/\1/p' ${srcdir}/inc
 XC_CHECK_PROG_CC
 CURL_ATOMIC
 
-dnl for --enable-code-coverage
-CURL_COVERAGE
-
 XC_AUTOMAKE
 AC_MSG_CHECKING([curl version])
 AC_MSG_RESULT($CURLVERSION)
@@ -275,8 +272,8 @@ AC_ARG_WITH(rustls,dnl
 AS_HELP_STRING([--with-rustls=PATH],[where to look for Rustls, PATH points to the installation root]),[
   OPT_RUSTLS=$withval
   if test X"$withval" != Xno; then
-    TLSCHOICE="${TLSCHOICE:+$TLSCHOICE, }rustls"
-    experimental="$experimental rustls"
+    TLSCHOICE="${TLSCHOICE:+$TLSCHOICE, }Rustls"
+    experimental="$experimental Rustls"
   fi
 ])
 
@@ -523,6 +520,8 @@ dnl platform/compiler/architecture specific checks/flags
 dnl **********************************************************************
 
 CURL_CHECK_COMPILER
+dnl for --enable-code-coverage
+CURL_COVERAGE
 CURL_CHECK_NATIVE_WINDOWS
 
 curl_cv_wince='no'
@@ -2205,20 +2204,67 @@ dnl **********************************************************************
 dnl Check for libgsasl
 dnl **********************************************************************
 
-AC_ARG_WITH(libgsasl,
-  AS_HELP_STRING([--without-libgsasl],
-  [disable libgsasl support for SCRAM]),
-  with_libgsasl=$withval,
-  with_libgsasl=yes)
-if test $with_libgsasl != "no"; then
-  AC_SEARCH_LIBS(gsasl_init, gsasl,
-    [curl_gsasl_msg="enabled";
-      AC_DEFINE([USE_GSASL], [1], [GSASL support enabled])
-      LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE libgsasl"
+OPT_LIBGSASL=no
+AC_ARG_WITH(libgsasl,dnl
+AS_HELP_STRING([--with-libgsasl=PATH],[Where to look for libgsasl, PATH points to the libgsasl installation; when possible, set the PKG_CONFIG_PATH environment variable instead of using this option])
+AS_HELP_STRING([--without-libgsasl], [disable libgsasl support for SCRAM]),
+  OPT_LIBGSASL=$withval)
+
+if test "$OPT_LIBGSASL" != no; then
+  dnl backup the pre-libgsasl variables
+  CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
+  CLEANCPPFLAGS="$CPPFLAGS"
+  CLEANLIBS="$LIBS"
+
+  case "$OPT_LIBGSASL" in
+    yes)
+      dnl --with-libgsasl (without path) used
+      CURL_CHECK_PKGCONFIG(libgsasl)
+
+      if test "$PKGCONFIG" != "no"; then
+        LIB_GSASL=`$PKGCONFIG --libs-only-l libgsasl`
+        LD_GSASL=`$PKGCONFIG --libs-only-L libgsasl`
+        CPP_GSASL=`$PKGCONFIG --cflags-only-I libgsasl`
+      else
+        dnl no libgsasl pkg-config found
+        LIB_GSASL="-lgsasl"
+      fi
+      ;;
+    *)
+      dnl use the given --with-libgsasl spot
+      PREFIX_GSASL=$OPT_LIBGSASL
+      ;;
+  esac
+
+  dnl if given with a prefix, we set -L and -I based on that
+  if test -n "$PREFIX_GSASL"; then
+    LIB_GSASL="-lgsasl"
+    LD_GSASL=-L${PREFIX_GSASL}/lib$libsuff
+    CPP_GSASL=-I${PREFIX_GSASL}/include
+  fi
+
+  LDFLAGS="$LDFLAGS $LD_GSASL"
+  LDFLAGSPC="$LDFLAGSPC $LD_GSASL"
+  CPPFLAGS="$CPPFLAGS $CPP_GSASL"
+  LIBS="$LIB_GSASL $LIBS"
+
+  AC_CHECK_LIB(gsasl, gsasl_init,
+    [
+      AC_CHECK_HEADERS(gsasl.h,
+        curl_gsasl_msg="enabled"
+        AC_DEFINE(USE_GSASL, 1, [GSASL support enabled])
+        USE_LIBGSASL=1
+        LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE libgsasl"
+      )
     ],
-    [curl_gsasl_msg="no      (libgsasl not found)";
+      dnl not found, revert back to clean variables
+      LDFLAGS=$CLEANLDFLAGS
+      LDFLAGSPC=$CLEANLDFLAGSPC
+      CPPFLAGS=$CLEANCPPFLAGS
+      LIBS=$CLEANLIBS
+      curl_gsasl_msg="no      (libgsasl not found)"
       AC_MSG_WARN([libgsasl was not found])
-    ]
   )
 fi
 AM_CONDITIONAL([USE_GSASL], [test "$curl_gsasl_msg" = "enabled"])
@@ -2293,8 +2339,8 @@ if test X"$OPT_LIBSSH2" != Xno; then
   CPPFLAGS="$CPPFLAGS $CPP_SSH2"
   LIBS="$LIB_SSH2 $LIBS"
 
-  dnl check for function added in libssh2 version 1.2.8
-  AC_CHECK_LIB(ssh2, libssh2_free)
+  dnl check for function added in libssh2 version 1.9.0
+  AC_CHECK_LIB(ssh2, libssh2_agent_get_identity_path)
 
   AC_CHECK_HEADER(libssh2.h,
     curl_ssh_msg="enabled (libssh2)"
@@ -4340,11 +4386,9 @@ if test "$want_threaded_resolver" = "yes" && test "$USE_THREADS_WIN32" != "1"; t
       AC_CHECK_FUNC(pthread_create, [USE_THREADS_POSIX=1] )
       LIBS="$save_LIBS"
 
-      dnl on HP-UX, life is more complicated...
       case $host in
         *-hp-hpux*)
-          dnl it doesn't actually work without -lpthread
-          USE_THREADS_POSIX=""
+          CFLAGS="$CFLAGS -mt"
           ;;
         *)
           ;;

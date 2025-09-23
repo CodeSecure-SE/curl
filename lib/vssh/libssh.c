@@ -765,7 +765,7 @@ static int myssh_in_SFTP_QUOTE_STATVFS(struct Curl_easy *data,
     #else
     #define CURL_LIBSSH_VFS_SIZE_MASK PRIu64
     #endif
-    CURLcode result;
+    CURLcode result = CURLE_OK;
     char *tmp = aprintf("statvfs:\n"
                         "f_bsize: %" CURL_LIBSSH_VFS_SIZE_MASK "\n"
                         "f_frsize: %" CURL_LIBSSH_VFS_SIZE_MASK "\n"
@@ -786,14 +786,13 @@ static int myssh_in_SFTP_QUOTE_STATVFS(struct Curl_easy *data,
                         statvfs->f_namemax);
     sftp_statvfs_free(statvfs);
 
-    if(!tmp) {
-      myssh_to(data, sshc, SSH_SFTP_CLOSE);
-      sshc->nextstate = SSH_NO_STATE;
-      return SSH_OK;
-    }
+    if(!tmp)
+      result = CURLE_OUT_OF_MEMORY;
 
-    result = Curl_client_write(data, CLIENTWRITE_HEADER, tmp, strlen(tmp));
-    free(tmp);
+    if(!result) {
+      result = Curl_client_write(data, CLIENTWRITE_HEADER, tmp, strlen(tmp));
+      free(tmp);
+    }
     if(result) {
       myssh_to(data, sshc, SSH_SFTP_CLOSE);
       sshc->nextstate = SSH_NO_STATE;
@@ -1320,8 +1319,7 @@ static int myssh_in_SFTP_DOWNLOAD_STAT(struct Curl_easy *data,
 
     if(size < 0) {
       failf(data, "Bad file size (%" FMT_OFF_T ")", size);
-      rc = myssh_to_ERROR(data, sshc, CURLE_BAD_DOWNLOAD_RESUME);
-      return rc;
+      return myssh_to_ERROR(data, sshc, CURLE_BAD_DOWNLOAD_RESUME);
     }
     if(data->state.use_range) {
       curl_off_t from, to;
@@ -1329,51 +1327,43 @@ static int myssh_in_SFTP_DOWNLOAD_STAT(struct Curl_easy *data,
       int from_t, to_t;
 
       from_t = curlx_str_number(&p, &from, CURL_OFF_T_MAX);
-      if(from_t == STRE_OVERFLOW) {
-        rc = myssh_to_ERROR(data, sshc, CURLE_RANGE_ERROR);
-        return rc;
-      }
+      if(from_t == STRE_OVERFLOW)
+        return myssh_to_ERROR(data, sshc, CURLE_RANGE_ERROR);
+
       curlx_str_passblanks(&p);
       (void)curlx_str_single(&p, '-');
 
       to_t = curlx_str_numblanks(&p, &to);
       if(to_t == STRE_OVERFLOW)
-        return CURLE_RANGE_ERROR;
+        return myssh_to_ERROR(data, sshc, CURLE_RANGE_ERROR);
 
       if((to_t == STRE_NO_NUM) || (to >= size)) {
         to = size - 1;
-        to_t = STRE_OK;
       }
 
       if(from_t == STRE_NO_NUM) {
         /* from is relative to end of file */
         from = size - to;
         to = size - 1;
-        from_t = STRE_OK;
       }
       if(from > size) {
         failf(data, "Offset (%" FMT_OFF_T ") was beyond file size (%"
               FMT_OFF_T ")", from, size);
-        rc = myssh_to_ERROR(data, sshc, CURLE_BAD_DOWNLOAD_RESUME);
-        return rc;
+        return myssh_to_ERROR(data, sshc, CURLE_BAD_DOWNLOAD_RESUME);
       }
       if(from > to) {
         from = to;
         size = 0;
       }
       else {
-        if((to - from) == CURL_OFF_T_MAX) {
-          rc = myssh_to_ERROR(data, sshc, CURLE_RANGE_ERROR);
-          return rc;
-        }
+        if((to - from) == CURL_OFF_T_MAX)
+          return myssh_to_ERROR(data, sshc, CURLE_RANGE_ERROR);
         size = to - from + 1;
       }
 
       rc = sftp_seek64(sshc->sftp_file, from);
-      if(rc) {
-        rc = myssh_to_SFTP_CLOSE(data, sshc);
-        return rc;
-      }
+      if(rc)
+        return myssh_to_SFTP_CLOSE(data, sshc);
     }
     data->req.size = size;
     data->req.maxdownload = size;
@@ -1387,8 +1377,7 @@ static int myssh_in_SFTP_DOWNLOAD_STAT(struct Curl_easy *data,
       if((curl_off_t)size < -data->state.resume_from) {
         failf(data, "Offset (%" FMT_OFF_T ") was beyond file size (%"
               FMT_OFF_T ")", data->state.resume_from, size);
-        rc = myssh_to_ERROR(data, sshc, CURLE_BAD_DOWNLOAD_RESUME);
-        return rc;
+        return myssh_to_ERROR(data, sshc, CURLE_BAD_DOWNLOAD_RESUME);
       }
       /* download from where? */
       data->state.resume_from += size;
@@ -1398,8 +1387,7 @@ static int myssh_in_SFTP_DOWNLOAD_STAT(struct Curl_easy *data,
         failf(data, "Offset (%" FMT_OFF_T
               ") was beyond file size (%" FMT_OFF_T ")",
               data->state.resume_from, size);
-        rc = myssh_to_ERROR(data, sshc, CURLE_BAD_DOWNLOAD_RESUME);
-        return rc;
+        return myssh_to_ERROR(data, sshc, CURLE_BAD_DOWNLOAD_RESUME);
       }
     }
     /* Now store the number of bytes we are expected to download */
@@ -1409,10 +1397,8 @@ static int myssh_in_SFTP_DOWNLOAD_STAT(struct Curl_easy *data,
                              size - data->state.resume_from);
 
     rc = sftp_seek64(sshc->sftp_file, data->state.resume_from);
-    if(rc) {
-      rc = myssh_to_SFTP_CLOSE(data, sshc);
-      return rc;
-    }
+    if(rc)
+      return myssh_to_SFTP_CLOSE(data, sshc);
   }
 
   /* Setup the actual download */
@@ -1808,10 +1794,7 @@ static int myssh_in_SFTP_QUOTE_STAT(struct Curl_easy *data,
   if(!strncmp(cmd, "chgrp", 5)) {
     const char *p = sshc->quote_path1;
     curl_off_t gid;
-    (void)curlx_str_number(&p, &gid, UINT_MAX);
-    sshc->quote_attrs->gid = (uint32_t)gid;
-    if(sshc->quote_attrs->gid == 0 && !ISDIGIT(sshc->quote_path1[0]) &&
-       !sshc->acceptfail) {
+    if(curlx_str_number(&p, &gid, UINT_MAX)) {
       Curl_safefree(sshc->quote_path1);
       Curl_safefree(sshc->quote_path2);
       failf(data, "Syntax error: chgrp gid not a number");
@@ -1820,6 +1803,7 @@ static int myssh_in_SFTP_QUOTE_STAT(struct Curl_easy *data,
       sshc->actualcode = CURLE_QUOTE_ERROR;
       return SSH_NO_ERROR;
     }
+    sshc->quote_attrs->gid = (uint32_t)gid;
     sshc->quote_attrs->flags |= SSH_FILEXFER_ATTR_UIDGID;
   }
   else if(!strncmp(cmd, "chmod", 5)) {
@@ -1840,9 +1824,7 @@ static int myssh_in_SFTP_QUOTE_STAT(struct Curl_easy *data,
   else if(!strncmp(cmd, "chown", 5)) {
     const char *p = sshc->quote_path1;
     curl_off_t uid;
-    (void)curlx_str_number(&p, &uid, UINT_MAX);
-    if(sshc->quote_attrs->uid == 0 && !ISDIGIT(sshc->quote_path1[0]) &&
-       !sshc->acceptfail) {
+    if(curlx_str_number(&p, &uid, UINT_MAX)) {
       Curl_safefree(sshc->quote_path1);
       Curl_safefree(sshc->quote_path2);
       failf(data, "Syntax error: chown uid not a number");
@@ -1851,6 +1833,7 @@ static int myssh_in_SFTP_QUOTE_STAT(struct Curl_easy *data,
       sshc->actualcode = CURLE_QUOTE_ERROR;
       return SSH_NO_ERROR;
     }
+    sshc->quote_attrs->uid = (uint32_t)uid;
     sshc->quote_attrs->flags |= SSH_FILEXFER_ATTR_UIDGID;
   }
   else if(!strncmp(cmd, "atime", 5) ||
@@ -2889,7 +2872,7 @@ static CURLcode scp_recv(struct Curl_easy *data, int sockindex,
 {
   struct connectdata *conn = data->conn;
   struct ssh_conn *sshc = Curl_conn_meta_get(conn, CURL_META_SSH_CONN);
-  ssize_t nread;
+  int nread;
 
   (void)sockindex; /* we only support SCP on the fixed known primary socket */
   *pnread = 0;
@@ -2899,7 +2882,8 @@ static CURLcode scp_recv(struct Curl_easy *data, int sockindex,
 
   /* libssh returns int */
   nread = ssh_scp_read(sshc->scp_session, mem, len);
-
+  if(nread == SSH_ERROR)
+    return CURLE_SSH;
 #if 0
   /* The following code is misleading, mostly added as wishful thinking
    * that libssh at some point will implement non-blocking ssh_scp_write/read.

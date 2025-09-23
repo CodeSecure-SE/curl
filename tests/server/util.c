@@ -229,12 +229,9 @@ curl_off_t our_getpid(void)
   curl_off_t pid = (curl_off_t)t_getpid();
 #ifdef _WIN32
   /* store pid + MAX_PID to avoid conflict with Cygwin/msys PIDs, see also:
-   * - 2019-01-31: https://cygwin.com/git/?p=newlib-cygwin.git;a=commit;
-   *               h=b5e1003722cb14235c4f166be72c09acdffc62ea
-   * - 2019-02-02: https://cygwin.com/git/?p=newlib-cygwin.git;a=commit;
-   *               h=448cf5aa4b429d5a9cebf92a0da4ab4b5b6d23fe
-   * - 2024-12-19: https://cygwin.com/git/?p=newlib-cygwin.git;a=commit;
-   *               h=363357c023ce01e936bdaedf0f479292a8fa4e0f
+   * - 2019-01-31: https://cygwin.com/git/?p=newlib-cygwin.git;a=commit;h=b5e1003722cb14235c4f166be72c09acdffc62ea
+   * - 2019-02-02: https://cygwin.com/git/?p=newlib-cygwin.git;a=commit;h=448cf5aa4b429d5a9cebf92a0da4ab4b5b6d23fe
+   * - 2024-12-19: https://cygwin.com/git/?p=newlib-cygwin.git;a=commit;h=363357c023ce01e936bdaedf0f479292a8fa4e0f
    */
   pid += 4194304;
 #endif
@@ -350,7 +347,7 @@ static SIGHANDLER_T old_sigbreak_handler = SIG_ERR;
 #endif
 
 #if defined(_WIN32) && !defined(CURL_WINDOWS_UWP) && !defined(UNDER_CE)
-static unsigned int thread_main_id = 0;
+static DWORD thread_main_id = 0;
 static HANDLE thread_main_window = NULL;
 static HWND hidden_main_window = NULL;
 #endif
@@ -422,7 +419,7 @@ static void exit_signal_handler(int signum)
  * They are included for ANSI compatibility. Therefore, you can set
  * signal handlers for these signals by using signal, and you can also
  * explicitly generate these signals by calling raise. Source:
- * https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/signal
+ * https://learn.microsoft.com/cpp/c-runtime-library/reference/signal
  */
 static BOOL WINAPI ctrl_event_handler(DWORD dwCtrlType)
 {
@@ -487,8 +484,7 @@ static LRESULT CALLBACK main_window_proc(HWND hwnd, UINT uMsg,
 }
 /* Window message queue loop for hidden main window, details see above.
  */
-#include <process.h>
-static unsigned int WINAPI main_window_loop(void *lpParameter)
+static DWORD WINAPI main_window_loop(void *lpParameter)
 {
   WNDCLASS wc;
   BOOL ret;
@@ -509,7 +505,7 @@ static unsigned int WINAPI main_window_loop(void *lpParameter)
                                       CW_USEDEFAULT, CW_USEDEFAULT,
                                       CW_USEDEFAULT, CW_USEDEFAULT,
                                       (HWND)NULL, (HMENU)NULL,
-                                      wc.hInstance, (LPVOID)NULL);
+                                      wc.hInstance, NULL);
   if(!hidden_main_window) {
     win32_perror("CreateWindowEx failed");
     return (DWORD)-1;
@@ -623,15 +619,10 @@ void install_signal_handlers(bool keep_sigalrm)
 #endif
 
 #if !defined(CURL_WINDOWS_UWP) && !defined(UNDER_CE)
-  {
-    typedef uintptr_t curl_win_thread_handle_t;
-    curl_win_thread_handle_t thread;
-    thread = _beginthreadex(NULL, 0, &main_window_loop,
-                            (void *)GetModuleHandle(NULL), 0, &thread_main_id);
-    thread_main_window = (HANDLE)thread;
-    if(!thread_main_window || !thread_main_id)
-      logmsg("cannot start main window loop");
-  }
+  thread_main_window = CreateThread(NULL, 0, &main_window_loop,
+                                    GetModuleHandle(NULL), 0, &thread_main_id);
+  if(!thread_main_window || !thread_main_id)
+    logmsg("cannot start main window loop");
 #endif
 #endif
 }

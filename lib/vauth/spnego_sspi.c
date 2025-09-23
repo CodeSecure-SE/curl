@@ -105,7 +105,6 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
   SecBufferDesc chlg_desc;
   SecBufferDesc resp_desc;
   unsigned long attrs;
-  TimeStamp expiry; /* For Windows 9x compatibility of SSPI calls */
 
 #ifdef CURL_DISABLE_VERBOSE_STRINGS
   (void)data;
@@ -173,7 +172,7 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
                                 (TCHAR *)CURL_UNCONST(TEXT(SP_NAME_NEGOTIATE)),
                                 SECPKG_CRED_OUTBOUND, NULL,
                                 nego->p_identity, NULL, NULL,
-                                nego->credentials, &expiry);
+                                nego->credentials, NULL);
     if(nego->status != SEC_E_OK)
       return CURLE_AUTH_ERROR;
 
@@ -211,8 +210,7 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
     * we have to pass a second SecBuffer to the SecBufferDesc
     * otherwise IIS will not pass the authentication (401 response).
     * Minimum supported version is Windows 7.
-    * https://docs.microsoft.com/en-us/security-updates
-    * /SecurityAdvisories/2009/973811
+    * https://learn.microsoft.com/security-updates/SecurityAdvisories/2009/973811
     */
     if(nego->sslContext) {
       SEC_CHANNEL_BINDINGS channelBindings;
@@ -250,8 +248,7 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
                                                   0, SECURITY_NATIVE_DREP,
                                                   chlg ? &chlg_desc : NULL,
                                                   0, nego->context,
-                                                  &resp_desc, &attrs,
-                                                  &expiry);
+                                                  &resp_desc, &attrs, NULL);
 
   /* Free the decoded challenge as it is not required anymore */
   free(chlg);
@@ -270,7 +267,7 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
   if(nego->status == SEC_I_COMPLETE_NEEDED ||
      nego->status == SEC_I_COMPLETE_AND_CONTINUE) {
     nego->status = (DWORD)Curl_pSecFn->CompleteAuthToken(nego->context,
-                                                      &resp_desc);
+                                                         &resp_desc);
     if(GSS_ERROR(nego->status)) {
       char buffer[STRERROR_LEN];
       failf(data, "CompleteAuthToken failed: %s",
@@ -308,7 +305,7 @@ CURLcode Curl_auth_create_spnego_message(struct negotiatedata *nego,
                                          char **outptr, size_t *outlen)
 {
   /* Base64 encode the already generated response */
-  CURLcode result = curlx_base64_encode((const char *) nego->output_token,
+  CURLcode result = curlx_base64_encode((const char *)nego->output_token,
                                         nego->output_token_length, outptr,
                                         outlen);
   if(!result && (!*outptr || !*outlen)) {

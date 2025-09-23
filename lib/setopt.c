@@ -443,6 +443,7 @@ static CURLcode setopt_bool(struct Curl_easy *data, CURLoption option,
                             long arg, bool *set)
 {
   bool enabled = !!arg;
+  int ok = 1;
   struct UserDefined *s = &data->set;
   switch(option) {
   case CURLOPT_FORBID_REUSE:
@@ -619,7 +620,7 @@ static CURLcode setopt_bool(struct Curl_easy *data, CURLoption option,
      * Enable verification of the hostname in the peer certificate for proxy
      */
     s->proxy_ssl.primary.verifyhost = enabled;
-
+    ok = 2;
     /* Update the current connection proxy_ssl_config. */
     Curl_ssl_conn_config_update(data, TRUE);
     break;
@@ -723,6 +724,7 @@ static CURLcode setopt_bool(struct Curl_easy *data, CURLoption option,
      * Enable verification of the hostname in the peer certificate for DoH
      */
     s->doh_verifyhost = enabled;
+    ok = 2;
     break;
   case CURLOPT_DOH_SSL_VERIFYSTATUS:
     /*
@@ -732,6 +734,7 @@ static CURLcode setopt_bool(struct Curl_easy *data, CURLoption option,
       return CURLE_NOT_BUILT_IN;
 
     s->doh_verifystatus = enabled;
+    ok = 2;
     break;
 #endif /* ! CURL_DISABLE_DOH */
   case CURLOPT_SSL_VERIFYHOST:
@@ -743,6 +746,7 @@ static CURLcode setopt_bool(struct Curl_easy *data, CURLoption option,
        this argument took a boolean when it was not and misused it.
        Treat 1 and 2 the same */
     s->ssl.primary.verifyhost = enabled;
+    ok = 2;
 
     /* Update the current connection ssl_config. */
     Curl_ssl_conn_config_update(data, FALSE);
@@ -814,10 +818,10 @@ static CURLcode setopt_bool(struct Curl_easy *data, CURLoption option,
 #if defined(CONNECT_DATA_IDEMPOTENT) || defined(MSG_FASTOPEN) ||        \
   defined(TCP_FASTOPEN_CONNECT)
     s->tcp_fastopen = enabled;
+    break;
 #else
     return CURLE_NOT_BUILT_IN;
 #endif
-    break;
   case CURLOPT_SSL_ENABLE_ALPN:
     s->ssl_enable_alpn = enabled;
     break;
@@ -844,7 +848,7 @@ static CURLcode setopt_bool(struct Curl_easy *data, CURLoption option,
   default:
     return CURLE_OK;
   }
-  if((arg > 1) || (arg < 0))
+  if((arg > ok) || (arg < 0))
     /* reserve other values for future use */
     infof(data, "boolean setopt(%d) got unsupported argument %ld,"
           " treated as %d", option, arg, enabled);
@@ -951,7 +955,7 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
     break;
 
   case CURLOPT_MAXREDIRS:
-    result = value_range(&arg, -1, 0, 0x7fff);
+    result = value_range(&arg, -1, -1, 0x7fff);
     if(result)
       return result;
     s->maxredirs = (short)arg;
@@ -1963,15 +1967,8 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
   case CURLOPT_FTP_ALTERNATIVE_TO_USER:
     return Curl_setstropt(&s->str[STRING_FTP_ALTERNATIVE_TO_USER], ptr);
 
-#ifdef HAVE_GSSAPI
   case CURLOPT_KRBLEVEL:
-    /*
-     * A string that defines the kerberos security level.
-     */
-    result = Curl_setstropt(&s->str[STRING_KRB_LEVEL], ptr);
-    s->krb = !!(s->str[STRING_KRB_LEVEL]);
-    break;
-#endif
+    return CURLE_NOT_BUILT_IN; /* removed in 8.17.0 */
 #endif
   case CURLOPT_URL:
     /*
@@ -2633,8 +2630,15 @@ static CURLcode setopt_func(struct Curl_easy *data, CURLoption option,
      */
     s->fwrite_func = va_arg(param, curl_write_callback);
     if(!s->fwrite_func)
+#if defined(__clang__) && __clang_major__ >= 16
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-function-type-strict"
+#endif
       /* When set to NULL, reset to our internal default function */
       s->fwrite_func = (curl_write_callback)fwrite;
+#if defined(__clang__) && __clang_major__ >= 16
+#pragma clang diagnostic pop
+#endif
     break;
   case CURLOPT_READFUNCTION:
     /*
@@ -2643,8 +2647,15 @@ static CURLcode setopt_func(struct Curl_easy *data, CURLoption option,
     s->fread_func_set = va_arg(param, curl_read_callback);
     if(!s->fread_func_set) {
       s->is_fread_set = 0;
+#if defined(__clang__) && __clang_major__ >= 16
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-function-type-strict"
+#endif
       /* When set to NULL, reset to our internal default function */
       s->fread_func_set = (curl_read_callback)fread;
+#if defined(__clang__) && __clang_major__ >= 16
+#pragma clang diagnostic pop
+#endif
     }
     else
       s->is_fread_set = 1;

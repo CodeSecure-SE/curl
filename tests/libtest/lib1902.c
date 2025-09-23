@@ -1,5 +1,3 @@
-#ifndef HEADER_CURL_KRB5_H
-#define HEADER_CURL_KRB5_H
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |
@@ -23,32 +21,28 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+#include "first.h"
 
-struct Curl_sec_client_mech {
-  const char *name;
-  size_t size;
-  int (*init)(void *);
-  int (*auth)(void *, struct Curl_easy *data, struct connectdata *);
-  void (*end)(void *);
-  int (*check_prot)(void *, int);
-  int (*encode)(void *, const void *, int, int, void **);
-  int (*decode)(void *, void *, int, int, struct connectdata *);
-};
+#include "memdebug.h"
 
-#define AUTH_OK         0
-#define AUTH_CONTINUE   1
-#define AUTH_ERROR      2
+static CURLcode test_lib1902(const char *URL)
+{
+  CURLcode res = CURLE_OK;
+  CURL *curl;
 
-#if defined(HAVE_GSSAPI) && !defined(CURL_DISABLE_FTP)
-void Curl_sec_conn_init(struct connectdata *);
-void Curl_sec_conn_destroy(struct connectdata *);
-int Curl_sec_read_msg(struct Curl_easy *data, struct connectdata *conn, char *,
-                      enum protection_level);
-CURLcode Curl_sec_login(struct Curl_easy *, struct connectdata *);
-int Curl_sec_request_prot(struct connectdata *conn, const char *level);
-#else
-#define Curl_sec_conn_init(x)     Curl_nop_stmt
-#define Curl_sec_conn_destroy(x)  Curl_nop_stmt
-#endif
+  curl_global_init(CURL_GLOBAL_ALL);
 
-#endif /* HEADER_CURL_KRB5_H */
+  curl = curl_easy_init();
+  if(curl) {
+    easy_setopt(curl, CURLOPT_COOKIEFILE, URL);
+    easy_setopt(curl, CURLOPT_COOKIEJAR,  URL);
+
+    /* Do not perform any actual network operation,
+       the issue occur when not calling curl.*perform */
+  }
+
+test_cleanup:
+  curl_easy_cleanup(curl);
+  curl_global_cleanup();
+  return res;
+}

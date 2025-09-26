@@ -355,9 +355,8 @@ static CURLcode ossl_certchain(struct Curl_easy *data, SSL *ssl)
   DEBUGASSERT(ssl);
 
   sk = SSL_get_peer_cert_chain(ssl);
-  if(!sk) {
-    return CURLE_OUT_OF_MEMORY;
-  }
+  if(!sk)
+    return CURLE_SSL_CONNECT_ERROR;
 
   numcerts = sk_X509_num(sk);
 
@@ -741,6 +740,7 @@ static int ossl_bio_cf_in_read(BIO *bio, char *buf, int blen)
   if(!octx->x509_store_setup) {
     r2 = Curl_ssl_setup_x509_store(cf, data, octx->ssl_ctx);
     if(r2) {
+      BIO_clear_retry_flags(bio);
       octx->io_result = r2;
       return -1;
     }
@@ -4855,9 +4855,15 @@ CURLcode Curl_ossl_check_peer_cert(struct Curl_cfilter *cf,
     return CURLE_OUT_OF_MEMORY;
   }
 
-  if(data->set.ssl.certinfo)
-    /* asked to gather certificate info */
-    (void)ossl_certchain(data, octx->ssl);
+  if(data->set.ssl.certinfo && !octx->reused_session) {
+    /* asked to gather certificate info. Reused sessions don't have cert
+       chains */
+    result = ossl_certchain(data, octx->ssl);
+    if(result) {
+      BIO_free(mem);
+      return result;
+    }
+  }
 
   octx->server_cert = SSL_get1_peer_certificate(octx->ssl);
   if(!octx->server_cert) {
@@ -5368,6 +5374,7 @@ static CURLcode ossl_recv(struct Curl_cfilter *cf,
         connclose(conn, "TLS close_notify");
       break;
     case SSL_ERROR_WANT_READ:
+      connssl->io_need = CURL_SSL_IO_NEED_RECV;
       result = CURLE_AGAIN;
       goto out;
     case SSL_ERROR_WANT_WRITE:

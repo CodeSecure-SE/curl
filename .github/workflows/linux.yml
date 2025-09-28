@@ -44,7 +44,7 @@ env:
   # renovate: datasource=github-tags depName=Mbed-TLS/mbedtls versioning=semver registryUrl=https://github.com
   MBEDTLS_VERSION: 3.6.4
   # renovate: datasource=github-tags depName=awslabs/aws-lc versioning=semver registryUrl=https://github.com
-  AWSLC_VERSION: 1.61.3
+  AWSLC_VERSION: 1.61.4
   # renovate: datasource=github-tags depName=google/boringssl versioning=semver registryUrl=https://github.com
   BORINGSSL_VERSION: 0.20250818.0
   # handled in renovate.json
@@ -503,9 +503,8 @@ jobs:
         run: |
           curl --disable --fail --silent --show-error --connect-timeout 15 --max-time 120 --retry 6 --retry-connrefused \
             --location "https://github.com/awslabs/aws-lc/archive/refs/tags/v${AWSLC_VERSION}.tar.gz" | tar -xz
-          mkdir "aws-lc-${AWSLC_VERSION}-build"
-          cd "aws-lc-${AWSLC_VERSION}-build"
-          cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/home/runner/awslc "../aws-lc-${AWSLC_VERSION}" -DBUILD_TOOL=OFF -DBUILD_TESTING=OFF
+          cd "aws-lc-${AWSLC_VERSION}"
+          cmake -B . -G Ninja -DCMAKE_INSTALL_PREFIX=/home/runner/awslc -DBUILD_TOOL=OFF -DBUILD_TESTING=OFF
           cmake --build .
           cmake --install .
 
@@ -596,7 +595,7 @@ jobs:
             mkdir bld && cd bld && \
             ${MATRIX_CONFIGURE_PREFIX} \
             ../configure --prefix="$HOME"/curl-install --enable-unity --enable-warnings --enable-werror \
-              --disable-dependency-tracking \
+              --disable-dependency-tracking --enable-option-checking=fatal \
               ${MATRIX_CONFIGURE}
           fi
 

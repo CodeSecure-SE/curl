@@ -91,6 +91,8 @@ my %banfunc = (
     "fclose" => 1,
     "fdopen" => 1,
     "fopen" => 1,
+    "open" => 1,
+    "stat" => 1,
     );
 
 my %warnings_extended = (
@@ -893,7 +895,8 @@ sub scanfile {
         # scan for use of banned functions
         my $bl = $l;
       again:
-        if(($l =~ /^(.*?\W)(\w+)(\s*\()/x) && $banfunc{$2}) {
+        if((($l =~ /^(.*?\W)(\w+)(\s*\()/x) && $banfunc{$2}) ||
+           (($l =~ /^(.*?\()(\w+)(\s*\()/x) && $banfunc{$2})) {
             my $bad = $2;
             my $prefix = $1;
             my $suff = $3;
@@ -902,6 +905,9 @@ sub scanfile {
                       "use of $bad is banned");
             my $replace = 'x' x (length($bad) + 1);
             $prefix =~ s/\*/\\*/;
+            $prefix =~ s/\[/\\[/;
+            $prefix =~ s/\]/\\]/;
+            $prefix =~ s/\(/\\(/;
             $suff =~ s/\(/\\(/;
             $l =~ s/$prefix$bad$suff/$prefix$replace/;
             goto again;

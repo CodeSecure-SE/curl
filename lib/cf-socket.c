@@ -333,12 +333,11 @@ static CURLcode sock_assign_addr(struct Curl_sockaddr_ex *dest,
   }
   dest->addrlen = (unsigned int)ai->ai_addrlen;
 
-  if(dest->addrlen > sizeof(struct Curl_sockaddr_storage)) {
-    DEBUGASSERT(0);
+  DEBUGASSERT(dest->addrlen <= sizeof(dest->curl_sa_addrbuf));
+  if(dest->addrlen > sizeof(dest->curl_sa_addrbuf))
     return CURLE_TOO_LARGE;
-  }
 
-  memcpy(&dest->curl_sa_addr, ai->ai_addr, dest->addrlen);
+  memcpy(&dest->curl_sa_addrbuf, ai->ai_addr, dest->addrlen);
   return CURLE_OK;
 }
 
@@ -1329,7 +1328,8 @@ static CURLcode cf_tcp_connect(struct Curl_cfilter *cf,
   rc = SOCKET_WRITABLE(ctx->sock, 0);
 
   if(rc == 0) { /* no connection yet */
-    CURL_TRC_CF(data, cf, "not connected yet");
+    CURL_TRC_CF(data, cf, "not connected yet on fd=%" FMT_SOCKET_T,
+                ctx->sock);
     return CURLE_OK;
   }
   else if(rc == CURL_CSELECT_OUT || cf->conn->bits.tcp_fastopen) {
@@ -1339,7 +1339,7 @@ static CURLcode cf_tcp_connect(struct Curl_cfilter *cf,
       set_local_ip(cf, data);
       *done = TRUE;
       cf->connected = TRUE;
-      CURL_TRC_CF(data, cf, "connected");
+      CURL_TRC_CF(data, cf, "connected on fd=%" FMT_SOCKET_T, ctx->sock);
       return CURLE_OK;
     }
   }

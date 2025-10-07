@@ -42,7 +42,6 @@
 #include "../cf-socket.h"
 #include "../connect.h"
 #include "../progress.h"
-#include "../strerror.h"
 #include "../curlx/dynbuf.h"
 #include "../http1.h"
 #include "../select.h"
@@ -57,9 +56,9 @@
 #include "curl_osslq.h"
 #include "../url.h"
 #include "../curlx/warnless.h"
+#include "../curlx/strerr.h"
 
-/* The last 3 #include files should be in this order */
-#include "../curl_printf.h"
+/* The last 2 #include files should be in this order */
 #include "../curl_memory.h"
 #include "../memdebug.h"
 
@@ -186,6 +185,7 @@ static CURLcode make_bio_addr(BIO_ADDR **pbio_addr,
       (struct sockaddr_in6 * const)CURL_UNCONST(&addr->curl_sa_addr);
     if(!BIO_ADDR_rawmake(bio_addr, AF_INET6, &sin->sin6_addr,
                          sizeof(sin->sin6_addr), sin->sin6_port)) {
+      goto out;
     }
     result = CURLE_OK;
     break;
@@ -511,9 +511,9 @@ static CURLcode cf_osslq_ssl_err(struct Curl_cfilter *cf,
     lerr = SSL_get_verify_result(ctx->tls.ossl.ssl);
     if(lerr != X509_V_OK) {
       ssl_config->certverifyresult = lerr;
-      msnprintf(ebuf, sizeof(ebuf),
-                "SSL certificate problem: %s",
-                X509_verify_cert_error_string(lerr));
+      curl_msnprintf(ebuf, sizeof(ebuf),
+                     "SSL certificate problem: %s",
+                     X509_verify_cert_error_string(lerr));
     }
     else
       err_descr = "SSL certificate verification failed";
@@ -550,12 +550,12 @@ static CURLcode cf_osslq_ssl_err(struct Curl_cfilter *cf,
     int sockerr = SOCKERRNO;
     struct ip_quadruple ip;
 
-    Curl_cf_socket_peek(cf->next, data, NULL, NULL, &ip);
     if(sockerr && detail == SSL_ERROR_SYSCALL)
-      Curl_strerror(sockerr, extramsg, sizeof(extramsg));
-    failf(data, "QUIC connect: %s in connection to %s:%d (%s)",
-          extramsg[0] ? extramsg : osslq_SSL_ERROR_to_str(detail),
-          ctx->peer.dispname, ip.remote_port, ip.remote_ip);
+      curlx_strerror(sockerr, extramsg, sizeof(extramsg));
+    if(!Curl_cf_socket_peek(cf->next, data, NULL, NULL, &ip))
+      failf(data, "QUIC connect: %s in connection to %s:%d (%s)",
+            extramsg[0] ? extramsg : osslq_SSL_ERROR_to_str(detail),
+            ctx->peer.dispname, ip.remote_port, ip.remote_ip);
   }
   else {
     /* Could be a CERT problem */
@@ -867,8 +867,8 @@ static int cb_h3_recv_header(nghttp3_conn *conn, int64_t sid,
                                      (const char *)h3val.base, h3val.len);
     if(result)
       return -1;
-    ncopy = msnprintf(line, sizeof(line), "HTTP/3 %03d \r\n",
-                      stream->status_code);
+    ncopy = curl_msnprintf(line, sizeof(line), "HTTP/3 %03d \r\n",
+                           stream->status_code);
     CURL_TRC_CF(data, cf, "[%" FMT_PRId64 "] status: %s", stream_id, line);
     result = write_resp_raw(cf, data, line, ncopy, FALSE);
     if(result) {
@@ -1177,8 +1177,8 @@ static CURLcode cf_osslq_ctx_start(struct Curl_cfilter *cf,
     goto out;
 
   result = CURLE_QUIC_CONNECT_ERROR;
-  Curl_cf_socket_peek(cf->next, data, &ctx->q.sockfd, &peer_addr, NULL);
-  if(!peer_addr)
+  if(Curl_cf_socket_peek(cf->next, data, &ctx->q.sockfd, &peer_addr, NULL) ||
+     !peer_addr)
     goto out;
 
   ctx->q.local_addrlen = sizeof(ctx->q.local_addr);
@@ -1857,9 +1857,9 @@ out:
   if(result) {
     struct ip_quadruple ip;
 
-    Curl_cf_socket_peek(cf->next, data, NULL, NULL, &ip);
-    infof(data, "QUIC connect to %s port %u failed: %s",
-          ip.remote_ip, ip.remote_port, curl_easy_strerror(result));
+    if(!Curl_cf_socket_peek(cf->next, data, NULL, NULL, &ip))
+      infof(data, "QUIC connect to %s port %u failed: %s",
+            ip.remote_ip, ip.remote_port, curl_easy_strerror(result));
   }
 #endif
   if(!result)
@@ -2465,7 +2465,7 @@ bool Curl_conn_is_osslq(const struct Curl_easy *data,
 void Curl_osslq_ver(char *p, size_t len)
 {
   const nghttp3_info *ht3 = nghttp3_version(0);
-  (void)msnprintf(p, len, "nghttp3/%s", ht3->version_str);
+  (void)curl_msnprintf(p, len, "nghttp3/%s", ht3->version_str);
 }
 
 #endif /* !CURL_DISABLE_HTTP && USE_OPENSSL_QUIC && USE_NGHTTP3 */

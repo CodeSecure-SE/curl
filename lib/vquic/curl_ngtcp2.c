@@ -57,7 +57,6 @@
 #include "../cf-socket.h"
 #include "../connect.h"
 #include "../progress.h"
-#include "../strerror.h"
 #include "../curlx/dynbuf.h"
 #include "../http1.h"
 #include "../select.h"
@@ -73,8 +72,7 @@
 
 #include "../curlx/warnless.h"
 
-/* The last 3 #include files should be in this order */
-#include "../curl_printf.h"
+/* The last 2 #include files should be in this order */
 #include "../curl_memory.h"
 #include "../memdebug.h"
 
@@ -112,8 +110,8 @@ void Curl_ngtcp2_ver(char *p, size_t len)
 {
   const ngtcp2_info *ng2 = ngtcp2_version(0);
   const nghttp3_info *ht3 = nghttp3_version(0);
-  (void)msnprintf(p, len, "ngtcp2/%s nghttp3/%s",
-                  ng2->version_str, ht3->version_str);
+  (void)curl_msnprintf(p, len, "ngtcp2/%s nghttp3/%s",
+                       ng2->version_str, ht3->version_str);
 }
 
 struct cf_ngtcp2_ctx {
@@ -145,8 +143,8 @@ struct cf_ngtcp2_ctx {
   uint64_t max_bidi_streams;         /* max bidi streams we can open */
   size_t earlydata_max;              /* max amount of early data supported by
                                         server on session reuse */
-  size_t earlydata_skip;            /* sending bytes to skip when earlydata
-                                     * is accepted by peer */
+  size_t earlydata_skip;             /* sending bytes to skip when earlydata
+                                        is accepted by peer */
   CURLcode tls_vrfy_result;          /* result of TLS peer verification */
   int qlogfd;
   BIT(initialized);
@@ -390,9 +388,9 @@ static void quic_printf(void *user_data, const char *fmt, ...)
   (void)ctx;  /* need an easy handle to infof() message */
   va_list ap;
   va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
+  curl_mvfprintf(stderr, fmt, ap);
   va_end(ap);
-  fprintf(stderr, "\n");
+  curl_mfprintf(stderr, "\n");
 }
 #endif
 
@@ -2481,8 +2479,7 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
   if(result)
     return result;
 
-  Curl_cf_socket_peek(cf->next, data, &ctx->q.sockfd, &sockaddr, NULL);
-  if(!sockaddr)
+  if(Curl_cf_socket_peek(cf->next, data, &ctx->q.sockfd, &sockaddr, NULL))
     return CURLE_QUIC_CONNECT_ERROR;
   ctx->q.local_addrlen = sizeof(ctx->q.local_addr);
   rv = getsockname(ctx->q.sockfd, (struct sockaddr *)&ctx->q.local_addr,
@@ -2634,9 +2631,9 @@ out:
   if(result) {
     struct ip_quadruple ip;
 
-    Curl_cf_socket_peek(cf->next, data, NULL, NULL, &ip);
-    infof(data, "QUIC connect to %s port %u failed: %s",
-          ip.remote_ip, ip.remote_port, curl_easy_strerror(result));
+    if(!Curl_cf_socket_peek(cf->next, data, NULL, NULL, &ip))
+      infof(data, "QUIC connect to %s port %u failed: %s",
+            ip.remote_ip, ip.remote_port, curl_easy_strerror(result));
   }
 #endif
   if(!result && ctx->qconn) {

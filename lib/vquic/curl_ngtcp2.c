@@ -300,6 +300,35 @@ static CURLcode h3_data_setup(struct Curl_cfilter *cf,
   return CURLE_OK;
 }
 
+struct cf_ngtcp2_sfind_ctx {
+  curl_int64_t stream_id;
+  struct h3_stream_ctx *stream;
+  unsigned int mid;
+};
+
+static bool cf_ngtcp2_sfind(unsigned int mid, void *value, void *user_data)
+{
+  struct cf_ngtcp2_sfind_ctx *fctx = user_data;
+  struct h3_stream_ctx *stream = value;
+
+  if(fctx->stream_id == stream->id) {
+    fctx->mid = mid;
+    fctx->stream = stream;
+    return FALSE;
+  }
+  return TRUE; /* continue */
+}
+
+static struct h3_stream_ctx *
+cf_ngtcp2_get_stream(struct cf_ngtcp2_ctx *ctx, curl_int64_t stream_id)
+{
+  struct cf_ngtcp2_sfind_ctx fctx;
+  fctx.stream_id = stream_id;
+  fctx.stream = NULL;
+  Curl_uint_hash_visit(&ctx->streams, cf_ngtcp2_sfind, &fctx);
+  return fctx.stream;
+}
+
 static void cf_ngtcp2_stream_close(struct Curl_cfilter *cf,
                                    struct Curl_easy *data,
                                    struct h3_stream_ctx *stream)
@@ -1113,7 +1142,7 @@ static int cb_h3_recv_header(nghttp3_conn *conn, int64_t sid,
     result = Curl_http_decode_status(&stream->status_code,
                                      (const char *)h3val.base, h3val.len);
     if(result)
-      return -1;
+      return NGHTTP3_ERR_CALLBACK_FAILURE;
     curlx_dyn_reset(&ctx->scratch);
     result = curlx_dyn_addn(&ctx->scratch, STRCONST("HTTP/3 "));
     if(!result)
@@ -1127,7 +1156,7 @@ static int cb_h3_recv_header(nghttp3_conn *conn, int64_t sid,
     CURL_TRC_CF(data, cf, "[%" FMT_PRId64 "] status: %s",
                 stream_id, curlx_dyn_ptr(&ctx->scratch));
     if(result) {
-      return -1;
+      return NGHTTP3_ERR_CALLBACK_FAILURE;
     }
   }
   else {
@@ -1329,7 +1358,7 @@ static CURLcode cf_ngtcp2_recv(struct Curl_cfilter *cf, struct Curl_easy *data,
   /* handshake verification failed in callback, do not recv anything */
   if(ctx->tls_vrfy_result) {
     result = ctx->tls_vrfy_result;
-    goto out;
+    goto denied;
   }
 
   pktx_init(&pktx, cf, data);
@@ -1361,7 +1390,7 @@ static CURLcode cf_ngtcp2_recv(struct Curl_cfilter *cf, struct Curl_easy *data,
 out:
   result = Curl_1st_err(result, cf_progress_egress(cf, data, &pktx));
   result = Curl_1st_err(result, check_and_set_expiry(cf, data, &pktx));
-
+denied:
   CURL_TRC_CF(data, cf, "[%" FMT_PRId64 "] cf_recv(blen=%zu) -> %d, %zu",
               stream ? stream->id : -1, blen, result, *pnread);
   CF_DATA_RESTORE(cf, save);
@@ -1578,6 +1607,7 @@ static CURLcode h3_stream_open(struct Curl_cfilter *cf,
                   "%d (%s)", stream->id, rc, nghttp3_strerror(rc));
       break;
     }
+    cf_ngtcp2_stream_close(cf, data, stream);
     result = CURLE_SEND_ERROR;
     goto out;
   }
@@ -1616,8 +1646,10 @@ static CURLcode cf_ngtcp2_send(struct Curl_cfilter *cf, struct Curl_easy *data,
   *pnwritten = 0;
 
   /* handshake verification failed in callback, do not send anything */
-  if(ctx->tls_vrfy_result)
-    return ctx->tls_vrfy_result;
+  if(ctx->tls_vrfy_result) {
+    result = ctx->tls_vrfy_result;
+    goto denied;
+  }
 
   (void)eos; /* use for stream EOF and block handling */
   result = cf_progress_ingress(cf, data, &pktx);
@@ -1684,7 +1716,7 @@ static CURLcode cf_ngtcp2_send(struct Curl_cfilter *cf, struct Curl_easy *data,
 
 out:
   result = Curl_1st_err(result, check_and_set_expiry(cf, data, &pktx));
-
+denied:
   CURL_TRC_CF(data, cf, "[%" FMT_PRId64 "] cf_send(len=%zu) -> %d, %zu",
               stream ? stream->id : -1, len, result, *pnwritten);
   CF_DATA_RESTORE(cf, save);
@@ -1806,13 +1838,13 @@ static CURLcode read_pkt_to_send(void *userp,
     else if(n < 0) {
       switch(n) {
       case NGTCP2_ERR_STREAM_DATA_BLOCKED: {
-        struct h3_stream_ctx *stream = H3_STREAM_CTX(ctx, x->data);
+        struct h3_stream_ctx *stream;
         DEBUGASSERT(ndatalen == -1);
         nghttp3_conn_block_stream(ctx->h3conn, stream_id);
         CURL_TRC_CF(x->data, x->cf, "[%" FMT_PRId64 "] block quic flow",
                     (curl_int64_t)stream_id);
-        DEBUGASSERT(stream);
-        if(stream)
+        stream = cf_ngtcp2_get_stream(ctx, stream_id);
+        if(stream) /* it might be not one of our h3 streams? */
           stream->quic_flow_blocked = TRUE;
         n = 0;
         break;
@@ -2742,9 +2774,13 @@ static bool cf_ngtcp2_conn_is_alive(struct Curl_cfilter *cf,
    * it will close the connection when it expires. */
   rp = ngtcp2_conn_get_remote_transport_params(ctx->qconn);
   if(rp && rp->max_idle_timeout) {
-    timediff_t idletime = curlx_timediff(curlx_now(), ctx->q.last_io);
-    if(idletime > 0 && (uint64_t)idletime > rp->max_idle_timeout)
-      goto out;
+    timediff_t idletime_ms = curlx_timediff(curlx_now(), ctx->q.last_io);
+    if(idletime_ms > 0) {
+      uint64_t max_idle_ms =
+        (uint64_t)(rp->max_idle_timeout / NGTCP2_MILLISECONDS);
+      if((uint64_t)idletime_ms > max_idle_ms)
+        goto out;
+    }
   }
 
   if(!cf->next || !cf->next->cft->is_alive(cf->next, data, input_pending))

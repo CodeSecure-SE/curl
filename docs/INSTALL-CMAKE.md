@@ -474,7 +474,7 @@ the parent project, ideally in the "extra" find package redirect file:
 Available variables:
 
 - `HAVE_GNUTLS_SRP`:                        `gnutls_srp_verifier` present in GnuTLS.
-- `HAVE_GSS_C_NT_HOSTBASED_SERVICE`:        `GSS_C_NT_HOSTBASED_SERVICE` present in GSS/Heimdal/Kerberos.
+- `HAVE_GSS_C_NT_HOSTBASED_SERVICE`:        `GSS_C_NT_HOSTBASED_SERVICE` present in GSS/Kerberos.
 - `HAVE_LDAP_INIT_FD`:                      `ldap_init_fd` present in LDAP library.
 - `HAVE_LDAP_URL_PARSE`:                    `ldap_url_parse` present in LDAP library.
 - `HAVE_OPENSSL_SRP`:                       `SSL_CTX_set_srp_username` present in OpenSSL (or fork).
@@ -498,6 +498,26 @@ or `OFF`), the symbol detection is skipped. If the variable is *not defined*,
 the feature detection is performed.
 
 Note: These variables are internal and subject to change.
+
+## Useful build targets
+
+- `testdeps`:               Build test dependencies (servers, tools, test certificates).
+                            Individual targets: `curlinfo`, `libtests`, `servers`, `tunits`, `units`
+                            Test certificates: `build-certs`, `clean-certs`
+- `tests`:                  Run tests (`runtests.pl`). Customize via the `TFLAGS` environment variable, e.g. `TFLAGS=1621`.
+                            Other flavors: `test-am`, `test-ci`, `test-event`, `test-full`, `test-nonflaky`, `test-quiet`, `test-torture`
+- `curl-pytest`:            Run tests (pytest).
+                            Other flavor: `curl-test-ci`
+- `curl-examples`:          Build examples
+                            Individual targets: `curl-example-<name>`,
+                            where <name> is the .c filename without extension.
+- `curl-examples-build`:    Build examples quickly but without the ability to run them (for build tests)
+- `curl-man`:               Build man pages (built by default unless disabled)
+- `curl_uninstall`:         Uninstall curl
+- `curl-completion-fish`:   Build shell completions for fish (built by default if enabled)
+- `curl-completion-zsh`:    Build shell completions for zsh (built by default if enabled)
+- `curl-ca-bundle`:         Build the CA bundle via `scripts/mk-ca-bundle.pl`
+- `curl-ca-firefox`:        Build the CA bundle via `scripts/firefox-db2pem.sh`
 
 # Migrating from Visual Studio IDE Project Files
 

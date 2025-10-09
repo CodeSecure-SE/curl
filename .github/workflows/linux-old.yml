@@ -68,7 +68,7 @@ jobs:
           dpkg -i freexian-archive-keyring_2022.06.08_all.deb
           echo 'deb http://deb.freexian.com/extended-lts stretch-lts main contrib non-free' | tee /etc/apt/sources.list.d/extended-lts.list
           apt-get -o Dpkg::Use-Pty=0 update
-          apt-get -o Dpkg::Use-Pty=0 install -y --no-install-suggests --no-install-recommends cmake make automake autoconf libtool gcc pkg-config libpsl-dev libzstd-dev zlib1g-dev libgnutls28-dev libc-ares-dev heimdal-dev libldap2-dev librtmp-dev stunnel4 groff
+          apt-get -o Dpkg::Use-Pty=0 install -y --no-install-suggests --no-install-recommends cmake make automake autoconf libtool gcc pkg-config libpsl-dev libzstd-dev zlib1g-dev libgnutls28-dev libc-ares-dev libkrb5-dev libldap2-dev librtmp-dev stunnel4 groff
           # GitHub's actions/checkout needs newer glibc and libstdc++. The latter also depends on
           # gcc-8-base, but it doesn't actually seem used in our situation and isn't available in
           # the main repo, so force the install.
@@ -89,6 +89,10 @@ jobs:
           VERBOSE=1 make install
           src/curl --disable --version
 
+      - name: 'cmake build-only configure log'
+        if: ${{ !cancelled() }}
+        run: cat bld-1/CMakeFiles/CMake*.log 2>/dev/null || true
+
       - name: 'cmake build-only curl_config.h'
         run: |
           echo '::group::raw'; cat bld-1/lib/curl_config.h || true; echo '::endgroup::'
@@ -96,13 +100,17 @@ jobs:
 
       # when this job can get a libssh version 0.9.0 or later, this should get
       # that enabled again
-      - name: 'cmake generate (out-of-tree, c-ares, zstd, gssapi)'
+      - name: 'cmake configure (out-of-tree, c-ares, zstd, gssapi)'
         run: |
           mkdir bld-cares
           cd bld-cares
           cmake .. -DCMAKE_UNITY_BUILD=ON -DCURL_WERROR=ON -DBUILD_SHARED_LIBS=ON \
             -DCURL_USE_GNUTLS=ON -DENABLE_ARES=ON -DCURL_USE_GSSAPI=ON -DCURL_USE_LIBSSH2=OFF -DCURL_USE_LIBSSH=OFF -DUSE_LIBRTMP=ON \
             -DCURL_LIBCURL_VERSIONED_SYMBOLS=ON
+
+      - name: 'cmake configure log'
+        if: ${{ !cancelled() }}
+        run: cat bld-cares/CMakeFiles/CMake*.log 2>/dev/null || true
 
       - name: 'cmake curl_config.h'
         run: |
@@ -129,13 +137,17 @@ jobs:
       - name: 'autoreconf'
         run: autoreconf -if
 
-      - name: 'configure (out-of-tree, c-ares, zstd, gssapi)'
+      - name: 'autotools configure (out-of-tree, c-ares, zstd, gssapi)'
         run: |
           mkdir bld-am
           cd bld-am
           ../configure --disable-dependency-tracking --enable-unity --enable-warnings --enable-werror \
             --with-gnutls --enable-ares --without-libssh2 --with-zstd --with-gssapi --with-librtmp \
             --prefix="$PWD"/../curl-install-am
+
+      - name: 'autotools configure log'
+        if: ${{ !cancelled() }}
+        run: cat bld-am/config.log 2>/dev/null || true
 
       - name: 'autotools curl_config.h'
         run: |

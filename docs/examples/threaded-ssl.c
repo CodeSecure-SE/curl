@@ -64,7 +64,7 @@ static void *pull_one_url(void *pindex)
      might be downloading stuff from an impostor */
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-  curl_easy_perform(curl); /* ignores error */
+  (void)curl_easy_perform(curl); /* ignores error */
   curl_easy_cleanup(curl);
 
   return NULL;
@@ -72,13 +72,16 @@ static void *pull_one_url(void *pindex)
 
 int main(int argc, char **argv)
 {
+  CURLcode res;
   pthread_t tid[NUMT];
   int i;
   (void)argc;
   (void)argv;
 
   /* Must initialize libcurl before any threads are started */
-  curl_global_init(CURL_GLOBAL_ALL);
+  res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   for(i = 0; i < NUMT; i++) {
     int error = pthread_create(&tid[i],
@@ -96,6 +99,8 @@ int main(int argc, char **argv)
     pthread_join(tid[i], NULL);
     fprintf(stderr, "Thread %d terminated\n", i);
   }
+
+  curl_global_cleanup();
 
   return 0;
 }

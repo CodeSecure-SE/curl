@@ -1251,7 +1251,7 @@ static int enginecheck(struct Curl_easy *data,
     UI_METHOD *ui_method =
       UI_create_method(OSSL_UI_METHOD_CAST("curl user interface"));
     if(!ui_method) {
-      failf(data, "unable do create " OSSL_PACKAGE " user-interface method");
+      failf(data, "unable to create " OSSL_PACKAGE " user-interface method");
       return 0;
     }
     UI_method_set_opener(ui_method, UI_method_get_opener(UI_OpenSSL()));
@@ -1313,7 +1313,7 @@ static int providercheck(struct Curl_easy *data,
     UI_METHOD *ui_method =
       UI_create_method(OSSL_UI_METHOD_CAST("curl user interface"));
     if(!ui_method) {
-      failf(data, "unable do create " OSSL_PACKAGE " user-interface method");
+      failf(data, "unable to create " OSSL_PACKAGE " user-interface method");
       return 0;
     }
     UI_method_set_opener(ui_method, UI_method_get_opener(UI_OpenSSL()));
@@ -4898,7 +4898,7 @@ static void infof_certstack(struct Curl_easy *data, const SSL *ssl)
       curl_msnprintf(group_name_final, sizeof(group_name_final), "/%s",
                      group_name);
     }
-    type_name = current_pkey ? EVP_PKEY_get0_type_name(current_pkey) : NULL;
+    type_name = EVP_PKEY_get0_type_name(current_pkey);
 #else
     get_group_name = 0;
     type_name = NULL;

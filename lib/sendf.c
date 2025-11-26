@@ -230,7 +230,8 @@ static CURLcode cw_download_write(struct Curl_easy *data,
   size_t nwrite, excess_len = 0;
   bool is_connect = !!(type & CLIENTWRITE_CONNECT);
 
-  if(!is_connect && !ctx->started_response) {
+  if(!ctx->started_response &&
+     !(type & (CLIENTWRITE_INFO|CLIENTWRITE_CONNECT))) {
     Curl_pgrsTime(data, TIMER_STARTTRANSFER);
     Curl_rlimit_start(&data->progress.dl.rlimit, curlx_now());
     ctx->started_response = TRUE;
@@ -1195,6 +1196,7 @@ CURLcode Curl_client_read(struct Curl_easy *data, char *buf, size_t blen,
   DEBUGASSERT(blen);
   DEBUGASSERT(nread);
   DEBUGASSERT(eos);
+  *nread = 0;
 
   if(!data->req.reader_stack) {
     result = Curl_creader_set_fread(data, data->state.infilesize);

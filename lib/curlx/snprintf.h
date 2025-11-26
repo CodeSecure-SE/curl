@@ -1,5 +1,3 @@
-#ifndef HEADER_CURL_SLIST_H
-#define HEADER_CURL_SLIST_H
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |
@@ -24,18 +22,15 @@
  *
  ***************************************************************************/
 
-/*
- * Curl_slist_duplicate() duplicates a linked list. It always returns the
- * address of the first record of the cloned list or NULL in case of an
- * error (or if the input list was NULL).
- */
-struct curl_slist *Curl_slist_duplicate(struct curl_slist *inlist);
+/* Raw snprintf() for curlx */
 
-/*
- * Curl_slist_append_nodup() takes ownership of the given string and appends
- * it to the list.
- */
-struct curl_slist *Curl_slist_append_nodup(struct curl_slist *list,
-                                           const char *data);
-
-#endif /* HEADER_CURL_SLIST_H */
+#ifdef WITHOUT_LIBCURL /* when built for the test servers */
+#if defined(_MSC_VER) && (_MSC_VER < 1900)  /* adjust for old MSVC */
+#define SNPRINTF _snprintf
+#else
+#define SNPRINTF snprintf
+#endif
+#else /* !WITHOUT_LIBCURL */
+#include <curl/mprintf.h>
+#define SNPRINTF curl_msnprintf
+#endif /* WITHOUT_LIBCURL */

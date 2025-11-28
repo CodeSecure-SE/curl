@@ -139,7 +139,8 @@ const struct Curl_handler Curl_handler_ldap = {
   PORT_LDAP,                            /* defport */
   CURLPROTO_LDAP,                       /* protocol */
   CURLPROTO_LDAP,                       /* family */
-  PROTOPT_SSL_REUSE                     /* flags */
+  PROTOPT_SSL_REUSE |                   /* flags */
+  PROTOPT_CONN_REUSE
 };
 
 #ifdef USE_SSL
@@ -169,7 +170,8 @@ const struct Curl_handler Curl_handler_ldaps = {
   PORT_LDAPS,                           /* defport */
   CURLPROTO_LDAPS,                      /* protocol */
   CURLPROTO_LDAP,                       /* family */
-  PROTOPT_SSL                           /* flags */
+  PROTOPT_SSL |                         /* flags */
+  PROTOPT_CONN_REUSE
 };
 #endif
 
@@ -992,7 +994,6 @@ static CURLcode oldap_do(struct Curl_easy *data, bool *done)
 
   if(!li)
     return CURLE_FAILED_INIT;
-  connkeep(conn, "OpenLDAP do");
 
   infof(data, "LDAP local: %s", data->state.url);
 
@@ -1212,7 +1213,8 @@ static CURLcode oldap_recv(struct Curl_easy *data, int sockindex, char *buf,
 
           /* Binary value, encode to base64. */
           if(bvals[i].bv_len)
-            result = curlx_base64_encode(bvals[i].bv_val, bvals[i].bv_len,
+            result = curlx_base64_encode((uint8_t *)bvals[i].bv_val,
+                                         bvals[i].bv_len,
                                          &val_b64, &val_b64_sz);
           if(!result)
             result = client_write(data, STRCONST(": "), val_b64, val_b64_sz,

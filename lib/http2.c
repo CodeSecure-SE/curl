@@ -1847,8 +1847,7 @@ CURLcode Curl_http2_request_upgrade(struct dynbuf *req,
     return CURLE_FAILED_INIT;
   }
 
-  result = curlx_base64url_encode((const char *)binsettings, binlen,
-                                  &base64, &blen);
+  result = curlx_base64url_encode(binsettings, binlen, &base64, &blen);
   if(result) {
     curlx_dyn_free(req);
     return result;
@@ -2071,7 +2070,7 @@ static CURLcode h2_progress_ingress(struct Curl_cfilter *cf,
   size_t nread;
 
   if(should_close_session(ctx)) {
-    CURL_TRC_CF(data, cf, "progress ingress, session is closed");
+    CURL_TRC_CF(data, cf, "[0] ingress: session is closed");
     return CURLE_HTTP2;
   }
 
@@ -2128,15 +2127,16 @@ static CURLcode h2_progress_ingress(struct Curl_cfilter *cf,
     result = h2_process_pending_input(cf, data);
     if(result)
       return result;
-    CURL_TRC_CF(data, cf, "[0] progress ingress: inbufg=%zu",
+    CURL_TRC_CF(data, cf, "[0] ingress: nw-in buffered %zu",
                 Curl_bufq_len(&ctx->inbufq));
   }
 
   if(ctx->conn_closed && Curl_bufq_is_empty(&ctx->inbufq)) {
-    connclose(cf->conn, "GOAWAY received");
+    connclose(cf->conn, ctx->rcvd_goaway ? "server closed with GOAWAY" :
+              "server closed abruptly");
   }
 
-  CURL_TRC_CF(data, cf, "[0] progress ingress: done");
+  CURL_TRC_CF(data, cf, "[0] ingress: done");
   return CURLE_OK;
 }
 
@@ -2258,7 +2258,7 @@ static CURLcode cf_h2_body_send(struct Curl_cfilter *cf,
 
 static CURLcode h2_submit(struct h2_stream_ctx **pstream,
                           struct Curl_cfilter *cf, struct Curl_easy *data,
-                          const void *buf, size_t len,
+                          const uint8_t *buf, size_t len,
                           bool eos, size_t *pnwritten)
 {
   struct cf_h2_ctx *ctx = cf->ctx;
@@ -2281,7 +2281,7 @@ static CURLcode h2_submit(struct h2_stream_ctx **pstream,
   if(result)
     goto out;
 
-  result = Curl_h1_req_parse_read(&stream->h1, buf, len, NULL,
+  result = Curl_h1_req_parse_read(&stream->h1, (const char *)buf, len, NULL,
                                   !data->state.http_ignorecustom ?
                                   data->set.str[STRING_CUSTOMREQUEST] : NULL,
                                   0, &nwritten);
@@ -2391,7 +2391,7 @@ out:
 }
 
 static CURLcode cf_h2_send(struct Curl_cfilter *cf, struct Curl_easy *data,
-                           const void *buf, size_t len, bool eos,
+                           const uint8_t *buf, size_t len, bool eos,
                            size_t *pnwritten)
 {
   struct cf_h2_ctx *ctx = cf->ctx;

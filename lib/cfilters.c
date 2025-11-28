@@ -85,7 +85,7 @@ bool Curl_cf_def_data_pending(struct Curl_cfilter *cf,
 }
 
 CURLcode Curl_cf_def_send(struct Curl_cfilter *cf, struct Curl_easy *data,
-                          const void *buf, size_t len, bool eos,
+                          const uint8_t *buf, size_t len, bool eos,
                           size_t *pnwritten)
 {
   if(cf->next)
@@ -296,12 +296,11 @@ CURLcode Curl_cf_recv_bufq(struct Curl_cfilter *cf,
 }
 
 static CURLcode cf_bufq_writer(void *writer_ctx,
-                               const unsigned char *buf, size_t buflen,
+                               const uint8_t *buf, size_t buflen,
                                size_t *pnwritten)
 {
   struct cf_io_ctx *io = writer_ctx;
-  return Curl_conn_cf_send(io->cf, io->data, (const char *)buf,
-                           buflen, FALSE, pnwritten);
+  return Curl_conn_cf_send(io->cf, io->data, buf, buflen, FALSE, pnwritten);
 }
 
 CURLcode Curl_cf_send_bufq(struct Curl_cfilter *cf,
@@ -422,7 +421,7 @@ void Curl_conn_cf_close(struct Curl_cfilter *cf, struct Curl_easy *data)
 }
 
 CURLcode Curl_conn_cf_send(struct Curl_cfilter *cf, struct Curl_easy *data,
-                           const void *buf, size_t len, bool eos,
+                           const uint8_t *buf, size_t len, bool eos,
                            size_t *pnwritten)
 {
   if(cf)
@@ -929,19 +928,6 @@ Curl_conn_get_remote_addr(struct Curl_easy *data, int sockindex)
     (data->conn && CONN_SOCK_IDX_VALID(sockindex)) ?
     data->conn->cfilter[sockindex] : NULL;
   return cf ? cf_get_remote_addr(cf, data) : NULL;
-}
-
-void Curl_conn_forget_socket(struct Curl_easy *data, int sockindex)
-{
-  struct connectdata *conn = data->conn;
-  if(conn && CONN_SOCK_IDX_VALID(sockindex)) {
-    struct Curl_cfilter *cf = conn->cfilter[sockindex];
-    if(cf)
-      (void)Curl_conn_cf_cntrl(cf, data, TRUE,
-                               CF_CTRL_FORGET_SOCKET, 0, NULL);
-    fake_sclose(conn->sock[sockindex]);
-    conn->sock[sockindex] = CURL_SOCKET_BAD;
-  }
 }
 
 static CURLcode cf_cntrl_all(struct connectdata *conn,

@@ -446,7 +446,6 @@ static CURLcode cf_recv_body(struct Curl_cfilter *cf,
     stream->closed = TRUE;
     stream->reset = TRUE;
     stream->send_closed = TRUE;
-    streamclose(cf->conn, "Reset of stream");
     return result;
   }
   return CURLE_OK;
@@ -510,7 +509,6 @@ static CURLcode h3_process_event(struct Curl_cfilter *cf,
     stream->closed = TRUE;
     stream->reset = TRUE;
     stream->send_closed = TRUE;
-    streamclose(cf->conn, "Reset of stream");
     break;
 
   case QUICHE_H3_EVENT_FINISHED:
@@ -522,7 +520,6 @@ static CURLcode h3_process_event(struct Curl_cfilter *cf,
       stream->resp_hds_complete = TRUE;
     }
     stream->closed = TRUE;
-    streamclose(cf->conn, "End of stream");
     break;
 
   case QUICHE_H3_EVENT_GOAWAY:
@@ -914,7 +911,7 @@ out:
 static CURLcode cf_quiche_send_body(struct Curl_cfilter *cf,
                                     struct Curl_easy *data,
                                     struct h3_stream_ctx *stream,
-                                    const void *buf, size_t len, bool eos,
+                                    const uint8_t *buf, size_t len, bool eos,
                                     size_t *pnwritten)
 {
   struct cf_quiche_ctx *ctx = cf->ctx;
@@ -959,7 +956,7 @@ static CURLcode cf_quiche_send_body(struct Curl_cfilter *cf,
 
 static CURLcode h3_open_stream(struct Curl_cfilter *cf,
                                struct Curl_easy *data,
-                               const char *buf, size_t blen, bool eos,
+                               const uint8_t *buf, size_t blen, bool eos,
                                size_t *pnwritten)
 {
   struct cf_quiche_ctx *ctx = cf->ctx;
@@ -983,7 +980,7 @@ static CURLcode h3_open_stream(struct Curl_cfilter *cf,
 
   DEBUGASSERT(stream);
 
-  result = Curl_h1_req_parse_read(&stream->h1, buf, blen, NULL,
+  result = Curl_h1_req_parse_read(&stream->h1, (const char *)buf, blen, NULL,
                                     !data->state.http_ignorecustom ?
                                     data->set.str[STRING_CUSTOMREQUEST] : NULL,
                                     0, pnwritten);
@@ -1079,7 +1076,7 @@ out:
 }
 
 static CURLcode cf_quiche_send(struct Curl_cfilter *cf, struct Curl_easy *data,
-                               const void *buf, size_t len, bool eos,
+                               const uint8_t *buf, size_t len, bool eos,
                                size_t *pnwritten)
 {
   struct cf_quiche_ctx *ctx = cf->ctx;
@@ -1415,7 +1412,6 @@ static CURLcode cf_quiche_connect(struct Curl_cfilter *cf,
       }
       cf->connected = TRUE;
       *done = TRUE;
-      connkeep(cf->conn, "HTTP/3 default");
     }
   }
   else if(quiche_conn_is_draining(ctx->qconn)) {

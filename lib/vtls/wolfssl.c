@@ -334,7 +334,8 @@ static int wssl_bio_cf_out_write(WOLFSSL_BIO *bio,
     skiplen = (ssize_t)(blen - wssl->io_send_blocked_len);
     blen = wssl->io_send_blocked_len;
   }
-  result = Curl_conn_cf_send(cf->next, data, buf, blen, FALSE, &nwritten);
+  result = Curl_conn_cf_send(cf->next, data,
+                             (const uint8_t *)buf, blen, FALSE, &nwritten);
   wssl->io_result = result;
   CURL_TRC_CF(data, cf, "bio_write(len=%d) -> %d, %zu",
               blen, result, nwritten);
@@ -1816,7 +1817,7 @@ static CURLcode wssl_handshake(struct Curl_cfilter *cf,
         char *b64str = NULL;
         size_t blen = 0;
 
-        result = curlx_base64_encode((const char *)echConfigs, echConfigsLen,
+        result = curlx_base64_encode(echConfigs, echConfigsLen,
                                      &b64str, &blen);
         if(!result && b64str)
           infof(data, "ECH: (not yet) retry_configs %s", b64str);

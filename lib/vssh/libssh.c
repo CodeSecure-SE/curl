@@ -156,7 +156,8 @@ const struct Curl_handler Curl_handler_scp = {
   PORT_SSH,                     /* defport */
   CURLPROTO_SCP,                /* protocol */
   CURLPROTO_SCP,                /* family */
-  PROTOPT_DIRLOCK | PROTOPT_CLOSEACTION | PROTOPT_NOURLQUERY    /* flags */
+  PROTOPT_DIRLOCK | PROTOPT_CLOSEACTION | /* flags */
+  PROTOPT_NOURLQUERY | PROTOPT_CONN_REUSE
 };
 
 /*
@@ -185,8 +186,8 @@ const struct Curl_handler Curl_handler_sftp = {
   PORT_SSH,                             /* defport */
   CURLPROTO_SFTP,                       /* protocol */
   CURLPROTO_SFTP,                       /* family */
-  PROTOPT_DIRLOCK | PROTOPT_CLOSEACTION
-  | PROTOPT_NOURLQUERY                  /* flags */
+  PROTOPT_DIRLOCK | PROTOPT_CLOSEACTION | /* flags */
+  PROTOPT_NOURLQUERY | PROTOPT_CONN_REUSE
 };
 
 static CURLcode sftp_error_to_CURLE(int err)
@@ -1873,6 +1874,19 @@ static int myssh_in_SFTP_QUOTE_STAT(struct Curl_easy *data,
   return SSH_NO_ERROR;
 }
 
+static void conn_forget_socket(struct Curl_easy *data, int sockindex)
+{
+  struct connectdata *conn = data->conn;
+  if(conn && CONN_SOCK_IDX_VALID(sockindex)) {
+    struct Curl_cfilter *cf = conn->cfilter[sockindex];
+    if(cf)
+      (void)Curl_conn_cf_cntrl(cf, data, TRUE,
+                               CF_CTRL_FORGET_SOCKET, 0, NULL);
+    fake_sclose(conn->sock[sockindex]);
+    conn->sock[sockindex] = CURL_SOCKET_BAD;
+  }
+}
+
 /*
  * ssh_statemach_act() runs the SSH state machine as far as it can without
  * blocking and without reaching the end. The data the pointer 'block' points
@@ -2375,7 +2389,7 @@ static CURLcode myssh_statemach_act(struct Curl_easy *data,
         /* conn->sock[FIRSTSOCKET] is closed by ssh_disconnect behind our back,
            tell the connection to forget about it. This libssh
            bug is fixed in 0.10.0. */
-        Curl_conn_forget_socket(data, FIRSTSOCKET);
+        conn_forget_socket(data, FIRSTSOCKET);
       }
 
       SSH_STRING_FREE_CHAR(sshc->homedir);
@@ -2571,10 +2585,6 @@ static CURLcode myssh_connect(struct Curl_easy *data, bool *done)
 
   if(!sshc || !ssh)
     return CURLE_FAILED_INIT;
-
-  /* We default to persistent connections. We set this already in this connect
-     function to make the reuse checks properly be able to check this bit. */
-  connkeep(conn, "SSH default");
 
   if(conn->handler->protocol & CURLPROTO_SCP) {
     conn->recv[FIRSTSOCKET] = scp_recv;

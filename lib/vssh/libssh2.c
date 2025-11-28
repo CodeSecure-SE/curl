@@ -123,8 +123,8 @@ const struct Curl_handler Curl_handler_scp = {
   PORT_SSH,                             /* defport */
   CURLPROTO_SCP,                        /* protocol */
   CURLPROTO_SCP,                        /* family */
-  PROTOPT_DIRLOCK | PROTOPT_CLOSEACTION
-  | PROTOPT_NOURLQUERY                  /* flags */
+  PROTOPT_DIRLOCK | PROTOPT_CLOSEACTION | /* flags */
+  PROTOPT_NOURLQUERY | PROTOPT_CONN_REUSE
 };
 
 
@@ -154,8 +154,8 @@ const struct Curl_handler Curl_handler_sftp = {
   PORT_SSH,                             /* defport */
   CURLPROTO_SFTP,                       /* protocol */
   CURLPROTO_SFTP,                       /* family */
-  PROTOPT_DIRLOCK | PROTOPT_CLOSEACTION
-  | PROTOPT_NOURLQUERY                  /* flags */
+  PROTOPT_DIRLOCK | PROTOPT_CLOSEACTION | /* flags */
+  PROTOPT_NOURLQUERY | PROTOPT_CONN_REUSE
 };
 
 static void
@@ -602,7 +602,7 @@ static CURLcode ssh_check_fingerprint(struct Curl_easy *data,
 
     /* The length of fingerprint is 32 bytes for SHA256.
      * See libssh2_hostkey_hash documentation. */
-    if(curlx_base64_encode(fingerprint, 32, &fingerprint_b64,
+    if(curlx_base64_encode((const uint8_t *)fingerprint, 32, &fingerprint_b64,
                            &fingerprint_b64_len) != CURLE_OK) {
       myssh_state(data, sshc, SSH_SESSION_FREE);
       return CURLE_PEER_FAILED_VERIFICATION;
@@ -3322,10 +3322,6 @@ static CURLcode ssh_connect(struct Curl_easy *data, bool *done)
 
   if(!sshc)
     return CURLE_FAILED_INIT;
-
-  /* We default to persistent connections. We set this already in this connect
-     function to make the reuse checks properly be able to check this bit. */
-  connkeep(conn, "SSH default");
 
   infof(data, "User: '%s'", conn->user);
 #ifdef CURL_LIBSSH2_DEBUG

@@ -142,7 +142,8 @@ const struct Curl_handler Curl_handler_http = {
   CURLPROTO_HTTP,                       /* protocol */
   CURLPROTO_HTTP,                       /* family */
   PROTOPT_CREDSPERREQUEST |             /* flags */
-  PROTOPT_USERPWDCTRL
+  PROTOPT_USERPWDCTRL | PROTOPT_CONN_REUSE
+
 };
 
 #ifdef USE_SSL
@@ -172,7 +173,7 @@ const struct Curl_handler Curl_handler_https = {
   CURLPROTO_HTTPS,                      /* protocol */
   CURLPROTO_HTTP,                       /* family */
   PROTOPT_SSL | PROTOPT_CREDSPERREQUEST | PROTOPT_ALPN | /* flags */
-  PROTOPT_USERPWDCTRL
+  PROTOPT_USERPWDCTRL | PROTOPT_CONN_REUSE
 };
 
 #endif
@@ -220,7 +221,6 @@ CURLcode Curl_http_setup_conn(struct Curl_easy *data,
 {
   /* allocate the HTTP-specific struct for the Curl_easy, only to survive
      during this request */
-  connkeep(conn, "HTTP default");
   if(data->state.http_neg.wanted == CURL_HTTP_V3x) {
     /* only HTTP/3, needs to work */
     CURLcode result = Curl_conn_may_http3(data, conn, conn->transport_wanted);
@@ -367,7 +367,8 @@ static CURLcode http_output_basic(struct Curl_easy *data, bool proxy)
   if(!out)
     return CURLE_OUT_OF_MEMORY;
 
-  result = curlx_base64_encode(out, strlen(out), &authorization, &size);
+  result = curlx_base64_encode((uint8_t *)out, strlen(out),
+                               &authorization, &size);
   if(result)
     goto fail;
 
@@ -1548,12 +1549,6 @@ Curl_compareheader(const char *headerline, /* line to check */
  */
 CURLcode Curl_http_connect(struct Curl_easy *data, bool *done)
 {
-  struct connectdata *conn = data->conn;
-
-  /* We default to persistent connections. We set this already in this connect
-     function to make the reuse checks properly be able to check this bit. */
-  connkeep(conn, "HTTP default");
-
   return Curl_conn_connect(data, FIRSTSOCKET, FALSE, done);
 }
 
@@ -3257,14 +3252,15 @@ static CURLcode http_header_c(struct Curl_easy *data,
     }
     return CURLE_OK;
   }
-  if(HD_IS_AND_SAYS(hd, hdlen, "Connection:", "close")) {
+  if((k->httpversion < 20) &&
+     HD_IS_AND_SAYS(hd, hdlen, "Connection:", "close")) {
     /*
      * [RFC 2616, section 8.1.2.1]
      * "Connection: close" is HTTP/1.1 language and means that
      * the connection will close when this request has been
      * served.
      */
-    streamclose(conn, "Connection: close used");
+    connclose(conn, "Connection: close used");
     return CURLE_OK;
   }
   if((k->httpversion == 10) &&

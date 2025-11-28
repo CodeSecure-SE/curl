@@ -597,7 +597,8 @@ static int ossl_bio_cf_out_write(BIO *bio, const char *buf, int blen)
   if(blen < 0)
     return 0;
 
-  result = Curl_conn_cf_send(cf->next, data, buf, (size_t)blen, FALSE,
+  result = Curl_conn_cf_send(cf->next, data,
+                             (const uint8_t *)buf, (size_t)blen, FALSE,
                              &nwritten);
   CURL_TRC_CF(data, cf, "ossl_bio_cf_out_write(len=%d) -> %d, %zu",
               blen, result, nwritten);
@@ -4132,7 +4133,7 @@ static void ossl_trace_ech_retry_configs(struct Curl_easy *data, SSL* ssl,
   int rv = 1;
 # ifndef HAVE_BORINGSSL_LIKE
   char *inner = NULL;
-  unsigned char *rcs = NULL;
+  uint8_t *rcs = NULL;
   char *outer = NULL;
 # else
   const char *inner = NULL;
@@ -4156,7 +4157,7 @@ static void ossl_trace_ech_retry_configs(struct Curl_easy *data, SSL* ssl,
     char *b64str = NULL;
     size_t blen = 0;
 
-    result = curlx_base64_encode((const char *)rcs, rcl, &b64str, &blen);
+    result = curlx_base64_encode(rcs, rcl, &b64str, &blen);
     if(!result && b64str) {
       infof(data, "ECH: retry_configs %s", b64str);
       free(b64str);
@@ -5175,7 +5176,6 @@ static CURLcode ossl_recv(struct Curl_cfilter *cf,
   char error_buffer[256];
   unsigned long sslerror;
   int buffsize;
-  struct connectdata *conn = cf->conn;
   struct ssl_connect_data *connssl = cf->ctx;
   struct ossl_ctx *octx = (struct ossl_ctx *)connssl->backend;
   CURLcode result = CURLE_OK;
@@ -5205,7 +5205,7 @@ static CURLcode ossl_recv(struct Curl_cfilter *cf,
       if(cf->sockindex == FIRSTSOCKET)
         /* mark the connection for close if it is indeed the control
            connection */
-        connclose(conn, "TLS close_notify");
+        CURL_TRC_CF(data, cf, "TLS close_notify");
       break;
     case SSL_ERROR_WANT_READ:
       connssl->io_need = CURL_SSL_IO_NEED_RECV;

@@ -1524,7 +1524,7 @@ cb_h3_read_req_body(nghttp3_conn *conn, int64_t stream_id,
 
 static CURLcode h3_stream_open(struct Curl_cfilter *cf,
                                struct Curl_easy *data,
-                               const void *buf, size_t len,
+                               const uint8_t *buf, size_t len,
                                size_t *pnwritten)
 {
   struct cf_ngtcp2_ctx *ctx = cf->ctx;
@@ -1552,7 +1552,7 @@ static CURLcode h3_stream_open(struct Curl_cfilter *cf,
     goto out;
   }
 
-  result = Curl_h1_req_parse_read(&stream->h1, buf, len, NULL,
+  result = Curl_h1_req_parse_read(&stream->h1, (const char *)buf, len, NULL,
                                   !data->state.http_ignorecustom ?
                                   data->set.str[STRING_CUSTOMREQUEST] : NULL,
                                   0, pnwritten);
@@ -1656,7 +1656,7 @@ out:
 }
 
 static CURLcode cf_ngtcp2_send(struct Curl_cfilter *cf, struct Curl_easy *data,
-                               const void *buf, size_t len, bool eos,
+                               const uint8_t *buf, size_t len, bool eos,
                                size_t *pnwritten)
 {
   struct cf_ngtcp2_ctx *ctx = cf->ctx;
@@ -2277,7 +2277,6 @@ static int quic_ossl_new_session_cb(SSL *ssl, SSL_SESSION *ssl_sessionid)
 #endif
     Curl_ossl_add_session(cf, data, ctx->peer.scache_key, ssl_sessionid,
                           SSL_version(ssl), "h3", quic_tp, quic_tp_len);
-    return 1;
   }
   return 0;
 }
@@ -2648,7 +2647,6 @@ static CURLcode cf_ngtcp2_connect(struct Curl_cfilter *cf,
       CURL_TRC_CF(data, cf, "peer verified");
       cf->connected = TRUE;
       *done = TRUE;
-      connkeep(cf->conn, "HTTP/3 default");
     }
   }
 
@@ -2880,22 +2878,6 @@ out:
       cf_ngtcp2_ctx_free(ctx);
   }
   return result;
-}
-
-bool Curl_conn_is_ngtcp2(const struct Curl_easy *data,
-                         const struct connectdata *conn,
-                         int sockindex)
-{
-  struct Curl_cfilter *cf = conn ? conn->cfilter[sockindex] : NULL;
-
-  (void)data;
-  for(; cf; cf = cf->next) {
-    if(cf->cft == &Curl_cft_http3)
-      return TRUE;
-    if(cf->cft->flags & CF_TYPE_IP_CONNECT)
-      return FALSE;
-  }
-  return FALSE;
 }
 
 #endif

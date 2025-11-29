@@ -31,7 +31,6 @@
 #include "first.h"
 
 #include "testtrace.h"
-#include "memdebug.h"
 
 #ifdef USE_OPENSSL
 
@@ -69,7 +68,6 @@ static void t758_msg(const char *msg)
 {
   curl_mfprintf(stderr, "%s %s\n", t758_tag(), msg);
 }
-
 
 struct t758_Sockets {
   curl_socket_t *sockets;
@@ -121,14 +119,15 @@ static int t758_addFd(struct t758_Sockets *sockets, curl_socket_t fd,
    * Allocate array storage when required.
    */
   if(!sockets->sockets) {
-    sockets->sockets = malloc(sizeof(curl_socket_t) * 20U);
+    sockets->sockets = curlx_malloc(sizeof(curl_socket_t) * 20U);
     if(!sockets->sockets)
       return 1;
     sockets->max_count = 20;
   }
   else if(sockets->count + 1 > sockets->max_count) {
-    curl_socket_t *ptr = realloc(sockets->sockets, sizeof(curl_socket_t) *
-                                 (sockets->max_count + 20));
+    curl_socket_t *ptr = curlx_realloc(sockets->sockets,
+                                       sizeof(curl_socket_t) *
+                                       (sockets->max_count + 20));
     if(!ptr)
       /* cleanup in test_cleanup */
       return 1;
@@ -203,7 +202,7 @@ static int t758_curlTimerCallback(CURLM *multi, long timeout_ms, void *userp)
 
 static int t758_cert_verify_callback(X509_STORE_CTX *ctx, void *arg)
 {
-  SSL * ssl;
+  SSL *ssl;
   (void)arg;
   ssl = (SSL *)X509_STORE_CTX_get_ex_data(ctx,
         SSL_get_ex_data_X509_STORE_CTX_idx());
@@ -226,7 +225,7 @@ static int t758_cert_verify_callback(X509_STORE_CTX *ctx, void *arg)
 static CURLcode
 t758_set_ssl_ctx_callback(CURL *curl, void *ssl_ctx, void *clientp)
 {
-  SSL_CTX *ctx = (SSL_CTX *) ssl_ctx;
+  SSL_CTX *ctx = (SSL_CTX *)ssl_ctx;
   (void)curl;
   SSL_CTX_set_cert_verify_callback(ctx, t758_cert_verify_callback, clientp);
   return CURLE_OK;
@@ -277,7 +276,7 @@ static ssize_t t758_getMicroSecondTimeout(struct curltime *timeout)
 /**
  * Update a fd_set with all of the sockets in use.
  */
-static void t758_updateFdSet(struct t758_Sockets *sockets, fd_set* fdset,
+static void t758_updateFdSet(struct t758_Sockets *sockets, fd_set *fdset,
                              curl_socket_t *maxFd)
 {
   int i;
@@ -358,7 +357,6 @@ static CURLcode t758_one(const char *URL, int timer_fail_at,
     return res;
 
   curl_global_trace("all");
-
 
   easy_init(curl);
   debug_config.nohex = TRUE;
@@ -487,8 +485,8 @@ test_cleanup:
   curl_global_cleanup();
 
   /* free local memory */
-  free(sockets.read.sockets);
-  free(sockets.write.sockets);
+  curlx_free(sockets.read.sockets);
+  curlx_free(sockets.write.sockets);
   t758_msg("done");
 
   return res;

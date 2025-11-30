@@ -744,12 +744,14 @@ init_config_builder_verifier(struct Curl_easy *data,
   if(rr != RUSTLS_RESULT_OK) {
     rustls_failf(data, rr, "failed to build trusted root certificate store");
     result = CURLE_SSL_CACERT_BADFILE;
-    if(result) {
-      goto cleanup;
-    }
+    goto cleanup;
   }
 
   verifier_builder = rustls_web_pki_server_cert_verifier_builder_new(roots);
+  if(!verifier_builder) {
+    result = CURLE_OUT_OF_MEMORY;
+    goto cleanup;
+  }
 
   if(conn_config->CRLfile) {
     result = init_config_builder_verifier_crl(data,

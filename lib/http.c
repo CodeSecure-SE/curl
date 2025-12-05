@@ -84,6 +84,7 @@
 #include "altsvc.h"
 #include "hsts.h"
 #include "ws.h"
+#include "bufref.h"
 #include "curl_ctype.h"
 #include "curlx/strparse.h"
 
@@ -610,7 +611,8 @@ CURLcode Curl_http_auth_act(struct Curl_easy *data)
        we must make sure to free it before allocating a new one. As figured
        out in bug #2284386 */
     curlx_free(data->req.newurl);
-    data->req.newurl = curlx_strdup(data->state.url); /* clone URL */
+    /* clone URL */
+    data->req.newurl = Curl_bufref_dup(&data->state.url);
     if(!data->req.newurl)
       return CURLE_OUT_OF_MEMORY;
   }
@@ -623,7 +625,8 @@ CURLcode Curl_http_auth_act(struct Curl_easy *data)
        we did not try HEAD or GET */
     if((data->state.httpreq != HTTPREQ_GET) &&
        (data->state.httpreq != HTTPREQ_HEAD)) {
-      data->req.newurl = curlx_strdup(data->state.url); /* clone URL */
+      /* clone URL */
+      data->req.newurl = Curl_bufref_dup(&data->state.url);
       if(!data->req.newurl)
         return CURLE_OUT_OF_MEMORY;
       data->state.authhost.done = TRUE;
@@ -909,7 +912,7 @@ static CURLcode auth_spnego(struct Curl_easy *data,
         &conn->http_negotiate_state;
       if(!result) {
         curlx_free(data->req.newurl);
-        data->req.newurl = curlx_strdup(data->state.url);
+        data->req.newurl = Curl_bufref_dup(&data->state.url);
         if(!data->req.newurl)
           return CURLE_OUT_OF_MEMORY;
         data->state.authproblem = FALSE;
@@ -1232,18 +1235,15 @@ CURLcode Curl_http_follow(struct Curl_easy *data, const char *newurl,
         /* We are asked to automatically set the previous URL as the referer
            when we get the next URL. We pick the ->url field, which may or may
            not be 100% correct */
-
-        if(data->state.referer_alloc) {
-          Curl_safefree(data->state.referer);
-          data->state.referer_alloc = FALSE;
-        }
+        Curl_bufref_free(&data->state.referer);
 
         /* Make a copy of the URL without credentials and fragment */
         u = curl_url();
         if(!u)
           return CURLE_OUT_OF_MEMORY;
 
-        uc = curl_url_set(u, CURLUPART_URL, data->state.url, 0);
+        uc = curl_url_set(u, CURLUPART_URL,
+                          Curl_bufref_ptr(&data->state.url), 0);
         if(!uc)
           uc = curl_url_set(u, CURLUPART_FRAGMENT, NULL, 0);
         if(!uc)
@@ -1258,8 +1258,7 @@ CURLcode Curl_http_follow(struct Curl_easy *data, const char *newurl,
         if(uc || !referer)
           return CURLE_OUT_OF_MEMORY;
 
-        data->state.referer = referer;
-        data->state.referer_alloc = TRUE; /* yes, free this later */
+        Curl_bufref_set(&data->state.referer, referer, 0, curl_free);
       }
     }
   }
@@ -1365,13 +1364,9 @@ CURLcode Curl_http_follow(struct Curl_easy *data, const char *newurl,
   if(disallowport)
     data->state.allow_port = FALSE;
 
-  if(data->state.url_alloc)
-    Curl_safefree(data->state.url);
-
-  data->state.url = follow_url;
-  data->state.url_alloc = TRUE;
+  Curl_bufref_set(&data->state.url, follow_url, 0, curl_free);
   rewind_result = Curl_req_soft_reset(&data->req, data);
-  infof(data, "Issue another request to this URL: '%s'", data->state.url);
+  infof(data, "Issue another request to this URL: '%s'", follow_url);
   if((data->set.http_follow_mode == CURLFOLLOW_FIRSTONLY) &&
      data->set.str[STRING_CUSTOMREQUEST] &&
      !data->state.http_ignorecustom) {
@@ -2867,8 +2862,10 @@ static CURLcode http_add_hd(struct Curl_easy *data,
 
   case H1_HD_REFERER:
     Curl_safefree(data->state.aptr.ref);
-    if(data->state.referer && !Curl_checkheaders(data, STRCONST("Referer")))
-      result = curlx_dyn_addf(req, "Referer: %s\r\n", data->state.referer);
+    if(Curl_bufref_ptr(&data->state.referer) &&
+       !Curl_checkheaders(data, STRCONST("Referer")))
+      result = curlx_dyn_addf(req, "Referer: %s\r\n",
+                              Curl_bufref_ptr(&data->state.referer));
     break;
 
 #ifndef CURL_DISABLE_PROXY
@@ -4054,7 +4051,7 @@ static CURLcode http_on_response(struct Curl_easy *data,
             data->state.disableexpect = TRUE;
             Curl_req_abort_sending(data);
             DEBUGASSERT(!data->req.newurl);
-            data->req.newurl = curlx_strdup(data->state.url);
+            data->req.newurl = Curl_bufref_dup(&data->state.url);
             if(!data->req.newurl) {
               result = CURLE_OUT_OF_MEMORY;
               goto out;

@@ -53,6 +53,7 @@
 #include "socketpair.h"
 #include "socks.h"
 #include "urlapi-int.h"
+#include "bufref.h"
 
 /* initial multi->xfers table size for a full multi */
 #define CURL_XFER_TABLE_SIZE 512
@@ -606,12 +607,11 @@ static void multi_done_locked(struct connectdata *conn,
 
   Curl_detach_connection(data);
 
-  CURL_TRC_M(data, "multi_done_locked, in use=%u",
-             Curl_uint32_spbset_count(&conn->xfers_attached));
+  CURL_TRC_M(data, "multi_done_locked, in use=%u", conn->attached_xfers);
   if(CONN_INUSE(conn)) {
     /* Stop if still used. */
     CURL_TRC_M(data, "Connection still in use %u, no more multi_done now!",
-               Curl_uint32_spbset_count(&conn->xfers_attached));
+               conn->attached_xfers);
     return;
   }
 
@@ -905,9 +905,13 @@ void Curl_detach_connection(struct Curl_easy *data)
 {
   struct connectdata *conn = data->conn;
   if(conn) {
-    Curl_uint32_spbset_remove(&conn->xfers_attached, data->mid);
-    if(Curl_uint32_spbset_empty(&conn->xfers_attached))
-      conn->attached_multi = NULL;
+    /* this should never happen, prevent underflow */
+    DEBUGASSERT(conn->attached_xfers);
+    if(conn->attached_xfers) {
+      conn->attached_xfers--;
+      if(!conn->attached_xfers)
+        conn->attached_multi = NULL;
+    }
   }
   data->conn = NULL;
 }
@@ -923,8 +927,9 @@ void Curl_attach_connection(struct Curl_easy *data,
   DEBUGASSERT(data);
   DEBUGASSERT(!data->conn);
   DEBUGASSERT(conn);
+  DEBUGASSERT(conn->attached_xfers < UINT32_MAX);
   data->conn = conn;
-  Curl_uint32_spbset_add(&conn->xfers_attached, data->mid);
+  conn->attached_xfers++;
   /* all attached transfers must be from the same multi */
   if(!conn->attached_multi)
     conn->attached_multi = data->multi;
@@ -2006,7 +2011,7 @@ static CURLMcode state_performing(struct Curl_easy *data,
       data->state.errorbuf = FALSE;
       if(!newurl)
         /* typically for HTTP_1_1_REQUIRED error on first flight */
-        newurl = curlx_strdup(data->state.url);
+        newurl = Curl_bufref_dup(&data->state.url);
       if(!newurl) {
         result = CURLE_OUT_OF_MEMORY;
       }
@@ -4066,7 +4071,7 @@ static void multi_xfer_dump(struct Curl_multi *multi, uint32_t mid,
                   ", url=%s\n",
                   mid,
                   (data->magic == CURLEASY_MAGIC_NUMBER) ? "GOOD" : "BAD!",
-                  (void *)data, data->id, data->state.url);
+                  (void *)data, data->id, Curl_bufref_ptr(&data->state.url));
   }
 }
 

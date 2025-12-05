@@ -54,6 +54,7 @@
 #include "tftp.h"
 #include "strdup.h"
 #include "escape.h"
+#include "bufref.h"
 
 static CURLcode setopt_set_timeout_sec(timediff_t *ptimeout_ms, long secs)
 {
@@ -1753,12 +1754,8 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
     /*
      * String to set in the HTTP Referer: field.
      */
-    if(data->state.referer_alloc) {
-      Curl_safefree(data->state.referer);
-      data->state.referer_alloc = FALSE;
-    }
     result = Curl_setstropt(&s->str[STRING_SET_REFERER], ptr);
-    data->state.referer = s->str[STRING_SET_REFERER];
+    Curl_bufref_set(&data->state.referer, s->str[STRING_SET_REFERER], 0, NULL);
     break;
 
   case CURLOPT_USERAGENT:
@@ -1971,12 +1968,8 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
     /*
      * The URL to fetch.
      */
-    if(data->state.url_alloc) {
-      Curl_safefree(data->state.url);
-      data->state.url_alloc = FALSE;
-    }
     result = Curl_setstropt(&s->str[STRING_SET_URL], ptr);
-    data->state.url = s->str[STRING_SET_URL];
+    Curl_bufref_set(&data->state.url, s->str[STRING_SET_URL], 0, NULL);
     break;
 
   case CURLOPT_USERPWD:
@@ -2063,12 +2056,7 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
     /*
      * pass CURLU to set URL
      */
-    if(data->state.url_alloc) {
-      Curl_safefree(data->state.url);
-      data->state.url_alloc = FALSE;
-    }
-    else
-      data->state.url = NULL;
+    Curl_bufref_free(&data->state.url);
     Curl_safefree(s->str[STRING_SET_URL]);
     s->uh = (CURLU *)ptr;
     break;

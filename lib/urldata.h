@@ -154,6 +154,7 @@ typedef unsigned int curl_prot_t;
 #include "hash.h"
 #include "splay.h"
 #include "curlx/dynbuf.h"
+#include "bufref.h"
 #include "dynhds.h"
 #include "request.h"
 #include "ratelimit.h"
@@ -275,13 +276,13 @@ struct ssl_config_data {
   char *key_type; /* format for private key (default: PEM) */
   char *key_passwd; /* plain text private key password */
   BIT(certinfo);     /* gather lots of certificate info */
-  BIT(earlydata);    /* use tls1.3 early data */
+  BIT(earlydata);    /* use TLS 1.3 early data */
   BIT(enable_beast); /* allow this flaw for interoperability's sake */
   BIT(no_revoke);    /* disable SSL certificate revocation checks */
   BIT(no_partialchain); /* do not accept partial certificate chains */
   BIT(revoke_best_effort); /* ignore SSL revocation offline/missing revocation
                               list errors */
-  BIT(native_ca_store); /* use the native ca store of operating system */
+  BIT(native_ca_store); /* use the native CA store of operating system */
   BIT(auto_client_cert);   /* automatically locate and use a client
                               certificate for authentication (Schannel) */
   BIT(custom_cafile); /* application has set custom CA file */
@@ -617,8 +618,7 @@ struct connectdata {
      handle is still used by one or more easy handles and can only used by any
      other easy handle without careful consideration (== only for
      multiplexing) and it cannot be used by another multi handle! */
-#define CONN_INUSE(c) (!Curl_uint32_spbset_empty(&(c)->xfers_attached))
-#define CONN_ATTACHED(c) Curl_uint32_spbset_count(&(c)->xfers_attached)
+#define CONN_INUSE(c) (!!(c)->attached_xfers)
 
   /**** Fields set when inited and not modified again */
   curl_off_t connection_id; /* Contains a unique number to make it easier to
@@ -678,7 +678,6 @@ struct connectdata {
      was used on this connection. */
   struct curltime keepalive;
 
-  struct uint32_spbset xfers_attached; /* mids of attached transfers */
   /* A connection cache from a SHARE might be used in several multi handles.
    * We MUST not reuse connections that are running in another multi,
    * for concurrency reasons. That multi might run in another thread.
@@ -720,6 +719,9 @@ struct connectdata {
   int remote_port; /* the remote port, not the proxy port! */
   int conn_to_port; /* the remote port to connect to. valid only if
                        bits.conn_to_port is set */
+
+  uint32_t attached_xfers; /* # of attached easy handles */
+
 #ifdef USE_IPV6
   unsigned int scope_id;  /* Scope id for IPv6 */
 #endif
@@ -1025,8 +1027,8 @@ struct UrlState {
   void *in;                      /* CURLOPT_READDATA */
   CURLU *uh; /* URL handle for the current parsed URL */
   struct urlpieces up;
-  char *url;        /* work URL, copied from UserDefined */
-  char *referer;    /* referer string */
+  struct bufref url;        /* work URL, initially copied from UserDefined */
+  struct bufref referer;    /* referer string */
   struct curl_slist *resolve; /* set to point to the set.resolve list when
                                  this should be dealt with in pretransfer */
 #ifndef CURL_DISABLE_HTTP
@@ -1122,8 +1124,6 @@ struct UrlState {
 #ifdef CURL_LIST_ONLY_PROTOCOL
   BIT(list_only);      /* list directory contents */
 #endif
-  BIT(url_alloc);   /* URL string is malloc()'ed */
-  BIT(referer_alloc); /* referer string is malloc()ed */
   BIT(wildcard_resolve); /* Set to true if any resolve change is a wildcard */
   BIT(upload);         /* upload request */
   BIT(internal); /* internal: true if this easy handle was created for
@@ -1159,7 +1159,7 @@ enum dupstring {
   STRING_SSL_PINNEDPUBLICKEY, /* public key file to verify peer against */
   STRING_SSL_CIPHER_LIST, /* list of ciphers to use */
   STRING_SSL_CIPHER13_LIST, /* list of TLS 1.3 ciphers to use */
-  STRING_SSL_CRLFILE,     /* crl file to check certificate */
+  STRING_SSL_CRLFILE,     /* CRL file to check certificate */
   STRING_SSL_ISSUERCERT, /* issuer cert file to check certificate */
   STRING_SERVICE_NAME,    /* Service name */
 #ifndef CURL_DISABLE_PROXY
@@ -1173,7 +1173,7 @@ enum dupstring {
   STRING_SSL_PINNEDPUBLICKEY_PROXY, /* public key file to verify proxy */
   STRING_SSL_CIPHER_LIST_PROXY, /* list of ciphers to use */
   STRING_SSL_CIPHER13_LIST_PROXY, /* list of TLS 1.3 ciphers to use */
-  STRING_SSL_CRLFILE_PROXY, /* crl file to check certificate */
+  STRING_SSL_CRLFILE_PROXY, /* CRL file to check certificate */
   STRING_SSL_ISSUERCERT_PROXY, /* issuer cert file to check certificate */
   STRING_PROXY_SERVICE_NAME, /* Proxy service name */
 #endif

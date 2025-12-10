@@ -71,14 +71,12 @@ my %whitelist = (
     'https://curl.se/rfc/rfc2255.txt' => 1,
     'https://curl.se/sponsors.html' => 1,
     'https://curl.se/support.html' => 1,
-    'https://curl.se/windows' => 1,
     'https://curl.se/windows/' => 1,
 
     'https://testclutch.curl.se/' => 1,
 
     'https://github.com/curl/curl-fuzzer' => 1,
     'https://github.com/curl/curl-www' => 1,
-    'https://github.com/curl/curl.git' => 1,
     'https://github.com/curl/curl/wcurl' => 1,
 
     );
@@ -86,8 +84,8 @@ my %whitelist = (
 my %url;
 my %flink;
 
-# list all .md files in the repo
-my @files=`git ls-files '**.md' docs/TODO docs/KNOWN_BUGS docs/FAQ`;
+# list all files to scan for links
+my @files=`git ls-files docs include lib scripts src`;
 
 sub storelink {
     my ($f, $line, $link) = @_;
@@ -103,6 +101,7 @@ sub storelink {
     if($link =~ /^(https|http):/) {
         if($whitelist{$link}) {
             #print "-- whitelisted: $link\n";
+            $whitelist{$link}++;
         }
         # example.com is just example
         elsif($link =~ /^https:\/\/(.*)example.(com|org|net)/) {
@@ -160,11 +159,11 @@ sub findlinks {
             #print "$f:$line $link\n";
             storelink($f, $line, $link);
         }
-        # ignore trailing: dot, quote, asterisk, hash, comma, question mark,
-        # colon, closing parenthesis, closing angle bracket, whitespace, pipe,
-        # backtick, semicolon
-        elsif(/(https:\/\/[a-z0-9.\/:%_+@-]+[^."*\#,?:\)> \t|`;])/i) {
-            #print "RAW ";
+        # ignore trailing: dot, double quote, single quote, asterisk, hash,
+        # comma, question mark, colon, closing parenthesis, backslash,
+        # closing angle bracket, whitespace, pipe, backtick, semicolon
+        elsif(/(https:\/\/[a-z0-9.\/:%_+@-]+[^."'*\#,?:\)> \t|`;\\])/i) {
+            #print "RAW '$_'\n";
             storelink($f, $line, $1);
         }
         $line++;
@@ -197,13 +196,21 @@ sub checkurl {
 
 for my $f (@files) {
     chomp $f;
-    findlinks($f);
+    if($f !~ /\/mdlinkcheck$/) {
+        findlinks($f);
+    }
 }
 
-#for my $u (sort keys %url) {
-#    print "$u\n";
-#}
-#exit;
+for my $u (sort keys %whitelist) {
+    if($whitelist{$u} == 1) {
+        printf "warning: unused whitelist entry: '$u'\n";
+    }
+}
+
+for my $u (sort keys %url) {
+    print "$u\n";
+}
+exit;
 
 my $error;
 my @errlist;

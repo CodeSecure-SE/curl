@@ -471,22 +471,13 @@
 #  endif
 #  include <sys/types.h>
 #  include <sys/stat.h>
-#  ifdef USE_WIN32_LARGE_FILES
-     /* Large file (>2Gb) support using Win32 functions. */
-#    undef  lseek
-#    define lseek(fdes, offset, whence)  _lseeki64(fdes, offset, whence)
-#    undef  fstat
-#    define fstat(fdes, stp)             _fstati64(fdes, stp)
-#    define struct_stat                  struct _stati64
-#    define LSEEK_ERROR                  (__int64)-1
-#  else
-     /* Small file (<2Gb) support using Win32 functions. */
-#    undef  lseek
-#    define lseek(fdes, offset, whence)  _lseek(fdes, (long)offset, whence)
-#    define fstat(fdes, stp)             _fstat(fdes, stp)
-#    define struct_stat                  struct _stat
-#    define LSEEK_ERROR                  (long)-1
-#  endif
+   /* Large file (>2Gb) support using Win32 functions. */
+#  undef  lseek
+#  define lseek(fdes, offset, whence)  _lseeki64(fdes, offset, whence)
+#  undef  fstat
+#  define fstat(fdes, stp)             _fstati64(fdes, stp)
+#  define struct_stat                  struct _stati64
+#  define LSEEK_ERROR                  (__int64)-1
 #elif defined(__DJGPP__)
    /* Requires DJGPP 2.04 */
 #  include <unistd.h>
@@ -519,9 +510,13 @@
 #endif
 
 #if SIZEOF_CURL_SOCKET_T < 8
+#ifdef _WIN32
+#  define FMT_SOCKET_T "u"
+#else
 #  define FMT_SOCKET_T "d"
-#elif defined(__MINGW32__)
-#  define FMT_SOCKET_T "zd"
+#endif
+#elif defined(_WIN32)
+#  define FMT_SOCKET_T "zu"
 #else
 #  define FMT_SOCKET_T "qd"
 #endif

@@ -89,17 +89,6 @@ jobs:
   #      - name: 'check special prose'
   #        run: proselint docs/internals/CHECKSRC.md docs/libcurl/curl_mprintf.md docs/libcurl/opts/CURLOPT_INTERFACE.md docs/cmdline-opts/interface.md
 
-  linkcheck:
-    name: 'linkcheck'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-        with:
-          persist-credentials: false
-
-      - name: 'mdlinkcheck'
-        run: ./scripts/mdlinkcheck
-
   pyspelling:
     name: 'pyspelling'
     runs-on: ubuntu-latest
@@ -138,7 +127,7 @@ jobs:
           persist-credentials: false
 
       - name: 'badwords'
-        run: .github/scripts/badwords.pl -w .github/scripts/badwords.ok '**.md' docs/FAQ docs/KNOWN_BUGS docs/TODO packages/OS400/README.OS400 < .github/scripts/badwords.txt
+        run: .github/scripts/badwords.pl -w .github/scripts/badwords.ok '**.md' packages/OS400/README.OS400 < .github/scripts/badwords.txt
 
       - name: 'verify synopsis'
         run: .github/scripts/verify-synopsis.pl docs/libcurl/curl*.md

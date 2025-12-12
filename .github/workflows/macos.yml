@@ -112,7 +112,7 @@ jobs:
 
       - name: 'cache libressl'
         if: ${{ contains(matrix.build.install_steps, 'libressl') }}
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@a7833574556fa59680c1b7cb190c1735db73ebf0 # v5.0.0
         id: cache-libressl
         env:
           cache-name: cache-libressl
@@ -618,7 +618,7 @@ jobs:
 
       - name: 'configure / ${{ matrix.build }}'
         run: |
-          if [ "${MATRIX_COMPILER}" = 'gcc-13' ] && [ "${MATRIX_IMAGE}" = 'macos-15' ] ; then
+          if [ "${MATRIX_COMPILER}" = 'gcc-13' ] && [ "${MATRIX_IMAGE}" = 'macos-15' ]; then
             # Ref: https://github.com/Homebrew/homebrew-core/issues/194778#issuecomment-2793243409
             /opt/homebrew/opt/gcc@13/libexec/gcc/aarch64-apple-darwin24/13/install-tools/mkheaders
           fi

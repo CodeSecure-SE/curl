@@ -1,5 +1,5 @@
-#ifndef HEADER_CURL_PARSEDATE_H
-#define HEADER_CURL_PARSEDATE_H
+#ifndef HEADER_TOOLX_TOOL_TIME_H
+#define HEADER_TOOLX_TOOL_TIME_H
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |
@@ -23,14 +23,8 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+#include "curl_setup.h"
 
-extern const char * const Curl_wkday[7];
-extern const char * const Curl_month[12];
+CURLcode toolx_localtime(time_t intime, struct tm *store);
 
-/* Curl_getdate_capped() differs from curl_getdate() in that this returns
-   TIME_T_MAX in case the parsed time value was too big, instead of an
-   error. */
-
-int Curl_getdate_capped(const char *p, time_t *store);
-
-#endif /* HEADER_CURL_PARSEDATE_H */
+#endif /* HEADER_TOOLX_TOOL_TIME_H */

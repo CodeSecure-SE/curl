@@ -28,7 +28,6 @@
 #include "cfilters.h"
 #include "curlx/dynbuf.h"
 #include "doh.h"
-#include "multiif.h"
 #include "progress.h"
 #include "request.h"
 #include "sendf.h"
@@ -90,7 +89,7 @@ CURLcode Curl_req_soft_reset(struct SingleRequest *req,
 CURLcode Curl_req_start(struct SingleRequest *req,
                         struct Curl_easy *data)
 {
-  req->start = data->progress.now;
+  req->start = *Curl_pgrs_now(data);
   return Curl_req_soft_reset(req, data);
 }
 

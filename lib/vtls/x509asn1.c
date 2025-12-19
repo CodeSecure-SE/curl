@@ -44,7 +44,6 @@
 #include "vtls.h"
 #include "vtls_int.h"
 #include "../sendf.h"
-#include "../curlx/inet_pton.h"
 #include "../curlx/base64.h"
 #include "x509asn1.h"
 #include "../curlx/dynbuf.h"
@@ -91,7 +90,6 @@
 #define CURL_ASN1_UNIVERSAL_STRING      28
 /* #define CURL_ASN1_CHARACTER_STRING      29 */
 #define CURL_ASN1_BMP_STRING            30
-
 
 #ifdef WANT_EXTRACT_CERTINFO
 /* ASN.1 OID table entry. */

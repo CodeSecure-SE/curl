@@ -70,7 +70,6 @@
 #include "cfilters.h"
 #include "connect.h"
 #include "select.h"
-#include "multiif.h"
 #include "url.h"
 #include "bufref.h"
 #include "curl_sasl.h"
@@ -1297,7 +1296,7 @@ static CURLcode pop3_connect(struct Curl_easy *data, bool *done)
   Curl_sasl_init(&pop3c->sasl, data, &saslpop3);
 
   /* Initialise the pingpong layer */
-  Curl_pp_init(pp, &data->progress.now);
+  Curl_pp_init(pp, Curl_pgrs_now(data));
 
   /* Parse the URL options */
   result = pop3_parse_url_options(conn);

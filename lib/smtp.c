@@ -72,7 +72,6 @@
 #include "cfilters.h"
 #include "connect.h"
 #include "select.h"
-#include "multiif.h"
 #include "url.h"
 #include "curl_gethostname.h"
 #include "bufref.h"
@@ -1441,7 +1440,7 @@ static CURLcode smtp_connect(struct Curl_easy *data, bool *done)
   Curl_sasl_init(&smtpc->sasl, data, &saslsmtp);
 
   /* Initialise the pingpong layer */
-  Curl_pp_init(&smtpc->pp, &data->progress.now);
+  Curl_pp_init(&smtpc->pp, Curl_pgrs_now(data));
 
   /* Parse the URL options */
   result = smtp_parse_url_options(data->conn, smtpc);
@@ -1702,7 +1701,6 @@ static CURLcode smtp_regular_transfer(struct Curl_easy *data,
                 result, *dophase_done);
   return result;
 }
-
 
 static void smtp_easy_dtor(void *key, size_t klen, void *entry)
 {

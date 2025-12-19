@@ -123,7 +123,6 @@ const struct Curl_handler Curl_handler_scp = {
   PROTOPT_NOURLQUERY | PROTOPT_CONN_REUSE
 };
 
-
 /*
  * SFTP protocol handler.
  */
@@ -352,7 +351,6 @@ static const char *myssh_statename(sshstate state)
 #else
 #define myssh_statename(x)    ""
 #endif /* !CURL_DISABLE_VERBOSE_STRINGS */
-
 
 #define myssh_state(x, y, z) myssh_set_state(x, y, z)
 
@@ -3121,13 +3119,12 @@ static CURLcode ssh_block_statemach(struct Curl_easy *data,
                                     bool disconnect)
 {
   CURLcode result = CURLE_OK;
-  struct curltime start = data->progress.now;
+  struct curltime start = *Curl_pgrs_now(data);
 
   while((sshc->state != SSH_STOP) && !result) {
     bool block;
     timediff_t left_ms = 1000;
 
-    Curl_pgrs_now_set(data); /* timeout disconnect */
     result = ssh_statemachine(data, sshc, sshp, &block);
     if(result)
       break;
@@ -3143,7 +3140,7 @@ static CURLcode ssh_block_statemach(struct Curl_easy *data,
         return CURLE_OPERATION_TIMEDOUT;
       }
     }
-    else if(curlx_timediff_ms(data->progress.now, start) > 1000) {
+    else if(curlx_ptimediff_ms(Curl_pgrs_now(data), &start) > 1000) {
       /* disconnect timeout */
       failf(data, "Disconnect timed out");
       result = CURLE_OK;

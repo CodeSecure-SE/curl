@@ -71,7 +71,6 @@
 #include "cfilters.h"
 #include "connect.h"
 #include "select.h"
-#include "multiif.h"
 #include "url.h"
 #include "bufref.h"
 #include "curl_sasl.h"
@@ -141,7 +140,6 @@ struct IMAP {
   unsigned int uidvalidity; /* UIDVALIDITY to check in select */
   BIT(uidvalidity_set);
 };
-
 
 /* Local API functions */
 static CURLcode imap_regular_transfer(struct Curl_easy *data,
@@ -1995,7 +1993,7 @@ static CURLcode imap_setup_connection(struct Curl_easy *data,
   Curl_sasl_init(&imapc->sasl, data, &saslimap);
 
   curlx_dyn_init(&imapc->dyn, DYN_IMAP_CMD);
-  Curl_pp_init(pp, &data->progress.now);
+  Curl_pp_init(pp, Curl_pgrs_now(data));
 
   if(Curl_conn_meta_set(conn, CURL_META_IMAP_CONN, imapc, imap_conn_dtor))
     return CURLE_OUT_OF_MEMORY;

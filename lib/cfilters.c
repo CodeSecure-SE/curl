@@ -31,7 +31,6 @@
 #include "url.h"
 #include "sendf.h"
 #include "sockaddr.h" /* required for Curl_sockaddr_storage */
-#include "multiif.h"
 #include "progress.h"
 #include "select.h"
 #include "curlx/warnless.h"
@@ -502,7 +501,7 @@ CURLcode Curl_conn_connect(struct Curl_easy *data,
        * socket and ip related information. */
       cf_cntrl_update_info(data, data->conn);
       conn_report_connect_stats(cf, data);
-      data->conn->keepalive = data->progress.now;
+      data->conn->keepalive = *Curl_pgrs_now(data);
 #ifndef CURL_DISABLE_VERBOSE_STRINGS
       result = cf_verboseconnect(data, cf);
 #endif

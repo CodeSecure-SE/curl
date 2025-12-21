@@ -34,9 +34,6 @@
 #include "curl_get_line.h"
 #include "parsedate.h"
 #include "sendf.h"
-#include "curlx/warnless.h"
-#include "rename.h"
-#include "strdup.h"
 #include "curlx/inet_pton.h"
 #include "curlx/strparse.h"
 #include "curlx/timeval.h"
@@ -379,7 +376,7 @@ CURLcode Curl_altsvc_save(struct Curl_easy *data,
         break;
     }
     curlx_fclose(out);
-    if(!result && tempstore && Curl_rename(tempstore, file))
+    if(!result && tempstore && curlx_rename(tempstore, file))
       result = CURLE_WRITE_ERROR;
 
     if(result && tempstore)

@@ -66,13 +66,11 @@
 #include "../curlx/fopen.h"
 #include "../curlx/timeval.h"
 #include "../curl_sha256.h"
-#include "../curlx/warnless.h"
 #include "../curlx/base64.h"
 #include "../curlx/inet_pton.h"
 #include "../connect.h"
 #include "../select.h"
 #include "../setopt.h"
-#include "../rand.h"
 #include "../strdup.h"
 
 #ifdef USE_APPLE_SECTRUST

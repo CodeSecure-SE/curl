@@ -32,12 +32,9 @@
 #include "vauth.h"
 #include "digest.h"
 #include "../curlx/base64.h"
-#include "../curl_hmac.h"
 #include "../curl_md5.h"
 #include "../curl_sha256.h"
 #include "../curl_sha512_256.h"
-#include "../vtls/vtls.h"
-#include "../curlx/warnless.h"
 #include "../curlx/strparse.h"
 #include "../rand.h"
 

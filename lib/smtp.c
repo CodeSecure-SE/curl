@@ -65,7 +65,6 @@
 #include "escape.h"
 #include "http.h" /* for HTTP proxy tunnel stuff */
 #include "mime.h"
-#include "socks.h"
 #include "smtp.h"
 #include "vtls/vtls.h"
 #include "cfilters.h"
@@ -75,7 +74,6 @@
 #include "curl_gethostname.h"
 #include "bufref.h"
 #include "curl_sasl.h"
-#include "curlx/warnless.h"
 #include "idn.h"
 #include "curlx/strparse.h"
 

@@ -57,8 +57,6 @@
 
 #include "urldata.h"
 
-#include "netrc.h"
-#include "content_encoding.h"
 #include "hostip.h"
 #include "cfilters.h"
 #include "cw-out.h"
@@ -68,9 +66,6 @@
 #include "http.h"
 #include "url.h"
 #include "getinfo.h"
-#include "vtls/vtls.h"
-#include "vquic/vquic.h"
-#include "select.h"
 #include "multiif.h"
 #include "connect.h"
 #include "http2.h"
@@ -79,7 +74,6 @@
 #include "setopt.h"
 #include "headers.h"
 #include "bufref.h"
-#include "curlx/warnless.h"
 
 #if !defined(CURL_DISABLE_HTTP) || !defined(CURL_DISABLE_SMTP) || \
   !defined(CURL_DISABLE_IMAP)

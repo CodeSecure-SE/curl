@@ -51,15 +51,12 @@
 #include "../http.h"               /* for HTTP proxy tunnel stuff */
 #include "ssh.h"
 #include "../url.h"
-#include "../vtls/vtls.h"
 #include "../cfilters.h"
 #include "../connect.h"
 #include "../parsedate.h"          /* for the week day and month names */
-#include "../sockaddr.h"           /* required for Curl_sockaddr_storage */
 #include "../curlx/strparse.h"
 #include "../multiif.h"
 #include "../select.h"
-#include "../curlx/warnless.h"
 #include "vssh.h"
 
 #ifdef HAVE_UNISTD_H
@@ -2506,8 +2503,7 @@ static CURLcode myssh_block_statemach(struct Curl_easy *data,
     if(block) {
       curl_socket_t fd_read = conn->sock[FIRSTSOCKET];
       /* wait for the socket to become ready */
-      (void)Curl_socket_check(fd_read, CURL_SOCKET_BAD, CURL_SOCKET_BAD,
-                              left_ms > 1000 ? 1000 : left_ms);
+      (void)SOCKET_READABLE(fd_read, left_ms > 1000 ? 1000 : left_ms);
     }
   }
 

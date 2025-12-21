@@ -56,7 +56,6 @@
 #include "curlx/base64.h"
 #include "cookie.h"
 #include "vauth/vauth.h"
-#include "vtls/vtls.h"
 #include "vquic/vquic.h"
 #include "http_digest.h"
 #include "http_ntlm.h"
@@ -75,7 +74,6 @@
 #include "strcase.h"
 #include "content_encoding.h"
 #include "http_proxy.h"
-#include "curlx/warnless.h"
 #include "http2.h"
 #include "cfilters.h"
 #include "connect.h"
@@ -84,7 +82,6 @@
 #include "hsts.h"
 #include "ws.h"
 #include "bufref.h"
-#include "curl_ctype.h"
 #include "curlx/strparse.h"
 #include "curlx/timeval.h"
 
@@ -4398,22 +4395,15 @@ static CURLcode http_parse_headers(struct Curl_easy *data,
       goto out; /* read more and try again */
     }
 
-    /* the size of the remaining (supposed) header line */
+    /* the size of the remaining header line */
     consumed = (end_ptr - buf) + 1;
 
-    {
-      /* preserve the whole original header piece size */
-      size_t header_piece = consumed;
-
-      if(consumed) {
-        result = curlx_dyn_addn(&data->state.headerb, buf, consumed);
-        if(result)
-          return result;
-        blen -= consumed;
-        buf += consumed;
-      }
-      *pconsumed += header_piece + unfold_len;
-    }
+    result = curlx_dyn_addn(&data->state.headerb, buf, consumed);
+    if(result)
+      return result;
+    blen -= consumed;
+    buf += consumed;
+    *pconsumed += consumed + unfold_len;
 
     /****
      * We now have a FULL header line in 'headerb'.

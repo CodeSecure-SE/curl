@@ -53,10 +53,8 @@
 #include "telnet.h"
 #include "connect.h"
 #include "progress.h"
-#include "system_win32.h"
 #include "arpa_telnet.h"
 #include "select.h"
-#include "curlx/warnless.h"
 #include "curlx/strparse.h"
 
 #define SUBBUFSIZE 512

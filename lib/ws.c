@@ -38,9 +38,7 @@
 #include "easyif.h"
 #include "transfer.h"
 #include "select.h"
-#include "curlx/nonblock.h"
 #include "curlx/strparse.h"
-#include "curlx/warnless.h"
 
 /***
     RFC 6455 Section 5.2
@@ -1702,8 +1700,7 @@ static CURLcode ws_send_raw_blocking(struct Curl_easy *data,
       /* POLLOUT socket */
       if(sock == CURL_SOCKET_BAD)
         return CURLE_SEND_ERROR;
-      ev = Curl_socket_check(CURL_SOCKET_BAD, CURL_SOCKET_BAD, sock,
-                             left_ms ? left_ms : 500);
+      ev = SOCKET_WRITABLE(sock, left_ms ? left_ms : 500);
       if(ev < 0) {
         failf(data, "[WS] Error while waiting for socket becoming writable");
         return CURLE_SEND_ERROR;

@@ -43,12 +43,9 @@
 #include "urlapi-int.h"
 #include "cfilters.h"
 #include "connect.h"
-#include "rand.h"
-#include "curlx/strparse.h"
 #include "transfer.h"
 #include "bufref.h"
 #include "curlx/dynbuf.h"
-#include "curlx/warnless.h"
 #include "headers.h"
 
 #if (NGHTTP2_VERSION_NUM < 0x010c00)

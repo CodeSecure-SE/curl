@@ -51,8 +51,6 @@
 #include "openssl.h"
 #include "../connect.h"
 #include "../progress.h"
-#include "../select.h"
-#include "../curlx/wait.h"
 #include "vtls.h"
 #include "vtls_int.h"
 #include "vtls_scache.h"
@@ -66,7 +64,6 @@
 #include "../strdup.h"
 #include "apple.h"
 
-#include <openssl/ssl.h>
 #include <openssl/rand.h>
 #include <openssl/x509v3.h>
 #ifndef OPENSSL_NO_DSA
@@ -74,12 +71,10 @@
 #endif
 #include <openssl/dh.h>
 #include <openssl/err.h>
-#include <openssl/md5.h>
 #include <openssl/conf.h>
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
 #include <openssl/bio.h>
-#include <openssl/buffer.h>
 #include <openssl/pkcs12.h>
 #include <openssl/tls1.h>
 #include <openssl/evp.h>
@@ -123,8 +118,6 @@ static void ossl_provider_cleanup(struct Curl_easy *data);
   (!defined(OPENSSL_IS_AWSLC) || defined(X509_V_ERR_EC_KEY_EXPLICIT_PARAMS))
 #define HAVE_SSL_CTX_SET_DEFAULT_READ_BUFFER_LEN 1
 #endif
-
-#include "../curlx/warnless.h"
 
 #if defined(USE_OPENSSL_ENGINE) || defined(OPENSSL_HAS_PROVIDERS)
 #include <openssl/ui.h>

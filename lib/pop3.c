@@ -62,7 +62,6 @@
 #include "transfer.h"
 #include "escape.h"
 #include "http.h" /* for HTTP proxy tunnel stuff */
-#include "socks.h"
 #include "pingpong.h"
 #include "pop3.h"
 #include "vtls/vtls.h"
@@ -73,7 +72,6 @@
 #include "bufref.h"
 #include "curl_sasl.h"
 #include "curl_md5.h"
-#include "curlx/warnless.h"
 #include "strdup.h"
 
 /* Authentication type flags */

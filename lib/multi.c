@@ -38,7 +38,6 @@
 #include "curlx/timeval.h"
 #include "http.h"
 #include "select.h"
-#include "curlx/warnless.h"
 #include "curlx/wait.h"
 #include "conncache.h"
 #include "multihandle.h"
@@ -48,8 +47,6 @@
 #include "http_proxy.h"
 #include "http2.h"
 #include "socketpair.h"
-#include "socks.h"
-#include "urlapi-int.h"
 #include "bufref.h"
 
 /* initial multi->xfers table size for a full multi */
@@ -2798,7 +2795,7 @@ static CURLMcode multi_perform(struct Curl_multi *multi,
   if(multi_ischanged(multi, TRUE))
     process_pending_handles(multi);
 
-  if(!returncode)
+  if(!returncode && CURL_MNTFY_HAS_ENTRIES(multi))
     returncode = Curl_mntfy_dispatch_all(multi);
 
   /*
@@ -3195,7 +3192,7 @@ out:
   if(multi_ischanged(multi, TRUE))
     process_pending_handles(multi);
 
-  if(!mresult)
+  if(!mresult && CURL_MNTFY_HAS_ENTRIES(multi))
     mresult = Curl_mntfy_dispatch_all(multi);
 
   if(running_handles) {

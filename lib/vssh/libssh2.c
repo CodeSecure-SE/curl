@@ -50,15 +50,12 @@
 #include "../http.h" /* for HTTP proxy tunnel stuff */
 #include "ssh.h"
 #include "../url.h"
-#include "../vtls/vtls.h"
 #include "../cfilters.h"
 #include "../connect.h"
 #include "../parsedate.h" /* for the week day and month names */
-#include "../sockaddr.h" /* required for Curl_sockaddr_storage */
 #include "../multiif.h"
 #include "../select.h"
 #include "../curlx/fopen.h"
-#include "../curlx/warnless.h"
 #include "vssh.h"
 #include "../curlx/strparse.h"
 #include "../curlx/base64.h" /* for base64 encoding/decoding */

@@ -52,11 +52,9 @@
 #include "../parsedate.h"
 #include "../connect.h" /* for the connect timeout */
 #include "../progress.h"
-#include "../select.h"
 #include "../strdup.h"
 #include "../curlx/fopen.h"
 #include "../curlx/timeval.h"
-#include "../curlx/warnless.h"
 #include "x509asn1.h"
 
 /* Enable GnuTLS debugging by defining GTLSDEBUG */

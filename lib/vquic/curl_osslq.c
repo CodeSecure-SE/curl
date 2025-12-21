@@ -33,9 +33,7 @@
 #include <nghttp3/nghttp3.h>
 
 #include "../urldata.h"
-#include "../hash.h"
 #include "../sendf.h"
-#include "../rand.h"
 #include "../multiif.h"
 #include "../cfilters.h"
 #include "../cf-socket.h"
@@ -54,7 +52,6 @@
 #include "curl_osslq.h"
 #include "../url.h"
 #include "../bufref.h"
-#include "../curlx/warnless.h"
 #include "../curlx/strerr.h"
 
 /* A stream window is the maximum amount we need to buffer for

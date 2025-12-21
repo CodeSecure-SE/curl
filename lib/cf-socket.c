@@ -63,17 +63,15 @@
 #include "cf-socket.h"
 #include "connect.h"
 #include "select.h"
-#include "url.h" /* for Curl_safefree() */
 #include "multiif.h"
-#include "sockaddr.h" /* required for Curl_sockaddr_storage */
 #include "curlx/inet_pton.h"
 #include "progress.h"
-#include "curlx/warnless.h"
 #include "conncache.h"
 #include "multihandle.h"
 #include "rand.h"
 #include "strdup.h"
 #include "system_win32.h"
+#include "curlx/nonblock.h"
 #include "curlx/version_win32.h"
 #include "curlx/strerr.h"
 #include "curlx/strparse.h"
@@ -2086,8 +2084,7 @@ static CURLcode cf_tcp_accept_connect(struct Curl_cfilter *cf,
 
   CURL_TRC_CF(data, cf, "Checking for incoming on fd=%" FMT_SOCKET_T
               " ip=%s:%d", ctx->sock, ctx->ip.local_ip, ctx->ip.local_port);
-  socketstate = Curl_socket_check(ctx->sock, CURL_SOCKET_BAD,
-                                  CURL_SOCKET_BAD, 0);
+  socketstate = SOCKET_READABLE(ctx->sock, 0);
   CURL_TRC_CF(data, cf, "socket_check -> %x", socketstate);
   switch(socketstate) {
   case -1: /* error */

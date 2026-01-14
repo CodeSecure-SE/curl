@@ -30,14 +30,14 @@
 #include "curl_sha256.h"
 
 #ifdef USE_MBEDTLS
-  #include <mbedtls/version.h>
-  #if MBEDTLS_VERSION_NUMBER < 0x03020000
-    #error "mbedTLS 3.2.0 or later required"
-  #endif
-  #include <psa/crypto_config.h>
-  #if defined(PSA_WANT_ALG_SHA_256) && PSA_WANT_ALG_SHA_256  /* mbedTLS 4+ */
-    #define USE_MBEDTLS_SHA256
-  #endif
+#include <mbedtls/version.h>
+#if MBEDTLS_VERSION_NUMBER < 0x03020000
+#error "mbedTLS 3.2.0 or later required"
+#endif
+#include <psa/crypto_config.h>
+#if defined(PSA_WANT_ALG_SHA_256) && PSA_WANT_ALG_SHA_256  /* mbedTLS 4+ */
+#define USE_MBEDTLS_SHA256
+#endif
 #endif
 
 #ifdef USE_OPENSSL
@@ -297,7 +297,7 @@ static const unsigned long K[64] = {
 #define Gamma0(x)         (Sha256_S(x, 7) ^ Sha256_S(x, 18) ^ Sha256_R(x, 3))
 #define Gamma1(x)         (Sha256_S(x, 17) ^ Sha256_S(x, 19) ^ Sha256_R(x, 10))
 
-/* Compress 512-bits */
+/* Compress 512 bits */
 static int sha256_compress(struct sha256_state *md, const unsigned char *buf)
 {
   unsigned long S[8], W[64];
@@ -307,7 +307,7 @@ static int sha256_compress(struct sha256_state *md, const unsigned char *buf)
   for(i = 0; i < 8; i++) {
     S[i] = md->state[i];
   }
-  /* copy the state into 512-bits into W[0..15] */
+  /* copy the state into 512 bits into W[0..15] */
   for(i = 0; i < 16; i++)
     W[i] = WPA_GET_BE32(buf + (4 * i));
   /* fill W[16..63] */

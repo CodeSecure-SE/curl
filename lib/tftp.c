@@ -340,7 +340,7 @@ static CURLcode tftp_option_add(struct tftp_conn *state, size_t *csize,
   return CURLE_OK;
 }
 
-/* the next blocknum is x + 1 but it needs to wrap at an unsigned 16bit
+/* the next blocknum is x + 1 but it needs to wrap at an unsigned 16-bit
    boundary */
 #define NEXT_BLOCKNUM(x) (((x) + 1) & 0xffff)
 
@@ -697,16 +697,16 @@ static CURLcode tftp_send_first(struct tftp_conn *state,
     if(result)
       return result;
 
-    if(strlen(filename) > (state->blksize - strlen(mode) - 4)) {
+    if(strlen(filename) + strlen(mode) + 4 > state->blksize) {
       failf(data, "TFTP filename too long");
       curlx_free(filename);
       return CURLE_TFTP_ILLEGAL; /* too long filename field */
     }
 
-    curl_msnprintf((char *)state->spacket.data + 2,
-                   state->blksize,
-                   "%s%c%s%c", filename, '\0', mode, '\0');
-    sbytes = 4 + strlen(filename) + strlen(mode);
+    sbytes = 2 +
+      curl_msnprintf((char *)state->spacket.data + 2,
+                     state->blksize,
+                     "%s%c%s%c", filename, '\0', mode, '\0');
     curlx_free(filename);
 
     /* optional addition of TFTP options */

@@ -361,7 +361,7 @@ CURL *curl_easy_init(void)
   }
   global_init_unlock();
 
-  /* We use curl_open() with undefined URL so far */
+  /* We use Curl_open() with undefined URL so far */
   result = Curl_open(&data);
   if(result) {
     DEBUGF(curl_mfprintf(stderr, "Error: Curl_open failed\n"));
@@ -891,8 +891,9 @@ static CURLcode dupset(struct Curl_easy *dst, struct Curl_easy *src)
   /* Copy src->set into dst->set first, then deal with the strings
      afterwards */
   dst->set = src->set;
+#if !defined(CURL_DISABLE_MIME) || !defined(CURL_DISABLE_FORM_API)
   dst->set.mimepostp = NULL;
-
+#endif
   /* clear all dest string and blob pointers first, in case we error out
      mid-function */
   memset(dst->set.str, 0, STRING_LAST * sizeof(char *));
@@ -927,6 +928,7 @@ static CURLcode dupset(struct Curl_easy *dst, struct Curl_easy *src)
     dst->set.postfields = dst->set.str[i];
   }
 
+#if !defined(CURL_DISABLE_MIME) || !defined(CURL_DISABLE_FORM_API)
   if(src->set.mimepostp) {
     /* Duplicate mime data. Get a mimepost struct for the clone as well */
     dst->set.mimepostp = curlx_malloc(sizeof(*dst->set.mimepostp));
@@ -938,6 +940,7 @@ static CURLcode dupset(struct Curl_easy *dst, struct Curl_easy *src)
     if(result)
       return result;
   }
+#endif
 
   if(src->set.resolve)
     dst->state.resolve = dst->set.resolve;

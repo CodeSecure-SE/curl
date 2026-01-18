@@ -43,6 +43,7 @@
 
 #include "../urldata.h"
 #include "../curl_trc.h"
+#include "../httpsrr.h"
 #include "../formdata.h" /* for the boundary function */
 #include "../url.h" /* for the ssl config check function */
 #include "../curlx/inet_pton.h"
@@ -3239,7 +3240,7 @@ static X509_STORE *ossl_get_cached_x509_store(struct Curl_cfilter *cf,
      !ossl_cached_x509_store_expired(data, share) &&
      !ossl_cached_x509_store_different(cf, data, share)) {
     store = share->store;
-    *pempty = share->store_is_empty;
+    *pempty = (bool)share->store_is_empty;
   }
 
   return store;
@@ -3332,7 +3333,7 @@ CURLcode Curl_ssl_setup_x509_store(struct Curl_cfilter *cf,
 
     result = ossl_populate_x509_store(cf, data, octx, store);
     if(result == CURLE_OK && cache_criteria_met) {
-      ossl_set_cached_x509_store(cf, data, store, octx->store_is_empty);
+      ossl_set_cached_x509_store(cf, data, store, (bool)octx->store_is_empty);
     }
   }
 
@@ -3651,11 +3652,7 @@ static CURLcode ossl_init_method(struct Curl_cfilter *cf,
       return CURLE_SSL_CONNECT_ERROR;
     }
 
-#ifdef USE_OPENSSL_QUIC
-    *pmethod = OSSL_QUIC_client_method();
-#else
     *pmethod = TLS_method();
-#endif
     break;
   default:
     failf(data, "unsupported transport %d in SSL init", peer->transport);
@@ -5016,7 +5013,7 @@ static bool ossl_data_pending(struct Curl_cfilter *cf,
 {
   struct ssl_connect_data *connssl = cf->ctx;
   (void)data;
-  return connssl->input_pending;
+  return (bool)connssl->input_pending;
 }
 
 static CURLcode ossl_send(struct Curl_cfilter *cf,

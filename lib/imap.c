@@ -35,6 +35,8 @@
  *
  ***************************************************************************/
 #include "curl_setup.h"
+#include "urldata.h"
+#include "imap.h"
 
 #ifndef CURL_DISABLE_IMAP
 
@@ -53,7 +55,6 @@
 #endif
 
 #include "curlx/dynbuf.h"
-#include "urldata.h"
 #include "sendf.h"
 #include "curl_trc.h"
 #include "hostip.h"
@@ -61,7 +62,6 @@
 #include "transfer.h"
 #include "escape.h"
 #include "pingpong.h"
-#include "imap.h"
 #include "mime.h"
 #include "curlx/strparse.h"
 #include "strcase.h"
@@ -559,7 +559,7 @@ static CURLcode imap_perform_upgrade_tls(struct Curl_easy *data,
     if(result)
       goto out;
     /* Change the connection handler */
-    conn->handler = &Curl_handler_imaps;
+    conn->scheme = &Curl_scheme_imaps;
   }
 
   DEBUGASSERT(!imapc->ssldone);
@@ -1677,40 +1677,9 @@ static void imap_easy_reset(struct IMAP *imap)
  */
 static bool imap_is_bchar(char ch)
 {
-  /* Performing the alnum check with this macro is faster because of ASCII
+  /* Performing the alnum check first with macro is faster because of ASCII
      arithmetic */
-  if(ISALNUM(ch))
-    return TRUE;
-
-  switch(ch) {
-  /* bchar */
-  case ':':
-  case '@':
-  case '/':
-  /* bchar -> achar */
-  case '&':
-  case '=':
-  /* bchar -> achar -> uchar -> unreserved (without alphanumeric) */
-  case '-':
-  case '.':
-  case '_':
-  case '~':
-  /* bchar -> achar -> uchar -> sub-delims-sh */
-  case '!':
-  case '$':
-  case '\'':
-  case '(':
-  case ')':
-  case '*':
-  case '+':
-  case ',':
-  /* bchar -> achar -> uchar -> pct-encoded */
-  case '%': /* HEXDIG chars are already included above */
-    return TRUE;
-
-  default:
-    return FALSE;
-  }
+  return ch && (ISALNUM(ch) || strchr(":@/&=-._~!$\'()*+,%", ch));
 }
 
 /***********************************************************************
@@ -2291,10 +2260,9 @@ static CURLcode imap_setup_connection(struct Curl_easy *data,
 }
 
 /*
- * IMAP protocol handler.
+ * IMAP protocol.
  */
-const struct Curl_handler Curl_handler_imap = {
-  "imap",                           /* scheme */
+static const struct Curl_protocol Curl_protocol_imap = {
   imap_setup_connection,            /* setup_connection */
   imap_do,                          /* do_it */
   imap_done,                        /* done */
@@ -2312,43 +2280,42 @@ const struct Curl_handler Curl_handler_imap = {
   ZERO_NULL,                        /* connection_check */
   ZERO_NULL,                        /* attach connection */
   ZERO_NULL,                        /* follow */
-  PORT_IMAP,                        /* defport */
+};
+
+#endif /* CURL_DISABLE_IMAP */
+
+
+/*
+ * IMAP protocol handler.
+ */
+const struct Curl_scheme Curl_scheme_imap = {
+  "imap",                           /* scheme */
+#ifdef CURL_DISABLE_IMAP
+  ZERO_NULL,
+#else
+  &Curl_protocol_imap,
+#endif
   CURLPROTO_IMAP,                   /* protocol */
   CURLPROTO_IMAP,                   /* family */
   PROTOPT_CLOSEACTION |             /* flags */
   PROTOPT_URLOPTIONS | PROTOPT_SSL_REUSE |
-  PROTOPT_CONN_REUSE
+  PROTOPT_CONN_REUSE,
+  PORT_IMAP,                        /* defport */
 };
 
-#ifdef USE_SSL
 /*
  * IMAPS protocol handler.
  */
-const struct Curl_handler Curl_handler_imaps = {
+const struct Curl_scheme Curl_scheme_imaps = {
   "imaps",                          /* scheme */
-  imap_setup_connection,            /* setup_connection */
-  imap_do,                          /* do_it */
-  imap_done,                        /* done */
-  ZERO_NULL,                        /* do_more */
-  imap_connect,                     /* connect_it */
-  imap_multi_statemach,             /* connecting */
-  imap_doing,                       /* doing */
-  imap_pollset,                     /* proto_pollset */
-  imap_pollset,                     /* doing_pollset */
-  ZERO_NULL,                        /* domore_pollset */
-  ZERO_NULL,                        /* perform_pollset */
-  imap_disconnect,                  /* disconnect */
-  ZERO_NULL,                        /* write_resp */
-  ZERO_NULL,                        /* write_resp_hd */
-  ZERO_NULL,                        /* connection_check */
-  ZERO_NULL,                        /* attach connection */
-  ZERO_NULL,                        /* follow */
-  PORT_IMAPS,                       /* defport */
+#if defined(CURL_DISABLE_IMAP) || !defined(USE_SSL)
+  ZERO_NULL,
+#else
+  &Curl_protocol_imap,
+#endif
   CURLPROTO_IMAPS,                  /* protocol */
   CURLPROTO_IMAP,                   /* family */
   PROTOPT_CLOSEACTION | PROTOPT_SSL | /* flags */
-  PROTOPT_URLOPTIONS | PROTOPT_CONN_REUSE
+  PROTOPT_URLOPTIONS | PROTOPT_CONN_REUSE,
+  PORT_IMAPS,                       /* defport */
 };
-#endif
-
-#endif /* CURL_DISABLE_IMAP */

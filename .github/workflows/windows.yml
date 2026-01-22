@@ -44,6 +44,7 @@ jobs:
       run:
         shell: D:\cygwin\bin\bash.exe '{0}'  # zizmor: ignore[misfeature]
     env:
+      LDFLAGS: -s
       MAKEFLAGS: -j 5
       SHELLOPTS: 'igncr'
       MATRIX_BUILD: '${{ matrix.build }}'
@@ -187,6 +188,7 @@ jobs:
       run:
         shell: msys2 {0}  # zizmor: ignore[misfeature]
     env:
+      LDFLAGS: -s
       MAKEFLAGS: -j 5
       MATRIX_BUILD: '${{ matrix.build }}'
       MATRIX_SYS: '${{ matrix.sys }}'
@@ -417,6 +419,7 @@ jobs:
         shell: msys2 {0}  # zizmor: ignore[misfeature]
     env:
       CURL_TEST_MIN: 1550
+      LDFLAGS: -s
       MAKEFLAGS: -j 5
       MATRIX_DIR: '${{ matrix.dir }}'
     strategy:
@@ -436,7 +439,7 @@ jobs:
             env: 'x86_64'
             ver: '9.5.0'
             url: 'https://github.com/brechtsanders/winlibs_mingw/releases/download/9.5.0-10.0.0-msvcrt-r1/winlibs-x86_64-posix-seh-gcc-9.5.0-mingw-w64msvcrt-10.0.0-r1.7z'
-            config: '-DENABLE_DEBUG=ON -DBUILD_SHARED_LIBS=OFF -DCURL_USE_SCHANNEL=ON -DENABLE_UNICODE=OFF'
+            config: '-DENABLE_DEBUG=ON -DBUILD_SHARED_LIBS=OFF -DCURL_USE_SCHANNEL=ON -DENABLE_UNICODE=OFF -DCURL_DISABLE_VERBOSE_STRINGS=ON'
             type: 'Release'
             tflags: 'skiprun'
           - name: 'schannel mbedtls U'  # mingw-w64 6.0
@@ -601,6 +604,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      LDFLAGS: -s
       MAKEFLAGS: -j 5
       TRIPLET: 'x86_64-w64-mingw32'
       MATRIX_BUILD: '${{ matrix.build }}'

@@ -693,6 +693,7 @@ static void init_terminal(void)
   }
 }
 
+#ifdef USE_WINSOCK
 /* The following STDIN non - blocking read techniques are heavily inspired
    by nmap and ncat (https://nmap.org/ncat/) */
 struct win_thread_data {
@@ -708,15 +709,15 @@ static DWORD WINAPI win_stdin_thread_func(void *thread_data)
 {
   struct win_thread_data *tdata = (struct win_thread_data *)thread_data;
   DWORD n;
-  int nwritten;
+  ssize_t nwritten;
   char buffer[BUFSIZ];
   BOOL r;
 
-  SOCKADDR_IN clientAddr;
+  struct sockaddr_in clientAddr;
   int clientAddrLen = sizeof(clientAddr);
 
   curl_socket_t socket_w = CURL_ACCEPT(tdata->socket_l,
-                                       (SOCKADDR *)&clientAddr,
+                                       (struct sockaddr *)&clientAddr,
                                        &clientAddrLen);
 
   if(socket_w == CURL_SOCKET_BAD) {
@@ -726,7 +727,7 @@ static DWORD WINAPI win_stdin_thread_func(void *thread_data)
 
   sclose(tdata->socket_l);
   tdata->socket_l = CURL_SOCKET_BAD;
-  if(shutdown(socket_w, SD_RECEIVE) == SOCKET_ERROR) {
+  if(shutdown(socket_w, SHUT_RD)) {
     errorf("shutdown error: %d", SOCKERRNO);
     goto ThreadCleanup;
   }
@@ -737,7 +738,7 @@ static DWORD WINAPI win_stdin_thread_func(void *thread_data)
     if(n == 0)
       break;
     nwritten = send(socket_w, buffer, n, 0);
-    if(nwritten == SOCKET_ERROR)
+    if(nwritten == -1)
       break;
     if((DWORD)nwritten != n)
       break;
@@ -759,11 +760,11 @@ ThreadCleanup:
 /* The background thread that reads and buffers the true stdin. */
 curl_socket_t win32_stdin_read_thread(void)
 {
-  int result;
   bool r;
-  int rc = 0, socksize = 0;
+  int rc = 0;
+  curl_socklen_t socksize = 0;
   struct win_thread_data *tdata = NULL;
-  SOCKADDR_IN selfaddr;
+  struct sockaddr_in selfaddr;
   static HANDLE stdin_thread = NULL;
   static curl_socket_t socket_r = CURL_SOCKET_BAD;
 
@@ -792,23 +793,20 @@ curl_socket_t win32_stdin_read_thread(void)
     socksize = sizeof(selfaddr);
     memset(&selfaddr, 0, socksize);
     selfaddr.sin_family = AF_INET;
-    selfaddr.sin_addr.S_un.S_addr = htonl(INADDR_LOOPBACK);
+    selfaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     /* Bind to any available loopback port */
-    result = bind(tdata->socket_l, (SOCKADDR *)&selfaddr, socksize);
-    if(result == SOCKET_ERROR) {
+    if(bind(tdata->socket_l, (const struct sockaddr *)&selfaddr, socksize)) {
       errorf("bind error: %d", SOCKERRNO);
       break;
     }
 
     /* Bind to any available loopback port */
-    result = getsockname(tdata->socket_l, (SOCKADDR *)&selfaddr, &socksize);
-    if(result == SOCKET_ERROR) {
+    if(getsockname(tdata->socket_l, (struct sockaddr *)&selfaddr, &socksize)) {
       errorf("getsockname error: %d", SOCKERRNO);
       break;
     }
 
-    result = listen(tdata->socket_l, 1);
-    if(result == SOCKET_ERROR) {
+    if(listen(tdata->socket_l, 1)) {
       errorf("listen error: %d", SOCKERRNO);
       break;
     }
@@ -845,12 +843,12 @@ curl_socket_t win32_stdin_read_thread(void)
     /* Hard close the socket on closesocket() */
     setsockopt(socket_r, SOL_SOCKET, SO_DONTLINGER, 0, 0);
 
-    if(connect(socket_r, (SOCKADDR *)&selfaddr, socksize) == SOCKET_ERROR) {
+    if(connect(socket_r, (const struct sockaddr *)&selfaddr, socksize)) {
       errorf("connect error: %d", SOCKERRNO);
       break;
     }
 
-    if(shutdown(socket_r, SD_SEND) == SOCKET_ERROR) {
+    if(shutdown(socket_r, SHUT_WR)) {
       errorf("shutdown error: %d", SOCKERRNO);
       break;
     }
@@ -898,6 +896,7 @@ curl_socket_t win32_stdin_read_thread(void)
   assert(socket_r != CURL_SOCKET_BAD);
   return socket_r;
 }
+#endif /* USE_WINSOCK */
 
 #endif /* !CURL_WINDOWS_UWP */
 

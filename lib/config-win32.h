@@ -46,11 +46,6 @@
 #define HAVE_STDBOOL_H 1
 #endif
 
-/* Define to 1 if you have the <stdint.h> header file. */
-#if defined(_MSC_VER) || defined(__MINGW32__)
-#define HAVE_STDINT_H 1
-#endif
-
 /* Define if you have the <sys/param.h> header file. */
 #ifdef __MINGW32__
 #define HAVE_SYS_PARAM_H 1
@@ -160,9 +155,6 @@
 
 /* Define to the type of arg 1 for send. */
 #define SEND_TYPE_ARG1 SOCKET
-
-/* Define to the type qualifier of arg 2 for send. */
-#define SEND_QUAL_ARG2 const
 
 /* Define to the type of arg 2 for send. */
 #define SEND_TYPE_ARG2 char *

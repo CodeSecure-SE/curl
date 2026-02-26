@@ -883,6 +883,10 @@ if(CURL_USE_WOLFSSL)
   endif()
   set(_curl_ca_bundle_supported TRUE)
 
+  if(USE_OPENSSL AND WOLFSSL_VERSION VERSION_LESS 5.7.6)
+    message(FATAL_ERROR "wolfSSL 5.7.6 or newer is required to coexist with OpenSSL.")
+  endif()
+
   set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS "WOLFSSL_OPTIONS_IGNORE_SYS")
 endif()
 
@@ -2335,8 +2339,7 @@ if(NOT CURL_DISABLE_INSTALL)
     FILES_MATCHING PATTERN "*.h")
 
   include(CMakePackageConfigHelpers)
-  write_basic_package_version_file(
-    "${_version_config}"
+  write_basic_package_version_file("${_version_config}"
     VERSION ${_curl_version}
     COMPATIBILITY SameMajorVersion)
   file(READ "${_version_config}" _generated_version_config)

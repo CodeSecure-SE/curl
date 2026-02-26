@@ -50,8 +50,8 @@ struct dynbuf;
 
 #ifdef USE_ECH
 #include "curlx/base64.h"
-#define ECH_ENABLED(__data__) \
-  (__data__->set.tls_ech && !(__data__->set.tls_ech & CURLECH_DISABLE))
+#define ECH_ENABLED(data) \
+  ((data)->set.tls_ech && !((data)->set.tls_ech & CURLECH_DISABLE))
 #endif /* USE_ECH */
 
 #define ALPN_ACCEPTED "ALPN: server accepted "
@@ -97,7 +97,7 @@ struct ssl_peer {
 CURLsslset Curl_init_sslset_nolock(curl_sslbackend id, const char *name,
                                    const curl_ssl_backend ***avail);
 
-#define MAX_PINNED_PUBKEY_SIZE 1048576 /* 1 MiB */
+#define MAX_PINNED_PUBKEY_SIZE (1024 * 1024) /* 1 MiB */
 
 curl_sslbackend Curl_ssl_backend(void);
 

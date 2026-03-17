@@ -346,6 +346,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      CURL_TRACE_PKG_CONFIG: '1'
       MATRIX_BUILD: ${{ matrix.build.generate && 'cmake' || 'autotools' }}
       MATRIX_INSTALL_PACKAGES: '${{ matrix.build.install_packages }}'
     strategy:
@@ -369,10 +370,11 @@ jobs:
 
           - name: 'libressl'
             install_steps: skipall
-            PKG_CONFIG_PATH: /home/runner/libressl/build/lib/pkgconfig:/home/runner/nghttp3/build/lib/pkgconfig:/home/runner/ngtcp2/build/lib/pkgconfig:/home/runner/nghttp2/build/lib/pkgconfig
+            # Intentionally using '--with-ngtcp2=<path>' to test this way of configuration, in addition to bare '--with-ngtcp2' + 'PKG_CONFIG_PATH' in other jobs.
+            PKG_CONFIG_PATH: /home/runner/libressl/build/lib/pkgconfig:/home/runner/nghttp3/build/lib/pkgconfig:/home/runner/nghttp2/build/lib/pkgconfig
             configure: >-
               LDFLAGS=-Wl,-rpath,/home/runner/libressl/build/lib
-              --with-openssl=/home/runner/libressl/build --with-ngtcp2 --enable-ssls-export
+              --with-openssl=/home/runner/libressl/build --with-ngtcp2=/home/runner/ngtcp2/build --enable-ssls-export
               --enable-unity
 
           - name: 'libressl'
@@ -520,7 +522,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: 'cache nettle'
-        if: ${{ matrix.build.name == 'gnutls' }}
+        if: ${{ contains(matrix.build.name, 'gnutls') }}
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         id: cache-nettle
         env:
@@ -531,7 +533,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: 'cache gnutls'
-        if: ${{ matrix.build.name == 'gnutls' }}
+        if: ${{ contains(matrix.build.name, 'gnutls') }}
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         id: cache-gnutls
         env:
@@ -542,7 +544,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: 'cache wolfssl'
-        if: ${{ matrix.build.name == 'wolfssl' }}
+        if: ${{ contains(matrix.build.name, 'wolfssl') }}
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         id: cache-wolfssl
         env:
@@ -593,7 +595,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: 'cache quiche'
-        if: ${{ matrix.build.name == 'quiche' }}
+        if: ${{ contains(matrix.build.name, 'quiche') }}
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         id: cache-quiche
         env:
@@ -603,7 +605,7 @@ jobs:
           key: ${{ runner.os }}-http3-build-${{ env.cache-name }}-${{ env.QUICHE_VERSION }}
 
       - name: 'build quiche and boringssl'
-        if: ${{ matrix.build.name == 'quiche' && steps.cache-quiche.outputs.cache-hit != 'true' }}
+        if: ${{ contains(matrix.build.name, 'quiche') && steps.cache-quiche.outputs.cache-hit != 'true' }}
         run: |
           cd ~
           git clone --quiet --depth 1 -b "${QUICHE_VERSION}" --recursive https://github.com/cloudflare/quiche

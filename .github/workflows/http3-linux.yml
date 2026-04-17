@@ -54,7 +54,7 @@ env:
   # renovate: datasource=github-tags depName=ngtcp2/nghttp3 versioning=semver registryUrl=https://github.com
   NGHTTP3_VERSION: 1.15.0
   # renovate: datasource=github-tags depName=ngtcp2/ngtcp2 versioning=semver registryUrl=https://github.com
-  NGTCP2_VERSION: 1.22.0
+  NGTCP2_VERSION: 1.22.1
   # renovate: datasource=github-tags depName=nghttp2/nghttp2 versioning=semver registryUrl=https://github.com
   NGHTTP2_VERSION: 1.68.1
   # renovate: datasource=github-tags depName=cloudflare/quiche versioning=semver registryUrl=https://github.com
@@ -206,7 +206,7 @@ jobs:
       - name: 'install build prereqs'
         if: ${{ steps.settings.outputs.needs-build == 'true' }}
         run: |
-          sudo rm -f /etc/apt/sources.list.d/{azure-cli.sources,microsoft-prod.list,ondrej-ubuntu-php-noble.sources}
+          sudo rm -f /etc/apt/sources.list.d/{azure-cli.sources,docker.list,microsoft-prod.list}
           sudo apt-get -o Dpkg::Use-Pty=0 update
           printf "#!/bin/sh
             while [ \$? = 0 ]; do for i in 1 2 3; do timeout 60 \"\$@\" && break 2; echo \"Error: slow server, retry \$i\"; sleep 1
@@ -560,7 +560,7 @@ jobs:
               'apache2 apache2-dev libnghttp2-dev vsftpd dante-server libev-dev' || '' }}
 
         run: |
-          sudo rm -f /etc/apt/sources.list.d/{azure-cli.sources,microsoft-prod.list,ondrej-ubuntu-php-noble.sources}
+          sudo rm -f /etc/apt/sources.list.d/{azure-cli.sources,docker.list,microsoft-prod.list}
           sudo apt-get -o Dpkg::Use-Pty=0 update
           printf "#!/bin/sh
             while [ \$? = 0 ]; do for i in 1 2 3; do timeout 45 \"\$@\" && break 2; echo \"Error: slow server, retry \$i\"; sleep 1

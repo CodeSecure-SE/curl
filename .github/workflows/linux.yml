@@ -34,7 +34,7 @@ env:
   CURL_CI: github
   CURL_TEST_MIN: 1650
   # renovate: datasource=github-tags depName=libressl/portable versioning=semver registryUrl=https://github.com
-  LIBRESSL_VERSION: 4.2.1
+  LIBRESSL_VERSION: 4.3.1
   # renovate: datasource=github-tags depName=wolfSSL/wolfssl versioning=semver extractVersion=^v?(?<version>.+)-stable$ registryUrl=https://github.com
   WOLFSSL_VERSION: 5.9.1
   # renovate: datasource=github-tags depName=Mbed-TLS/mbedtls versioning=semver registryUrl=https://github.com
@@ -47,13 +47,13 @@ env:
   # renovate: datasource=github-tags depName=google/boringssl versioning=semver registryUrl=https://github.com
   BORINGSSL_VERSION: 0.20260413.0
   # renovate: datasource=github-releases depName=openssl/openssl versioning=semver extractVersion=^openssl-(?<version>.+)$ registryUrl=https://github.com
-  OPENSSL_VERSION: 3.6.2
+  OPENSSL_VERSION: 4.0.0
   # renovate: datasource=github-tags depName=rustls/rustls-ffi versioning=semver registryUrl=https://github.com
   RUSTLS_VERSION: 0.15.2
   # handled in renovate.json
   OPENLDAP_VERSION: 2.6.10
   # renovate: datasource=github-tags depName=nghttp2/nghttp2 versioning=semver registryUrl=https://github.com
-  NGHTTP2_VERSION: 1.68.1
+  NGHTTP2_VERSION: 1.69.0
   # renovate: datasource=github-releases depName=pizlonator/fil-c versioning=semver-coerced registryUrl=https://github.com
   FIL_C_VERSION: 0.678
 
@@ -301,12 +301,13 @@ jobs:
           - name: 'clang-tidy'
             install_packages: clang-20 clang-tidy-20 libssl-dev libidn2-dev libssh2-1-dev libnghttp2-dev libldap-dev libkrb5-dev libgnutls28-dev
             install_steps: skiprun mbedtls-latest-intel rustls wolfssl-opensslextra-intel
-            install_steps_brew: gsasl
+            install_steps_brew: openssl@4 gsasl
             CC: clang-20
             LDFLAGS: >-
               -Wl,-rpath,/home/runner/wolfssl-opensslextra/lib
               -Wl,-rpath,/home/runner/mbedtls/lib
               -Wl,-rpath,/home/runner/rustls/lib
+              -Wl,-rpath,/home/linuxbrew/.linuxbrew/opt/openssl@4/lib
               -Wl,-rpath,/home/linuxbrew/.linuxbrew/opt/gsasl/lib
 
             PKG_CONFIG_PATH: "\
@@ -315,7 +316,8 @@ jobs:
               /home/runner/rustls/lib/pkgconfig:\
               /home/linuxbrew/.linuxbrew/opt/gsasl/lib/pkgconfig"
             generate: >-
-              -DCURL_USE_OPENSSL=ON -DCURL_USE_WOLFSSL=ON -DCURL_USE_GNUTLS=ON -DCURL_USE_MBEDTLS=ON -DCURL_USE_RUSTLS=ON
+              -DCURL_USE_OPENSSL=ON -DOPENSSL_ROOT_DIR=/home/linuxbrew/.linuxbrew/opt/openssl@4
+              -DCURL_USE_WOLFSSL=ON -DCURL_USE_GNUTLS=ON -DCURL_USE_MBEDTLS=ON -DCURL_USE_RUSTLS=ON
               -DCURL_USE_GSASL=ON
               -DUSE_ECH=ON -DCURL_USE_GSSAPI=ON -DUSE_SSLS_EXPORT=ON
               -DCURL_CLANG_TIDY=ON -DCLANG_TIDY=/usr/bin/clang-tidy-20
@@ -323,7 +325,7 @@ jobs:
           - name: 'clang-tidy H3 c-ares !examples'
             install_packages: clang-20 clang-tidy-20 libidn2-dev libssh-dev libnghttp2-dev
             install_steps: skiprun
-            install_steps_brew: openssl libngtcp2 libnghttp3 c-ares
+            install_steps_brew: libngtcp2 libnghttp3 c-ares
             CC: clang-20
             LDFLAGS: >-
               -Wl,-rpath,/home/linuxbrew/.linuxbrew/opt/openssl/lib
@@ -359,7 +361,7 @@ jobs:
           - name: 'address-sanitizer H3 c-ares'
             install_packages: clang-20 libubsan1 libasan8 libtsan2
             install_steps: pytest
-            install_steps_brew: openssl libssh2 libngtcp2 libnghttp3 c-ares
+            install_steps_brew: openssl@4 libssh2 libngtcp2 libnghttp3 c-ares
             CC: clang-20
             CFLAGS: >-
               -fsanitize=address,bounds,leak,signed-integer-overflow,undefined
@@ -375,7 +377,9 @@ jobs:
               /home/linuxbrew/.linuxbrew/opt/libngtcp2/lib/pkgconfig:\
               /home/linuxbrew/.linuxbrew/opt/libnghttp3/lib/pkgconfig:\
               /home/linuxbrew/.linuxbrew/opt/c-ares/lib/pkgconfig"
-            generate: -DENABLE_DEBUG=ON -DCURL_USE_OPENSSL=ON -DOPENSSL_ROOT_DIR=/home/linuxbrew/.linuxbrew/opt/openssl -DUSE_NGTCP2=ON -DUSE_SSLS_EXPORT=ON -DENABLE_ARES=ON
+            generate: >-
+              -DENABLE_DEBUG=ON -DCURL_USE_OPENSSL=ON -DOPENSSL_ROOT_DIR=/home/linuxbrew/.linuxbrew/opt/openssl@4 -DUSE_ECH=ON -DUSE_NGTCP2=ON
+              -DUSE_SSLS_EXPORT=ON -DENABLE_ARES=ON
 
           - name: 'thread-sanitizer'
             install_packages: clang-20 libtsan2
@@ -383,7 +387,7 @@ jobs:
             CC: clang-20
             CFLAGS: -fsanitize=thread -g
             LDFLAGS: -fsanitize=thread
-            generate: -DOPENSSL_ROOT_DIR=/home/runner/openssl -DENABLE_DEBUG=ON
+            generate: -DOPENSSL_ROOT_DIR=/home/runner/openssl -DUSE_ECH=ON -DENABLE_DEBUG=ON
 
           - name: 'memory-sanitizer'
             install_packages: clang-20

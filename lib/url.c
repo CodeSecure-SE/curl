@@ -943,9 +943,9 @@ static bool url_match_auth(struct connectdata *conn,
     if(!Curl_creds_same(m->data->state.creds, conn->creds))
       return FALSE;
   }
-#ifdef HAVE_GSSAPI
-  /* GSS delegation differences do not actually affect every connection
-     and auth method, but this check takes precaution before efficiency */
+#if defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI)
+  /* GSS delegation differences do not actually affect every connection and
+     auth method, but this check takes precaution before efficiency */
   if(m->needle->gssapi_delegation != conn->gssapi_delegation)
     return FALSE;
 #endif
@@ -1340,7 +1340,7 @@ static struct connectdata *allocate_conn(struct Curl_easy *data)
   conn->fclosesocket = data->set.fclosesocket;
   conn->closesocket_client = data->set.closesocket_client;
   conn->lastused = conn->created;
-#ifdef HAVE_GSSAPI
+#if defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI)
   conn->gssapi_delegation = data->set.gssapi_delegation;
 #endif
   DEBUGF(infof(data, "alloc connection, bits.close=%d", conn->bits.close));
@@ -1436,14 +1436,16 @@ static CURLcode url_set_data_creds(struct Curl_easy *data,
   Curl_creds_unlink(&data->state.creds);
   if((data->set.str[STRING_USERNAME] ||
       data->set.str[STRING_PASSWORD] ||
+      data->set.str[STRING_BEARER] ||
       data->set.str[STRING_SASL_AUTHZID] ||
-      data->set.str[STRING_BEARER]) &&
+      data->set.str[STRING_SERVICE_NAME]) &&
      (data->set.allow_auth_to_other_hosts ||
       Curl_peer_same_destination(data->state.initial_origin, conn->origin))) {
     result = Curl_creds_create(data->set.str[STRING_USERNAME],
                                data->set.str[STRING_PASSWORD],
-                               data->set.str[STRING_SASL_AUTHZID],
                                data->set.str[STRING_BEARER],
+                               data->set.str[STRING_SASL_AUTHZID],
+                               data->set.str[STRING_SERVICE_NAME],
                                CREDS_OPTION, &data->state.creds);
     if(result)
       return result;
@@ -1542,7 +1544,7 @@ static CURLcode parseurlandfillconn(struct Curl_easy *data,
     }
 
     /* after it was parsed, get the generated normalized version */
-    uc = curl_url_get(uh, CURLUPART_URL, &newurl, 0);
+    uc = curl_url_get(uh, CURLUPART_URL, &newurl, CURLU_GET_EMPTY);
     if(uc) {
       result = Curl_uc_to_curlcode(uc);
       goto out;
@@ -1599,7 +1601,8 @@ static CURLcode parseurlandfillconn(struct Curl_easy *data,
     goto out;
   }
 
-  uc = curl_url_get(uh, CURLUPART_QUERY, &data->state.up.query, 0);
+  uc = curl_url_get(uh, CURLUPART_QUERY, &data->state.up.query,
+                    CURLU_GET_EMPTY);
   if(uc && (uc != CURLUE_NO_QUERY)) {
     result = CURLE_OUT_OF_MEMORY;
     goto out;
@@ -1859,18 +1862,21 @@ static CURLcode parse_proxy(struct Curl_easy *data,
 
   if(proxyuser || proxypasswd) {
     result = Curl_creds_create(proxyuser, proxypasswd, NULL, NULL,
+                               data->set.str[STRING_PROXY_SERVICE_NAME],
                                CREDS_URL, &proxyinfo->creds);
     if(result)
       goto error;
   }
   else if(!for_pre_proxy &&
           (data->set.str[STRING_PROXYUSERNAME] ||
-           data->set.str[STRING_PROXYPASSWORD])) {
+           data->set.str[STRING_PROXYPASSWORD] ||
+           data->set.str[STRING_PROXY_SERVICE_NAME])) {
     /* No user/passwd in URL, if this is not a pre-proxy, the
      * CURLOPT_PROXY* settings apply. */
     result = Curl_creds_create(data->set.str[STRING_PROXYUSERNAME],
                                data->set.str[STRING_PROXYPASSWORD],
                                NULL, NULL,
+                               data->set.str[STRING_PROXY_SERVICE_NAME],
                                CREDS_OPTION, &proxyinfo->creds);
   }
   else
@@ -2191,7 +2197,8 @@ static CURLcode override_login(struct Curl_easy *data,
         if(data->set.use_netrc == CURL_NETRC_REQUIRED) {
           /* use the URL user to search netrc */
           result = Curl_creds_create(
-            data->state.creds->user, NULL, NULL, NULL, CREDS_URL, &ncreds_in);
+            data->state.creds->user, NULL, NULL, NULL, NULL, CREDS_URL,
+            &ncreds_in);
           if(result)
             goto out;
         }
@@ -2294,7 +2301,7 @@ static CURLcode url_set_conn_login(struct Curl_easy *data,
       Curl_creds_link(&conn->creds, data->state.creds);
     else
       return Curl_creds_create(CURL_DEFAULT_USER, CURL_DEFAULT_PASSWORD,
-                               NULL, NULL, CREDS_NONE, &conn->creds);
+                               NULL, NULL, NULL, CREDS_NONE, &conn->creds);
   }
   else if(!(conn->scheme->flags & PROTOPT_CREDSPERREQUEST)) {
     /* for protocols that do not handle credentials per request,

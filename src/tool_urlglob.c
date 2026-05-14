@@ -703,7 +703,8 @@ CURLcode glob_next_url(char **globbed, struct URLGlob *glob)
 #define MAX_OUTPUT_GLOB_LENGTH (1024 * 1024)
 
 CURLcode glob_match_url(char **output, const char *filename,
-                        struct URLGlob *glob, SANITIZEcode *sc)
+                        struct URLGlob *glob, struct URLGlob *glob2,
+                        SANITIZEcode *sc)
 {
   struct dynbuf dyn;
   const char *ifilename = filename;
@@ -715,7 +716,7 @@ CURLcode glob_match_url(char **output, const char *filename,
   while(*filename) {
     CURLcode result = CURLE_OK;
     struct URLPattern *pat = NULL;
-    if(*filename == '#' && ISDIGIT(filename[1])) {
+    if(glob_inuse(glob) && *filename == '#' && ISDIGIT(filename[1])) {
       /* a numbered glob reference */
       const char *ptr = filename++;
       curl_off_t num;
@@ -741,7 +742,11 @@ CURLcode glob_match_url(char **output, const char *filename,
       if(!curlx_str_until(&filename, &name, MAX_GLOBNAME_LEN, '>') &&
          !curlx_str_single(&filename, '>')) {
         /* find the correct glob entry */
-        pat = glob_find_name(glob, &name);
+        if(glob_inuse(glob))
+          pat = glob_find_name(glob, &name);
+        if(!pat && glob2 && glob_inuse(glob2))
+          /* scan the second glob list if there is one */
+          pat = glob_find_name(glob2, &name);
         if(!pat) {
           /* when the name is given correctly, it needs to be an existing glob
              name, which makes this an error */

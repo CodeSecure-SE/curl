@@ -79,7 +79,7 @@ bool Curl_auth_is_spnego_supported(void)
  */
 CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
                                          struct Curl_creds *creds,
-                                         const char *service,
+                                         const char *default_service,
                                          const char *host,
                                          const char *chlg64,
                                          struct negotiatedata *nego)
@@ -104,6 +104,8 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
 
   if(!nego->spn) {
     /* Generate our SPN */
+    const char *service = Curl_creds_has_sasl_service(creds) ?
+      Curl_creds_sasl_service(creds) : default_service;
     nego->spn = Curl_auth_build_spn(service, host, NULL);
     if(!nego->spn)
       return CURLE_OUT_OF_MEMORY;
@@ -225,8 +227,7 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
   /* Generate our challenge-response message */
   {
     DWORD sspi_flags = ISC_REQ_CONFIDENTIALITY;
-    if(data->set.gssapi_delegation & (CURLGSSAPI_DELEGATION_FLAG |
-                                      CURLGSSAPI_DELEGATION_POLICY_FLAG))
+    if(data->set.gssapi_delegation & CURLGSSAPI_DELEGATION_FLAG)
       sspi_flags |= ISC_REQ_DELEGATE | ISC_REQ_MUTUAL_AUTH;
     nego->status =
       Curl_pSecFn->InitializeSecurityContext(nego->credentials,

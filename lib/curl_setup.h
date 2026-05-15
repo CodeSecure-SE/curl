@@ -1542,7 +1542,7 @@ int getpwuid_r(uid_t uid, struct passwd *pwd, char *buf,
 #endif
 
 #if defined(USE_UNIX_SOCKETS) && defined(_WIN32)
-/* Offered by mingw-w64 v10+. MS SDK 10.17763/~VS2017+. */
+/* Offered by mingw-w64 v10+, MS SDK 10.0.16299.0/VS2017 15.4+ */
 #if defined(__MINGW32__) && (__MINGW64_VERSION_MAJOR >= 10)
 #  include <afunix.h>
 #elif !defined(UNIX_PATH_MAX) /* Replicate logic present in afunix.h */
@@ -1578,7 +1578,7 @@ typedef struct sockaddr_un {
 /* The code is compiled with C++ compiler.
    C++ always supports 'inline'. */
 #  define CURL_INLINE inline /* 'inline' keyword supported */
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
 /* C99 (and later) supports 'inline' keyword */
 #  define CURL_INLINE inline /* 'inline' keyword supported */
 #elif defined(__GNUC__) && __GNUC__ >= 3

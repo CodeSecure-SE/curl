@@ -475,6 +475,13 @@ static CURLUcode hostname_check(struct Curl_URL *u, char *hostname,
     if(hlen != len)
       /* hostname with bad content */
       return CURLUE_BAD_HOSTNAME;
+    else if((hlen >= 2) &&
+            (hostname[hlen - 1] == '.') && (hostname[hlen - 2] == '.'))
+      /* more than one trailing dot is not allowed */
+      return CURLUE_BAD_HOSTNAME;
+    else if((hlen == 1) && (hostname[0] == '.'))
+      /* just a single dot is not allowed */
+      return CURLUE_BAD_HOSTNAME;
   }
   return CURLUE_OK;
 }
@@ -488,6 +495,9 @@ static CURLUcode hostname_check(struct Curl_URL *u, char *hostname,
  *
  * Output the "normalized" version of that input string in plain quad decimal
  * integers.
+ *
+ * A single dot following the numerical address is accepted and "swallowed" as
+ * if it was never there.
  *
  * Returns the host type.
  *
@@ -520,17 +530,26 @@ UNITTEST int ipv4_normalize(struct dynbuf *host)
     else
       rc = curlx_str_number(&c, &l, UINT_MAX);
 
-    if(rc)
-      return HOST_NAME;
-
-    parts[n] = (unsigned int)l;
+    if(rc) {
+      if(!n || (rc != STRE_NO_NUM) || *c)
+        return HOST_NAME;
+      n--;
+    }
+    else
+      parts[n] = (unsigned int)l;
 
     switch(*c) {
     case '.':
-      if(n == 3)
-        return HOST_NAME;
-      n++;
-      c++;
+      if(n == 3) {
+        if(c[1])
+          /* something follows this dot */
+          return HOST_NAME;
+        done = TRUE;
+      }
+      else {
+        n++;
+        c++;
+      }
       break;
 
     case '\0':
@@ -1953,7 +1972,6 @@ nomem:
         return CURLUE_OUT_OF_MEMORY;
       }
     }
-
     else if(what == CURLUPART_HOST) {
       size_t n = curlx_dyn_len(&enc);
       if(!n && (flags & CURLU_NO_AUTHORITY)) {

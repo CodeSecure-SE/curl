@@ -43,12 +43,12 @@ static uint64_t capsule_ntohll(uint64_t value)
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
   return value;
 #elif (defined(__GNUC__) || defined(__clang__)) && \
-      defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+  defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
   return __builtin_bswap64(value);
 #else
   union {
-      uint64_t u64;
-      uint32_t u32[2];
+    uint64_t u64;
+    uint32_t u32[2];
   } src, dst;
 
   src.u64 = value;
@@ -135,8 +135,19 @@ static CURLcode capsule_decode_varint_at(struct bufq *recvbufq,
   return CURLE_OK;
 }
 
-size_t Curl_capsule_encap_udp_hdr(uint8_t *hdr, size_t hdrlen,
-                                  size_t payload_len)
+/**
+ * Write the capsule header (type + varint length + context ID) into `hdr`.
+ * @param hdr         Output buffer (must be >= HTTP_CAPSULE_HEADER_MAX_SIZE)
+ * @param hdrlen      Size of `hdr` in bytes
+ * @param payload_len Length of the UDP payload that follows
+ * @return Number of header bytes written, or 0 on error
+ *
+ * @unittest 3400
+ */
+UNITTEST size_t capsule_encap_udp_hdr(uint8_t *hdr, size_t hdrlen,
+                                      size_t payload_len);
+UNITTEST size_t capsule_encap_udp_hdr(uint8_t *hdr, size_t hdrlen,
+                                      size_t payload_len)
 {
   size_t off = 0;
   DEBUGASSERT(hdrlen >= HTTP_CAPSULE_HEADER_MAX_SIZE);
@@ -156,7 +167,7 @@ CURLcode Curl_capsule_encap_udp_datagram(struct dynbuf *dyn,
   size_t hdr_len;
 
   curlx_dyn_init(dyn, HTTP_CAPSULE_HEADER_MAX_SIZE + blen);
-  hdr_len = Curl_capsule_encap_udp_hdr(hdr, sizeof(hdr), blen);
+  hdr_len = capsule_encap_udp_hdr(hdr, sizeof(hdr), blen);
   DEBUGASSERT(hdr_len);
   if(!hdr_len)
     return CURLE_FAILED_INIT;

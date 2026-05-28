@@ -153,8 +153,7 @@ static CURLcode capsule_cf_send(struct Curl_cfilter *cf,
       curlx_dyn_free(&dyn);
       return CURLE_OUT_OF_MEMORY;
     }
-    memcpy(ctx->pending,
-           curlx_dyn_ptr(&dyn) + nwritten, remaining);
+    memcpy(ctx->pending, curlx_dyn_ptr(&dyn) + nwritten, remaining);
     ctx->pending_len = remaining;
     ctx->pending_offset = 0;
     ctx->pending_payload = len;
@@ -238,7 +237,7 @@ CURLcode Curl_cf_capsule_insert_after(struct Curl_cfilter *cf_at,
     return CURLE_OUT_OF_MEMORY;
 
   Curl_bufq_init2(&ctx->recvbuf, CAPSULE_CHUNK_SIZE, CAPSULE_RECV_CHUNKS,
-                   BUFQ_OPT_SOFT_LIMIT);
+                  BUFQ_OPT_SOFT_LIMIT);
 
   result = Curl_cf_create(&cf, &Curl_cft_capsule, ctx);
   if(result) {

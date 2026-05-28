@@ -471,7 +471,7 @@ static CURLUcode hostname_check(struct Curl_URL *u, char *hostname,
     return ipv6_parse(u, hostname, hlen);
   else {
     /* letters from the second string are not ok */
-    len = strcspn(hostname, " \r\n\t/:#?!@{}[]\\$\'\"^`*<>=;,+&()%");
+    len = strcspn(hostname, " \r\n\t/:#?!@{}[]\\$\'\"^`*<>=;,+&()%|");
     if(hlen != len)
       /* hostname with bad content */
       return CURLUE_BAD_HOSTNAME;
@@ -876,13 +876,19 @@ UNITTEST CURLUcode parse_file(const char *url, size_t urllen, CURLU *u,
   path = &url[5];
   pathlen = urllen - 5;
 
+  /* RFC 8089: file-hier-part = ( "//" auth-path ) / local-path, where
+     local-path also starts with a "/". So reject anything that doesn't
+     start with at least one "/" */
+  if(path[0] != '/')
+    return CURLUE_BAD_FILE_URL;
+
   /* Extra handling URLs with an authority component (i.e. that start with
    * "file://")
    *
    * We allow omitted hostname (e.g. file:/<path>) -- valid according to
    * RFC 8089, but not the (current) WHAT-WG URL spec.
    */
-  if(path[0] == '/' && path[1] == '/') {
+  if(path[1] == '/') {
     /* swallow the two slashes */
     const char *ptr = &path[2];
 

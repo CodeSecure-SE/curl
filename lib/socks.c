@@ -656,8 +656,7 @@ static CURLproxycode socks5_check_resp0(struct socks_ctx *sx,
       sxstate(sx, cf, data, SOCKS5_ST_GSSAPI_INIT);
       return CURLPX_OK;
     }
-    failf(data,
-          "SOCKS5 GSSAPI per-message authentication is not enabled.");
+    failf(data, "SOCKS5 GSSAPI per-message authentication is not enabled.");
     return CURLPX_GSSAPI_PERMSG;
   case 2:
     /* regular name + password authentication */
@@ -712,8 +711,7 @@ static CURLproxycode socks5_auth_init(struct Curl_cfilter *cf,
   if(result || (nwritten != 2))
     return CURLPX_SEND_REQUEST;
   if(ulen) {
-    result = Curl_bufq_cwrite(&sx->iobuf, sx->creds->user, ulen,
-                              &nwritten);
+    result = Curl_bufq_cwrite(&sx->iobuf, sx->creds->user, ulen, &nwritten);
     if(result || (nwritten != ulen))
       return CURLPX_SEND_REQUEST;
   }
@@ -722,8 +720,7 @@ static CURLproxycode socks5_auth_init(struct Curl_cfilter *cf,
   if(result || (nwritten != 1))
     return CURLPX_SEND_REQUEST;
   if(plen) {
-    result = Curl_bufq_cwrite(&sx->iobuf, sx->creds->passwd, plen,
-                              &nwritten);
+    result = Curl_bufq_cwrite(&sx->iobuf, sx->creds->passwd, plen, &nwritten);
     if(result || (nwritten != plen))
       return CURLPX_SEND_REQUEST;
   }
@@ -958,13 +955,13 @@ static CURLproxycode socks5_recv_resp1(struct socks_ctx *sx,
      +----+-----+-------+------+----------+----------+
      |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
      +----+-----+-------+------+----------+----------+
-     | 1  |  1  | X'00' |  1   | Variable |    2     |
+     | 1  |  1  | 0x00  |  1   | Variable |    2     |
      +----+-----+-------+------+----------+----------+
 
      ATYP:
-     o  IP v4 address: X'01', BND.ADDR = 4 byte
-     o  domain name:   X'03', BND.ADDR = [ 1 byte length, string ]
-     o  IP v6 address: X'04', BND.ADDR = 16 byte
+     o IPv4 address: 0x01, BND.ADDR = 4 byte
+     o domain name:  0x03, BND.ADDR = [ 1 byte length, string ]
+     o IPv6 address: 0x04, BND.ADDR = 16 byte
   */
   if(resp[0] != 5) { /* version */
     failf(data, "SOCKS5 reply has wrong version, version should be 5.");
@@ -1086,8 +1083,7 @@ process_state:
     sxstate(sx, cf, data, SOCKS5_ST_REQ1_INIT);
     goto process_state;
 #else
-    failf(data,
-          "SOCKS5 GSSAPI per-message authentication is not supported.");
+    failf(data, "SOCKS5 GSSAPI per-message authentication is not supported.");
     return socks_failed(sx, cf, data, CURLPX_GSSAPI_PERMSG);
 #endif
   }

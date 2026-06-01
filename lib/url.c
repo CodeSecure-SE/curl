@@ -301,6 +301,10 @@ CURLcode Curl_close(struct Curl_easy **datap)
 #ifndef CURL_DISABLE_DIGEST_AUTH
   curlx_free(data->state.envproxy);
 #endif
+  Curl_ssl_config_cleanup(&data->set.ssl.primary);
+#ifndef CURL_DISABLE_PROXY
+  Curl_ssl_config_cleanup(&data->set.proxy_ssl.primary);
+#endif
   curlx_free(data);
   return CURLE_OK;
 }
@@ -355,7 +359,9 @@ void Curl_init_userdefined(struct Curl_easy *data)
 
   set->httpauth = CURLAUTH_BASIC;  /* defaults to basic */
 
+  Curl_ssl_config_init(&data->set.ssl.primary);
 #ifndef CURL_DISABLE_PROXY
+  Curl_ssl_config_init(&data->set.proxy_ssl.primary);
   set->proxyport = 0;
   set->proxytype = CURLPROXY_HTTP; /* defaults to HTTP proxy */
   set->proxyauth = CURLAUTH_BASIC; /* defaults to basic */
@@ -363,7 +369,6 @@ void Curl_init_userdefined(struct Curl_easy *data)
   set->socks5auth = CURLAUTH_BASIC | CURLAUTH_GSSAPI;
 #endif
 
-  Curl_ssl_easy_config_init(data);
 #ifndef CURL_DISABLE_DOH
   set->doh_verifyhost = TRUE;
   set->doh_verifypeer = TRUE;
@@ -974,12 +979,6 @@ static bool url_match_destination(struct connectdata *conn,
        m->needle->scheme->protocol) {
       return FALSE;
     }
-    if(!url_match_ssl_use(conn, m)) {
-      DEBUGF(infof(m->data, "Connection #%" FMT_OFF_T
-                   " has compatible protocol family, but no SSL, no match",
-                   conn->connection_id));
-      return FALSE;
-    }
   }
   /* Scheme mismatch is acceptable, just compare hostname/port */
   return Curl_peer_same_destination(m->needle->origin, conn->origin);
@@ -1139,6 +1138,9 @@ static bool url_match_conn(struct connectdata *conn, void *userdata)
     return FALSE;
 
   if(!url_match_multiplex_needs(conn, m))
+    return FALSE;
+
+  if(!url_match_ssl_use(conn, m))
     return FALSE;
 
   if(!url_match_proxy_use(conn, m))
@@ -2785,7 +2787,7 @@ static CURLcode url_find_or_create_conn(struct Curl_easy *data)
 #endif
 
   /* Complete the easy's SSL configuration for connection cache matching */
-  result = Curl_ssl_easy_config_complete(data);
+  result = Curl_ssl_easy_config_complete(data, needle->origin);
   if(result)
     goto out;
 

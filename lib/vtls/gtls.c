@@ -409,7 +409,8 @@ CURLcode Curl_gtls_shared_creds_create(struct Curl_easy *data,
 
   rc = gnutls_certificate_allocate_credentials(&shared->creds);
   if(rc != GNUTLS_E_SUCCESS) {
-    failf(data, "gnutls_cert_all_cred() failed: %s", gnutls_strerror(rc));
+    failf(data, "gnutls_certificate_allocate_credentials() failed: %s",
+          gnutls_strerror(rc));
     curlx_free(shared);
     return CURLE_SSL_CONNECT_ERROR;
   }
@@ -1429,6 +1430,9 @@ static CURLcode gtls_verify_ocsp_status(struct Curl_easy *data,
 {
   gnutls_ocsp_resp_t ocsp_resp = NULL;
   gnutls_datum_t status_request;
+  gnutls_certificate_credentials_t creds = NULL;
+  gnutls_x509_trust_list_t tlist = NULL;
+  unsigned int verify_status = 0;
   gnutls_ocsp_cert_status_t status = GNUTLS_OCSP_CERT_UNKNOWN;
   gnutls_x509_crl_reason_t reason;
   CURLcode result = CURLE_OK;
@@ -1461,13 +1465,22 @@ static CURLcode gtls_verify_ocsp_status(struct Curl_easy *data,
     goto out;
   }
 
-  rc = gnutls_ocsp_resp_get_single(ocsp_resp, 0, NULL, NULL, NULL, NULL,
-                                   &status, NULL, NULL, NULL, &reason);
-  if(rc < 0) {
-    failf(data, "Invalid OCSP response received");
+  if(!gnutls_credentials_get(session, GNUTLS_CRD_CERTIFICATE, (void **)&creds))
+    gnutls_certificate_get_trust_list(creds, &tlist);
+  if(!tlist) {
+    failf(data, "OCSP response signature verification failed");
     result = CURLE_SSL_INVALIDCERTSTATUS;
     goto out;
   }
+  rc = gnutls_ocsp_resp_verify(ocsp_resp, tlist, &verify_status, 0);
+  if(rc < 0 || verify_status) {
+    failf(data, "OCSP response signature verification failed");
+    result = CURLE_SSL_INVALIDCERTSTATUS;
+    goto out;
+  }
+
+  (void)gnutls_ocsp_resp_get_single(ocsp_resp, 0, NULL, NULL, NULL, NULL,
+                                    &status, NULL, NULL, NULL, &reason);
 
   switch(status) {
   case GNUTLS_OCSP_CERT_GOOD:
@@ -1806,17 +1819,22 @@ CURLcode Curl_gtls_verifyserver(struct Curl_cfilter *cf,
     }
     issuerp = load_file(config->issuercert);
     rc = gnutls_x509_crt_import(x509_issuer, &issuerp, GNUTLS_X509_FMT_PEM);
-    if(!rc)
-      rc = (int)gnutls_x509_crt_check_issuer(x509_cert, x509_issuer);
     unload_file(issuerp);
+    if(rc) {
+      failf(data, "failed to import issuer certificate (%s) (Issuer Cert: %s)",
+            gnutls_strerror(rc), config->issuercert);
+      result = CURLE_SSL_ISSUER_ERROR;
+      goto out;
+    }
+    rc = (int)gnutls_x509_crt_check_issuer(x509_cert, x509_issuer);
     if(rc <= 0) {
-      failf(data, "server certificate issuer check failed (IssuerCert: %s)",
-            config->issuercert ? config->issuercert : "none");
+      failf(data, "server certificate issuer check failed (Issuer Cert: %s)",
+            config->issuercert);
       result = CURLE_SSL_ISSUER_ERROR;
       goto out;
     }
     infof(data, "  SSL certificate issuer check OK (Issuer Cert: %s)",
-          config->issuercert ? config->issuercert : "none");
+          config->issuercert);
   }
 
   /* This function checks if the given certificate's subject matches the

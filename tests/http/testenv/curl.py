@@ -89,6 +89,7 @@ class RunProfile:
                 'rss': mem.rss,
             })
         except psutil.NoSuchProcess:
+            # process may exit between sampling ticks: ignore this
             pass
 
     def finish(self):
@@ -187,17 +188,18 @@ class RunTcpDump:
         self._stdoutfile = os.path.join(self._run_dir, 'tcpdump.out')
         self._stderrfile = os.path.join(self._run_dir, 'tcpdump.err')
 
-    def get_rsts(self, ports: List[int]|None = None) -> Optional[List[str]]:
+    def get_rsts(self, ports: Optional[List[int]] = None) -> Optional[List[str]]:
         if self._proc:
             raise Exception('tcpdump still running')
         lines = []
-        for line in open(self._stdoutfile):
-            m = re.match(r'.* IP 127\.0\.0\.1\.(\d+) [<>] 127\.0\.0\.1\.(\d+):.*', line)
-            if m:
-                sport = int(m.group(1))
-                dport = int(m.group(2))
-                if ports is None or sport in ports or dport in ports:
-                    lines.append(line)
+        with open(self._stdoutfile) as fd:
+            for line in fd:
+                m = re.match(r'.* IP 127\.0\.0\.1\.(\d+) [<>] 127\.0\.0\.1\.(\d+):.*', line)
+                if m:
+                    sport = int(m.group(1))
+                    dport = int(m.group(2))
+                    if ports is None or sport in ports or dport in ports:
+                        lines.append(line)
         return lines
 
     @property
@@ -208,7 +210,8 @@ class RunTcpDump:
     def stderr(self) -> List[str]:
         if self._proc:
             raise Exception('tcpdump still running')
-        return open(self._stderrfile).readlines()
+        with open(self._stderrfile) as fd:
+            return fd.readlines()
 
     def sample(self):
         # not sure how to make that detection reliable for all platforms
@@ -236,6 +239,7 @@ class RunTcpDump:
                     try:
                         self._proc.wait(timeout=1)
                     except subprocess.TimeoutExpired:
+                        # timeout means tcpdump is still running
                         pass
         except Exception:
             log.exception('Tcpdump')
@@ -280,11 +284,11 @@ class ExecResult:
         if with_stats:
             self._parse_stats()
         else:
-            # noinspection PyBroadException
             try:
                 out = ''.join(self._stdout)
                 self._json_out = json.loads(out)
-            except:  # noqa: E722
+            except (json.JSONDecodeError, TypeError, ValueError):
+                # stdout not guaranteed to be JSON, keep _json_out as None
                 pass
 
     def __repr__(self):
@@ -296,8 +300,7 @@ class ExecResult:
         for line in self._stdout:
             try:
                 self._stats.append(json.loads(line))
-            # TODO: specify specific exceptions here
-            except:  # noqa: E722
+            except (json.JSONDecodeError, TypeError, ValueError):
                 log.exception(f'not a JSON stat: {line}')
                 break
 
@@ -722,7 +725,7 @@ class CurlClient:
                       no_save: bool = False,
                       limit_rate: Optional[str] = None,
                       extra_args: Optional[List[str]] = None,
-                      url_options: Optional[Dict[str,List[str]]] = None):
+                      url_options: Optional[Dict[str, List[str]]] = None):
         if extra_args is None:
             extra_args = []
         if no_save:
@@ -1027,8 +1030,6 @@ class CurlClient:
                                          cwd=self._run_dir, shell=False,
                                          env=self._run_env)
                     profile = RunProfile(p.pid, started_at, self._run_dir)
-                    if intext is not None and False:
-                        p.communicate(input=intext.encode(), timeout=1)
                     if self._with_perf:
                         perf = PerfProfile(p.pid, self._run_dir)
                         perf.start()

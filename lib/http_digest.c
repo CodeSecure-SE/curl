@@ -62,6 +62,27 @@ CURLcode Curl_input_digest(struct Curl_easy *data,
   return Curl_auth_decode_digest_http_message(header, digest);
 }
 
+/* Flush the Digest state if it was created for a different origin or with
+   different credentials than the ones now in use, then link the current
+   ones. */
+static void digest_flush_stale(struct digestdata *digest,
+                               struct Curl_peer *peer,
+                               struct Curl_creds *creds)
+{
+  bool flush = FALSE;
+  if(digest->origin && !Curl_peer_same_destination(peer, digest->origin))
+    flush = TRUE;
+  else if(digest->creds && !Curl_creds_same(creds, digest->creds))
+    flush = TRUE;
+
+  if(flush)
+    /* flush Digest state */
+    Curl_auth_digest_cleanup(digest);
+
+  Curl_peer_link(&digest->origin, peer);
+  Curl_creds_link(&digest->creds, creds);
+}
+
 CURLcode Curl_output_digest(struct Curl_easy *data,
                             bool proxy,
                             const unsigned char *request,
@@ -88,13 +109,17 @@ CURLcode Curl_output_digest(struct Curl_easy *data,
     return CURLE_NOT_BUILT_IN;
 #else
     digest = &data->state.proxydigest;
+    digest_flush_stale(digest, data->conn->http_proxy.peer,
+                       data->conn->http_proxy.creds);
     allocuserpwd = &data->req.hd_proxy_auth;
     creds = data->conn->http_proxy.creds;
     authp = &data->state.authproxy;
 #endif
   }
   else {
+    DEBUGASSERT(data->conn->origin);
     digest = &data->state.digest;
+    digest_flush_stale(digest, data->conn->origin, data->state.creds);
     allocuserpwd = &data->req.hd_auth;
     creds = data->state.creds;
     authp = &data->state.authhost;

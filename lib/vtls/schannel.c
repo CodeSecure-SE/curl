@@ -849,7 +849,7 @@ static CURLcode schannel_connect_step1(struct Curl_cfilter *cf,
 
   DEBUGASSERT(backend);
   DEBUGF(infof(data, "schannel: SSL/TLS connection with %s port %d (step 1/3)",
-               connssl->peer.dest->hostname, connssl->peer.dest->port));
+               connssl->peer.origin->hostname, connssl->peer.origin->port));
 
 #ifdef HAS_ALPN_SCHANNEL
   backend->use_alpn = connssl->alpn && s_win_has_alpn;
@@ -902,7 +902,7 @@ static CURLcode schannel_connect_step1(struct Curl_cfilter *cf,
     /* A hostname associated with the credential is needed by
        InitializeSecurityContext for SNI and other reasons. */
     snihost = connssl->peer.sni ?
-      connssl->peer.sni : connssl->peer.dest->hostname;
+      connssl->peer.sni : connssl->peer.origin->hostname;
     backend->cred->sni_hostname = curlx_convert_UTF8_to_tchar(snihost);
     if(!backend->cred->sni_hostname)
       return CURLE_OUT_OF_MEMORY;
@@ -1245,7 +1245,7 @@ static CURLcode schannel_connect_step2(struct Curl_cfilter *cf,
   connssl->io_need = CURL_SSL_IO_NEED_NONE;
 
   DEBUGF(infof(data, "schannel: SSL/TLS connection with %s port %d (step 2/3)",
-               connssl->peer.dest->hostname, connssl->peer.dest->port));
+               connssl->peer.origin->hostname, connssl->peer.origin->port));
 
   if(!backend->cred || !backend->ctxt)
     return CURLE_SSL_CONNECT_ERROR;
@@ -1597,7 +1597,7 @@ static CURLcode schannel_connect_step3(struct Curl_cfilter *cf,
   DEBUGASSERT(backend);
 
   DEBUGF(infof(data, "schannel: SSL/TLS connection with %s port %d (step 3/3)",
-               connssl->peer.dest->hostname, connssl->peer.dest->port));
+               connssl->peer.origin->hostname, connssl->peer.origin->port));
 
   if(!backend->cred)
     return CURLE_SSL_CONNECT_ERROR;
@@ -2190,7 +2190,7 @@ static CURLcode schannel_recv(struct Curl_cfilter *cf, struct Curl_easy *data,
       if(result == CURLE_AGAIN)
         SCH_DEV(infof(data, "schannel: recv returned CURLE_AGAIN"));
       else {
-        infof(data, "schannel: recv returned error %d", result);
+        infof(data, "schannel: recv returned error %d", (int)result);
         backend->recv_unrecoverable_err = result;
       }
     }
@@ -2435,7 +2435,7 @@ static CURLcode schannel_shutdown(struct Curl_cfilter *cf,
   *done = FALSE;
   if(backend->ctxt) {
     infof(data, "schannel: shutting down SSL/TLS connection with %s port %d",
-          connssl->peer.dest->hostname, connssl->peer.dest->port);
+          connssl->peer.origin->hostname, connssl->peer.origin->port);
   }
 
   if(!backend->ctxt || cf->shutdown) {
@@ -2509,7 +2509,7 @@ static CURLcode schannel_shutdown(struct Curl_cfilter *cf,
       else {
         if(!backend->recv_connection_closed) {
           result = CURLE_SEND_ERROR;
-          failf(data, "schannel: error sending close msg: %d", result);
+          failf(data, "schannel: error sending close msg: %d", (int)result);
           goto out;
         }
         /* Looks like server already closed the connection.
@@ -2532,7 +2532,7 @@ static CURLcode schannel_shutdown(struct Curl_cfilter *cf,
       connssl->io_need = CURL_SSL_IO_NEED_RECV;
     }
     else if(result) {
-      CURL_TRC_CF(data, cf, "SSL shutdown, error %d", result);
+      CURL_TRC_CF(data, cf, "SSL shutdown, error %d", (int)result);
       result = CURLE_RECV_ERROR;
     }
     else if(nread == 0) {

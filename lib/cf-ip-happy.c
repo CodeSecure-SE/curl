@@ -342,7 +342,7 @@ static CURLcode cf_ip_ballers_init(struct cf_ip_ballers *bs,
   bs->cf_create = get_cf_create(transport_peer, !!tunnel_peer);
   if(!bs->cf_create) {
     failf(data, "unsupported transport type %u%s",
-          transport_peer, tunnel_peer ? "to proxy" : "");
+          transport_peer, tunnel_peer ? " to proxy" : "");
     return CURLE_UNSUPPORTED_PROTOCOL;
   }
   Curl_peer_link(&bs->origin, origin);
@@ -886,7 +886,7 @@ static CURLcode cf_ip_happy_connect(struct Curl_cfilter *cf,
       ctx->ballers.winner->cf = NULL;
       cf_ip_happy_ctx_clear(ctx, data);
       Curl_expire_done(data, EXPIRE_HAPPY_EYEBALLS);
-      /* whatever errors where reported by ballers, clear our errorbuf */
+      /* whatever errors were reported by ballers, clear our errorbuf */
       Curl_reset_fail(data);
 
       if(cf->conn->scheme->protocol & PROTO_FAMILY_SSH)

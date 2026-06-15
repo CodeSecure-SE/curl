@@ -346,15 +346,20 @@ static struct resp *resp_queue;
 static CURLcode send_resp(curl_socket_t sock, struct resp *resp)
 {
   ssize_t rc;
+  int sockerr = 0;
 
-sending:
-  rc = sendto(sock, (const void *)resp->body.data, (SENDTO3)resp->body.dlen, 0,
-              &resp->addr, resp->addrlen);
-  if((rc < 0) && (SOCKERRNO == SOCKEINTR))
-    goto sending;
-  if(rc != (ssize_t)resp->body.dlen) {
-    logmsg("failed sending %d bytes, errno=%d\n",
-           (int)resp->body.dlen, SOCKERRNO);
+  do {
+    rc = sendto(sock, (const void *)resp->body.data, (SENDTO3)resp->body.dlen,
+                0, &resp->addr, resp->addrlen);
+  } while((rc < 0) && ((sockerr = SOCKERRNO) == SOCKEINTR));
+  if(rc < 0) {
+    char errbuf[STRERROR_LEN];
+    logmsg("failed sending %zu bytes, error: (%d) %s", resp->body.dlen,
+           sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
+    return CURLE_SEND_ERROR;
+  }
+  else if(rc != (ssize_t)resp->body.dlen) {
+    logmsg("failed sending %zu bytes, sent: %zd", resp->body.dlen, rc);
     return CURLE_SEND_ERROR;
   }
   logmsg("[%d] sent response", resp->qid);
@@ -742,7 +747,7 @@ static int test_dnsd(int argc, const char **argv)
   curl_socket_t sock = CURL_SOCKET_BAD;
   int flag;
   int rc;
-  int error;
+  int sockerr;
   char errbuf[STRERROR_LEN];
   int result = 0;
   struct resp *resp;
@@ -840,18 +845,18 @@ static int test_dnsd(int argc, const char **argv)
 #endif
 
   if(sock == CURL_SOCKET_BAD) {
-    error = SOCKERRNO;
+    sockerr = SOCKERRNO;
     logmsg("Error creating socket (%d) %s",
-           error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+           sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
     result = 1;
     goto dnsd_cleanup;
   }
 
   flag = 1;
   if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void *)&flag, sizeof(flag))) {
-    error = SOCKERRNO;
+    sockerr = SOCKERRNO;
     logmsg("setsockopt(SO_REUSEADDR) failed with error (%d) %s",
-           error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+           sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
     result = 1;
     goto dnsd_cleanup;
   }
@@ -875,9 +880,9 @@ static int test_dnsd(int argc, const char **argv)
   }
 #endif /* USE_IPV6 */
   if(rc) {
-    error = SOCKERRNO;
+    sockerr = SOCKERRNO;
     logmsg("Error binding socket on port %hu (%d) %s", port,
-           error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+           sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
     result = 1;
     goto dnsd_cleanup;
   }
@@ -897,9 +902,9 @@ static int test_dnsd(int argc, const char **argv)
       la_size = sizeof(localaddr.sa6);
 #endif
     if(getsockname(sock, &localaddr.sa, &la_size) < 0) {
-      error = SOCKERRNO;
+      sockerr = SOCKERRNO;
       logmsg("getsockname() failed with error (%d) %s",
-             error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+             sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
       sclose(sock);
       goto dnsd_cleanup;
     }

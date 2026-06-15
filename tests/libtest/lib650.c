@@ -95,7 +95,7 @@ static CURLcode test_lib650(const char *URL)
   formrc = curl_formadd(&formpost,
                         &lastptr,
                         CURLFORM_PTRNAME, testname,
-                        CURLFORM_NAMELENGTH, strlen(testname) - 1,
+                        CURLFORM_NAMELENGTH, sizeof(testname) - 2,
                         CURLFORM_ARRAY, formarray,
                         CURLFORM_FILENAME, "remotefile.txt",
                         CURLFORM_END);
@@ -189,7 +189,7 @@ static CURLcode test_lib650(const char *URL)
   /* include headers in the output */
   test_setopt(curl, CURLOPT_HEADER, 1L);
 
-  /* Perform the request, result will get the return code */
+  /* Perform the request, result gets the return code */
   result = curl_easy_perform(curl);
 
 test_cleanup:

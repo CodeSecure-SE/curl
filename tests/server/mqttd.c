@@ -416,10 +416,10 @@ static int publish(FILE *dump,
 
 static char topic[MAX_TOPIC_LENGTH + 1];
 
-static int fixedheader(curl_socket_t fd,
-                       unsigned char *bytep,
-                       size_t *remaining_lengthp,
-                       size_t *remaining_length_bytesp)
+static bool fixedheader(curl_socket_t fd,
+                        unsigned char *bytep,
+                        size_t *remaining_lengthp,
+                        size_t *remaining_length_bytesp)
 {
   /* get the fixed header */
   unsigned char buffer[10];
@@ -429,7 +429,7 @@ static int fixedheader(curl_socket_t fd,
   size_t i;
   if(rc < 2) {
     logmsg("READ %zd bytes [SHORT!]", rc);
-    return 1; /* fail */
+    return FALSE; /* fail */
   }
   logmsg("READ %zd bytes", rc);
   loghex(buffer, rc);
@@ -442,20 +442,19 @@ static int fixedheader(curl_socket_t fd,
     rc = sread(fd, &buffer[i], 1);
     if(rc != 1) {
       logmsg("Remaining Length broken");
-      return 1;
+      return FALSE;
     }
   }
   *remaining_lengthp = decode_length(&buffer[1], i, remaining_length_bytesp);
   logmsg("Remaining Length: %zu [%zu bytes]", *remaining_lengthp,
          *remaining_length_bytesp);
-  return 0;
+  return TRUE;
 }
 
 static curl_socket_t mqttit(curl_socket_t fd)
 {
   size_t buff_size = 10 * 1024;
   unsigned char *buffer = NULL;
-  ssize_t rc;
   unsigned char byte;
   unsigned short packet_id;
   size_t payload_len;
@@ -500,10 +499,10 @@ static curl_socket_t mqttit(curl_socket_t fd)
     const size_t client_id_offset = 12;
     size_t start_usr;
     size_t start_passwd;
+    ssize_t rc = 0;
 
     /* get the fixed header */
-    rc = fixedheader(fd, &byte, &remaining_length, &bytes);
-    if(rc)
+    if(!fixedheader(fd, &byte, &remaining_length, &bytes))
       break;
 
     if(remaining_length >= buff_size) {
@@ -713,7 +712,7 @@ static bool mqttd_incoming(curl_socket_t listenfd)
 
   do {
     ssize_t rc;
-    int error = 0;
+    int sockerr = 0;
     char errbuf[STRERROR_LEN];
     curl_socket_t sockfd = listenfd;
     int maxfd = (int)sockfd;
@@ -732,20 +731,20 @@ static bool mqttd_incoming(curl_socket_t listenfd)
         logmsg("signalled to die, exiting...");
         return FALSE;
       }
-    } while((rc == -1) && ((error = SOCKERRNO) == SOCKEINTR));
+    } while((rc == -1) && ((sockerr = SOCKERRNO) == SOCKEINTR));
 
     if(rc < 0) {
       logmsg("select() failed with error (%d) %s",
-             error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+             sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
       return FALSE;
     }
 
     if(FD_ISSET(sockfd, &fds_read)) {
       curl_socket_t newfd = accept(sockfd, NULL, NULL);
       if(newfd == CURL_SOCKET_BAD) {
-        error = SOCKERRNO;
+        sockerr = SOCKERRNO;
         logmsg("accept() failed with error (%d) %s",
-               error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+               sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
       }
       else {
         logmsg("====> Client connect, fd %ld. "
@@ -770,7 +769,7 @@ static int test_mqttd(int argc, const char *argv[])
   int wrotepidfile = 0;
   int wroteportfile = 0;
   bool juggle_again;
-  int error;
+  int sockerr;
   char errbuf[STRERROR_LEN];
   int arg = 1;
 
@@ -872,9 +871,9 @@ static int test_mqttd(int argc, const char *argv[])
   sock = socket(socket_domain, SOCK_STREAM, 0);
 
   if(sock == CURL_SOCKET_BAD) {
-    error = SOCKERRNO;
+    sockerr = SOCKERRNO;
     logmsg("Error creating socket (%d) %s",
-           error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+           sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
     goto mqttd_cleanup;
   }
 

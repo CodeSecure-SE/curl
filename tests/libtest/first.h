@@ -146,7 +146,7 @@ void ws_close(CURL *curl);  /* close the connection */
  * should be immediately followed by checking if 'res' variable has been
  * set.
  *
- * 'res' variable when set will hold a CURLcode, CURLMcode, or any of the
+ * 'res' variable when set holds a CURLcode, CURLMcode, or any of the
  * TEST_ERR_* values defined above. It is advisable to return this value
  * as test result.
  */
@@ -484,12 +484,12 @@ void ws_close(CURL *curl);  /* close the connection */
 #define exe_select_test(A, B, C, D, E, Y, Z)                             \
   do {                                                                   \
     if(select_wrapper(A, B, C, D, E) == -1) {                            \
-      int ec = SOCKERRNO;                                                \
-      char ecbuf[STRERROR_LEN];                                          \
+      int sockerr = SOCKERRNO;                                           \
+      char sockerrbuf[STRERROR_LEN];                                     \
       curl_mfprintf(stderr,                                              \
-                    "%s:%d select() failed, with "                       \
-                    "errno %d (%s)\n",                                   \
-                    Y, Z, ec, curlx_strerror(ec, ecbuf, sizeof(ecbuf))); \
+                    "%s:%d select() failed, with errno %d (%s)\n", Y, Z, \
+                    sockerr, curlx_strerror(sockerr, sockerrbuf,         \
+                                            sizeof(sockerrbuf)));        \
       result = TEST_ERR_SELECT;                                          \
     }                                                                    \
   } while(0)

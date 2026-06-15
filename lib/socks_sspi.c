@@ -442,6 +442,7 @@ static CURLcode socks5_sspi_encrypt(struct Curl_cfilter *cf,
     if(sspi_w_token[1].cbBuffer != 1) {
       failf(data, "Invalid SSPI encryption response length (%lu).",
             (unsigned long)sspi_w_token[1].cbBuffer);
+      goto fail;
     }
 
     memcpy(socksreq, sspi_w_token[1].pvBuffer, sspi_w_token[1].cbBuffer);
@@ -456,11 +457,12 @@ static CURLcode socks5_sspi_encrypt(struct Curl_cfilter *cf,
   }
   curlx_free(sspi_w_token[0].pvBuffer);
 
-  infof(data, "SOCKS5 access with%s protection granted BUT NOT USED.",
-        (socksreq[0] == 0) ? "out GSS-API data" :
-        ((socksreq[0] == 1) ? " GSS-API integrity" :
-         " GSS-API confidentiality"));
+  infof(data, "SOCKS5 access %s protection granted BUT NOT USED.",
+        (socksreq[0] == 0) ? "without GSS-API data" :
+         ((socksreq[0] == 1) ? "with GSS-API integrity" :
+          "with GSS-API confidentiality"));
 
+  cf->conn->socks5_gssapi_enctype = socksreq[0];
   return CURLE_OK;
 
 fail:

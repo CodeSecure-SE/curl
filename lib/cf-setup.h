@@ -1,5 +1,5 @@
-#ifndef HEADER_CURL_CF_CAPSULE_H
-#define HEADER_CURL_CF_CAPSULE_H
+#ifndef HEADER_CURL_CF_SETUP_H
+#define HEADER_CURL_CF_SETUP_H
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |
@@ -25,16 +25,22 @@
  ***************************************************************************/
 #include "curl_setup.h"
 
-#if !defined(CURL_DISABLE_PROXY) && !defined(CURL_DISABLE_HTTP)
+struct Curl_dns_entry;
+struct ip_quadruple;
+struct Curl_peer;
+struct Curl_str;
 
-/* Insert a capsule protocol filter after `cf_at` in the filter chain.
- * The capsule filter encapsulates/decapsulates UDP datagrams using
- * the HTTP Datagram capsule format (RFC 9297). */
-CURLcode Curl_cf_capsule_insert_after(struct Curl_cfilter *cf_at,
-                                      struct Curl_easy *data);
+CURLcode Curl_cf_setup_add(struct Curl_easy *data,
+                           struct connectdata *conn,
+                           int sockindex,
+                           uint8_t transport,
+                           int ssl_mode);
 
-extern struct Curl_cftype Curl_cft_capsule;
+CURLcode Curl_cf_setup_insert_after(struct Curl_cfilter *cf_at,
+                                    struct Curl_easy *data,
+                                    uint8_t transport,
+                                    int ssl_mode);
 
-#endif /* !CURL_DISABLE_PROXY && !CURL_DISABLE_HTTP */
+extern struct Curl_cftype Curl_cft_setup;
 
-#endif /* HEADER_CURL_CF_CAPSULE_H */
+#endif /* HEADER_CURL_CF_SETUP_H */

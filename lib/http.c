@@ -2544,7 +2544,7 @@ static CURLcode http_cookies(struct Curl_easy *data,
       const char *host = data->req.cookiehost ?
         data->req.cookiehost : data->state.origin->hostname;
       Curl_share_lock(data, CURL_LOCK_DATA_COOKIE, CURL_LOCK_ACCESS_SINGLE);
-      result = Curl_cookie_getlist(data, data->conn, &okay, host, &list);
+      result = Curl_cookie_getlist(data, &okay, host, &list);
       if(!result && okay) {
         struct Curl_llist_node *n;
         size_t clen = 8; /* hold the size of the generated Cookie: header */
@@ -3517,7 +3517,6 @@ static CURLcode http_header_s(struct Curl_easy *data,
                               const char *hd, size_t hdlen)
 {
 #if !defined(CURL_DISABLE_COOKIES) || !defined(CURL_DISABLE_HSTS)
-  struct connectdata *conn = data->conn;
   const char *v;
 #else
   (void)data;
@@ -3533,7 +3532,7 @@ static CURLcode http_header_s(struct Curl_easy *data,
      * real peer hostname. */
     const char *host = data->req.cookiehost ?
       data->req.cookiehost : data->state.origin->hostname;
-    const bool secure_context = Curl_secure_context(conn, host);
+    const bool secure_context = Curl_secure_context(data, host);
     CURLcode result;
     Curl_share_lock(data, CURL_LOCK_DATA_COOKIE, CURL_LOCK_ACCESS_SINGLE);
     result = Curl_cookie_add(data, data->cookies, TRUE, FALSE, v, host,
@@ -4938,7 +4937,7 @@ CURLcode Curl_http_req_to_h2(struct dynhds *h2_headers,
       infof(data, "set pseudo header %s to %s", HTTP_PSEUDO_SCHEME, scheme);
     }
     else {
-      scheme = Curl_xfer_is_secure(data) ? "https" : "http";
+      scheme = data->state.origin->scheme->name;
     }
   }
 

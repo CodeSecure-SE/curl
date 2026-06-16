@@ -42,7 +42,7 @@ void loghex(const unsigned char *buffer, ssize_t len)
   ssize_t width = 0;
   int left = sizeof(data);
 
-  for(i = 0; i < len && (left >= 0); i++) {
+  for(i = 0; i < len && (left > 2); i++) {
     snprintf(optr, left, "%02x", ptr[i]);
     width += 2;
     optr += 2;
@@ -313,20 +313,25 @@ static HWND hidden_main_window = NULL;
  * should finish its execution in a controlled manner as soon as possible.
  * The first time this is called it sets got_exit_signal to 1 and
  * stores in exit_signal the signal that triggered its execution.
- */
-/*
+ *
  * Only call signal-safe functions from the signal handler, as required by
  * the POSIX specification:
  *   https://pubs.opengroup.org/onlinepubs/9699919799/functions/V2_chap02.html
  * Hence, do not call 'logmsg()', and instead use 'open/write/close' to
  * log errors.
  */
+/* suppress warnings seen in configurations where 'write()' has the attribute
+   'warn_unused_result', which is not silenced by casting to '(void)'. */
+#if defined(CURL_HAVE_DIAG) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result" /* GCC 4.5+ */
+#endif
 static void exit_signal_handler(int signum)
 {
   int old_errno = errno;
   if(!serverlogfile) {
     static const char msg[] = "exit_signal_handler: serverlogfile not set\n";
-    (void)!write(STDERR_FILENO, msg, sizeof(msg) - 1);
+    (void)write(STDERR_FILENO, msg, sizeof(msg) - 1);
   }
   else {
     int fd = -1;
@@ -340,14 +345,14 @@ static void exit_signal_handler(int signum)
     if(fd != -1) {
 #endif
       static const char msg[] = "exit_signal_handler: called\n";
-      (void)!write(fd, msg, sizeof(msg) - 1);
+      (void)write(fd, msg, sizeof(msg) - 1);
       curlx_close(fd);
     }
     else {
       static const char msg[] = "exit_signal_handler: failed opening ";
-      (void)!write(STDERR_FILENO, msg, sizeof(msg) - 1);
-      (void)!write(STDERR_FILENO, serverlogfile, strlen(serverlogfile));
-      (void)!write(STDERR_FILENO, "\n", 1);
+      (void)write(STDERR_FILENO, msg, sizeof(msg) - 1);
+      (void)write(STDERR_FILENO, serverlogfile, strlen(serverlogfile));
+      (void)write(STDERR_FILENO, "\n", 1);
     }
   }
   if(got_exit_signal == 0) {
@@ -361,6 +366,9 @@ static void exit_signal_handler(int signum)
   (void)signal(signum, exit_signal_handler);
   errno = old_errno;
 }
+#if defined(CURL_HAVE_DIAG) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 #ifdef _WIN32
 /* CTRL event handler for Windows Console applications to simulate
@@ -674,7 +682,6 @@ int bind_unix_socket(curl_socket_t sock, const char *unix_socket,
   curlx_strcopy(sau->sun_path, sizeof(sau->sun_path), unix_socket, len);
   rc = bind(sock, (struct sockaddr *)sau, sizeof(struct sockaddr_un));
   if(rc && SOCKERRNO == SOCKEADDRINUSE) {
-    curlx_struct_stat statbuf;
     int sockerr;
     /* socket already exists. Perhaps it is stale? */
     curl_socket_t unixfd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -693,25 +700,24 @@ int bind_unix_socket(curl_socket_t sock, const char *unix_socket,
              sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
       return rc;
     }
+#if !defined(_WIN32) && defined(S_IFSOCK) /* No lstat(), S_IFSOCK on Windows */
     /* socket server is not alive, now check if it was actually a socket. */
-#ifdef _WIN32
-    /* Windows does not have lstat function. */
-    if(curlx_stat(unix_socket, &statbuf)) {
-#else
-    if(lstat(unix_socket, &statbuf)) {
-#endif
-      logmsg("Error binding socket, failed to stat %s (%d) %s", unix_socket,
-             errno, curlx_strerror(errno, errbuf, sizeof(errbuf)));
-      return -1;
-    }
-#ifdef S_IFSOCK
-    if((statbuf.st_mode & S_IFSOCK) != S_IFSOCK) {
-      logmsg("Error binding socket, failed to stat %s", unix_socket);
-      return -1;
+    {
+      curlx_struct_stat statbuf;
+      rc = lstat(unix_socket, &statbuf);
+      if(rc && errno != ENOENT) {
+        logmsg("Error binding socket, failed to stat %s (%d) %s", unix_socket,
+               errno, curlx_strerror(errno, errbuf, sizeof(errbuf)));
+        return -1;
+      }
+      if(!rc && (statbuf.st_mode & S_IFMT) != S_IFSOCK) {
+        logmsg("Error binding socket, %s is not a socket", unix_socket);
+        return -1;
+      }
     }
 #endif
     /* dead socket, cleanup and retry bind */
-    if(unlink(unix_socket)) {
+    if(unlink(unix_socket) && errno != ENOENT) {
       logmsg("Error binding socket, failed to unlink %s: %d (%s)", unix_socket,
              errno, curlx_strerror(errno, errbuf, sizeof(errbuf)));
       return -1;

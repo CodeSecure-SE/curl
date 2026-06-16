@@ -202,6 +202,7 @@ my %warnings = (
     'TYPEDEFSTRUCT'         => 'typedefed struct',
     'UNUSEDIGNORE'          => 'a warning ignore was not used',
     'USESAFEFREE'           => 'replace curlx_free() + NULL assignment with curlx_safefree()',
+    'VOIDEXCL'              => '(void)! is not something we like',
     );
 
 sub readskiplist {
@@ -540,7 +541,7 @@ sub scanfile {
         printf "Checking file: $file\n";
     }
 
-    open(my $R, '<', $file) || die "failed to open $file";
+    open(my $R, '<', $file) or die "failed to open $file";
 
     my $incomment = 0;
     my @copyright = ();
@@ -1163,6 +1164,12 @@ sub scanfile {
             checkwarn("EXCLAMATIONSPACE",
                       $line, length($1)+1, $file, $ol,
                       "space after exclamation mark");
+        }
+
+        if($nostr =~ /(.*)\(void\)\!/) {
+            checkwarn("VOIDEXCL",
+                      $line, length($1)+1, $file, $ol,
+                      "exclamation after (void) is weird");
         }
 
         if($nostr =~ /(.*)\b(EACCES|EADDRINUSE|EADDRNOTAVAIL|EAFNOSUPPORT|EBADF|ECONNREFUSED|ECONNRESET|EINPROGRESS|EINTR|EINVAL|EISCONN|EMSGSIZE|ENOMEM|ETIMEDOUT|EWOULDBLOCK)\b/) {

@@ -68,7 +68,7 @@ env:
 jobs:
   build-cache:
     name: 'Build caches'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: 'cache awslc'
@@ -232,8 +232,6 @@ jobs:
             libuv1-dev \
             libc-ares-dev \
             libp11-kit-dev autopoint bison gperf gtk-doc-tools libtasn1-bin  # for GnuTLS
-          echo 'CC=gcc-12' >> "$GITHUB_ENV"
-          echo 'CXX=g++-12' >> "$GITHUB_ENV"
 
       - name: 'build awslc'
         if: ${{ !steps.cache-awslc.outputs.cache-hit }}
@@ -428,7 +426,7 @@ jobs:
   linux:
     name: ${{ matrix.build.generate && 'CM' || 'AM' }} ${{ matrix.build.name }}
     needs: build-cache
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     env:
       CURL_TRACE_PKG_CONFIG: '1'
@@ -593,8 +591,6 @@ jobs:
             libpsl-dev libbrotli-dev libzstd-dev zlib1g-dev libidn2-0-dev libldap-dev libuv1-dev valgrind \
             ${INSTALL_PACKAGES} \
             ${MATRIX_INSTALL_PACKAGES}
-          echo 'CC=gcc-12' >> "$GITHUB_ENV"
-          echo 'CXX=g++-12' >> "$GITHUB_ENV"
 
       - name: 'cache awslc'
         if: ${{ contains(matrix.build.name, 'awslc') }}
@@ -793,7 +789,7 @@ jobs:
           if [ "${MATRIX_BUILD}" = 'cmake' ]; then
             [[ "${MATRIX_GENERATE}" = *'boringssl'* ]] && options=" -DBORINGSSL_VERSION=${BORINGSSL_VERSION}"
             cmake -B bld -G Ninja \
-              -DCMAKE_C_COMPILER_TARGET="$(uname -m)-pc-linux-gnu" -DBUILD_STATIC_LIBS=ON \
+              -DCMAKE_C_COMPILER_TARGET="$(uname -m)-unknown-linux-gnu" -DBUILD_STATIC_LIBS=ON \
               -DCURL_WERROR=ON -DENABLE_DEBUG=ON \
               -DCURL_USE_LIBUV=ON -DCURL_ENABLE_NTLM=ON \
               -DTEST_NGHTTPX=/home/runner/nghttp2/build/bin/nghttpx \

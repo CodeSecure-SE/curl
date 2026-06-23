@@ -805,7 +805,7 @@ static CURLcode sftp_quote(struct Curl_easy *data,
   cp = strchr(cmd, ' ');
   if(!cp) {
     failf(data, "Syntax error command '%s', missing parameter", cmd);
-    return result;
+    return CURLE_QUOTE_ERROR;
   }
 
   /*
@@ -1207,7 +1207,7 @@ static CURLcode sftp_quote_stat(struct Curl_easy *data,
     sshc->acceptfail = TRUE;
   }
 
-  if(!!strncmp(cmd, "chmod", 5)) {
+  if(strncmp(cmd, "chmod", 5)) {
     /* Since chown and chgrp only set owner OR group but libssh2 wants to set
      * them both at once, we need to obtain the current ownership first. This
      * takes an extra protocol round trip.

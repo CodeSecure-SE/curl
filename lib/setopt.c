@@ -108,7 +108,7 @@ CURLcode Curl_setblobopt(struct curl_blob **blobp,
 
   if(blob) {
     struct curl_blob *nblob;
-    if(!blob->len || (blob->len > CURL_MAX_INPUT_LENGTH))
+    if(!blob->data || !blob->len || (blob->len > CURL_MAX_INPUT_LENGTH))
       return CURLE_BAD_FUNCTION_ARGUMENT;
     nblob = (struct curl_blob *)
       curlx_malloc(sizeof(struct curl_blob) +
@@ -1814,14 +1814,12 @@ static CURLcode setopt_cptr_proxy(struct Curl_easy *data, CURLoption option,
 static CURLcode setopt_copypostfields(const char *ptr, struct UserDefined *s)
 {
   CURLcode result = CURLE_OK;
+  if(s->postfieldsize < -1)
+    return CURLE_BAD_FUNCTION_ARGUMENT;
   if(!ptr || s->postfieldsize == -1)
     result = Curl_setstropt(&s->str[STRING_COPYPOSTFIELDS], ptr);
   else {
-    size_t pflen;
-
-    if(s->postfieldsize < 0)
-      return CURLE_BAD_FUNCTION_ARGUMENT;
-    pflen = curlx_sotouz_range(s->postfieldsize, 0, SIZE_MAX);
+    size_t pflen = curlx_sotouz_range(s->postfieldsize, 0, SIZE_MAX);
     if(pflen == SIZE_MAX)
       return CURLE_OUT_OF_MEMORY;
     else {

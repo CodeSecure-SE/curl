@@ -56,7 +56,7 @@ env:
   # renovate: datasource=github-tags depName=rustls/rustls-ffi versioning=semver registryUrl=https://github.com
   RUSTLS_VERSION: 0.15.3
   # renovate: datasource=github-tags depName=wolfSSL/wolfssl versioning=semver extractVersion=^v?(?<version>.+)-stable$ registryUrl=https://github.com
-  WOLFSSL_VERSION: 5.9.1
+  WOLFSSL_VERSION: 5.9.2
 
 jobs:
   linux:
@@ -517,7 +517,7 @@ jobs:
 
       - name: 'cache libressl (c-arm)'
         if: ${{ contains(matrix.build.install_steps, 'libressl-c-arm') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-libressl-c-arm
         env:
           cache-name: cache-libressl-c-arm
@@ -538,7 +538,7 @@ jobs:
 
       - name: 'cache libressl (filc)'
         if: ${{ contains(matrix.build.install_steps, 'libressl-filc') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-libressl-filc
         env:
           cache-name: cache-libressl-filc
@@ -560,7 +560,7 @@ jobs:
 
       - name: 'cache nghttp2 (filc)'
         if: ${{ contains(matrix.build.install_steps, 'nghttp2-filc') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-nghttp2-filc
         env:
           cache-name: cache-nghttp2-filc
@@ -583,7 +583,7 @@ jobs:
 
       - name: 'cache wolfssl (all-arm)'
         if: ${{ contains(matrix.build.install_steps, 'wolfssl-all-arm') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-wolfssl-all-arm
         env:
           cache-name: cache-wolfssl-all-arm
@@ -598,6 +598,9 @@ jobs:
             --location --proto-redir =https "https://github.com/wolfSSL/wolfssl/archive/v${WOLFSSL_VERSION}-stable.tar.gz" --output pkg.bin
           sha256sum pkg.bin && tar -xzf pkg.bin && rm -f pkg.bin
           cd "wolfssl-${WOLFSSL_VERSION}-stable"
+          curl --disable --fail --silent --show-error --connect-timeout 15 --max-time 30 --retry 6 --retry-connrefused \
+            https://github.com/wolfSSL/wolfssl/commit/7dd269fc52228cbc854b9f0ed8c3938b95d8a2c8.diff --output pkg.patch
+          patch -p1 -i pkg.patch
           ./autogen.sh
           ./configure --disable-dependency-tracking --prefix=/home/runner/wolfssl-all \
             --enable-tls13 --enable-harden --enable-all \
@@ -606,7 +609,7 @@ jobs:
 
       - name: 'cache wolfssl (opensslextra-intel)'  # does support `OPENSSL_COEXIST`
         if: ${{ contains(matrix.build.install_steps, 'wolfssl-opensslextra-intel') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-wolfssl-opensslextra-intel
         env:
           cache-name: cache-wolfssl-opensslextra-intel
@@ -621,6 +624,9 @@ jobs:
             --location --proto-redir =https "https://github.com/wolfSSL/wolfssl/archive/v${WOLFSSL_VERSION}-stable.tar.gz" --output pkg.bin
           sha256sum pkg.bin && tar -xzf pkg.bin && rm -f pkg.bin
           cd "wolfssl-${WOLFSSL_VERSION}-stable"
+          curl --disable --fail --silent --show-error --connect-timeout 15 --max-time 30 --retry 6 --retry-connrefused \
+            https://github.com/wolfSSL/wolfssl/commit/7dd269fc52228cbc854b9f0ed8c3938b95d8a2c8.diff --output pkg.patch
+          patch -p1 -i pkg.patch
           ./autogen.sh
           ./configure --disable-dependency-tracking --prefix=/home/runner/wolfssl-opensslextra \
             --enable-tls13 --enable-harden --enable-ech --enable-ed25519 --enable-opensslextra \
@@ -629,7 +635,7 @@ jobs:
 
       - name: 'cache wolfssl (opensslextra-arm)'  # does support `OPENSSL_COEXIST`
         if: ${{ contains(matrix.build.install_steps, 'wolfssl-opensslextra-arm') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-wolfssl-opensslextra-arm
         env:
           cache-name: cache-wolfssl-opensslextra-arm
@@ -644,6 +650,9 @@ jobs:
             --location --proto-redir =https "https://github.com/wolfSSL/wolfssl/archive/v${WOLFSSL_VERSION}-stable.tar.gz" --output pkg.bin
           sha256sum pkg.bin && tar -xzf pkg.bin && rm -f pkg.bin
           cd "wolfssl-${WOLFSSL_VERSION}-stable"
+          curl --disable --fail --silent --show-error --connect-timeout 15 --max-time 30 --retry 6 --retry-connrefused \
+            https://github.com/wolfSSL/wolfssl/commit/7dd269fc52228cbc854b9f0ed8c3938b95d8a2c8.diff --output pkg.patch
+          patch -p1 -i pkg.patch
           ./autogen.sh
           ./configure --disable-dependency-tracking --prefix=/home/runner/wolfssl-opensslextra \
             --enable-tls13 --enable-harden --enable-ech --enable-ed25519 --enable-opensslextra \
@@ -652,7 +661,7 @@ jobs:
 
       - name: 'cache mbedtls (latest-intel)'
         if: ${{ contains(matrix.build.install_steps, 'mbedtls-latest-intel') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-mbedtls-latest-intel
         env:
           cache-name: cache-mbedtls-latest-intel
@@ -676,7 +685,7 @@ jobs:
 
       - name: 'cache mbedtls (latest-arm)'
         if: ${{ contains(matrix.build.install_steps, 'mbedtls-latest-arm') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-mbedtls-latest-arm
         env:
           cache-name: cache-mbedtls-latest-arm
@@ -700,7 +709,7 @@ jobs:
 
       - name: 'cache mbedtls (prev)'
         if: ${{ contains(matrix.build.install_steps, 'mbedtls-prev') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-mbedtls-prev
         env:
           cache-name: cache-mbedtls-prev
@@ -724,7 +733,7 @@ jobs:
 
       - name: 'cache openldap (static)'
         if: ${{ contains(matrix.build.install_steps, 'openldap-static') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-openldap-static
         env:
           cache-name: cache-openldap-static
@@ -745,7 +754,7 @@ jobs:
 
       - name: 'cache openssl (thread sanitizer)'
         if: ${{ contains(matrix.build.install_steps, 'openssl-tsan') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-openssl-tsan
         env:
           cache-name: cache-openssl-tsan
@@ -764,7 +773,7 @@ jobs:
 
       - name: 'cache awslc'
         if: ${{ contains(matrix.build.install_steps, 'awslc') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-awslc
         env:
           cache-name: cache-awslc
@@ -785,7 +794,7 @@ jobs:
 
       - name: 'cache boringssl'
         if: ${{ contains(matrix.build.install_steps, 'boringssl') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-boringssl
         env:
           cache-name: cache-boringssl
@@ -807,7 +816,7 @@ jobs:
 
       - name: 'cache rustls'
         if: ${{ contains(matrix.build.install_steps, 'rustls') }}
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-rustls
         env:
           cache-name: cache-rustls
@@ -842,7 +851,7 @@ jobs:
           source /opt/intel/oneapi/setvars.sh
           printenv >> "$GITHUB_ENV"
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 

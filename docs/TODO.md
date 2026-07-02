@@ -431,30 +431,18 @@ LDAPS not possible with macOS and Windows with Certificate-Based Authentication
 
 [curl issue 9641](https://github.com/curl/curl/issues/9641)
 
-# SMB
+# WebSocket
 
-## Support modern versions
+## Support text frames with command line tool
 
-curl only supports version 1, which barely anyone is using anymore.
+libcurl defaults to using binary WebSocket frames, which makes some servers
+not work as they require text. We should make it possible to tell the tool to
+use text frames.
 
-## File listing support
+[curl issue 21997](https://github.com/curl/curl/issues/21997)
 
-Add support for listing the contents of an SMB share. The output should
-probably be the same as/similar to FTP.
-
-## Honor file timestamps
-
-The timestamp of the transferred file should reflect that of the original
-file.
-
-## Use NTLMv2
-
-Currently the SMB authentication uses NTLMv1.
-
-## Create remote directories
-
-Support for creating remote directories when uploading a file to a directory
-that does not exist on the server, like `--ftp-create-dirs`.
+An abandoned attempt to add support for this exists in [PR
+22093](https://github.com/curl/curl/pull/22093).
 
 # FILE
 

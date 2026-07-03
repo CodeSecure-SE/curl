@@ -681,8 +681,8 @@ static bool ssh_config_matches(struct connectdata *one,
 
   sshc1 = Curl_conn_meta_get(one, CURL_META_SSH_CONN);
   sshc2 = Curl_conn_meta_get(two, CURL_META_SSH_CONN);
-  return sshc1 && sshc2 && Curl_safecmp(sshc1->rsa, sshc2->rsa) &&
-         Curl_safecmp(sshc1->rsa_pub, sshc2->rsa_pub);
+  return sshc1 && sshc2 && Curl_safecmp(sshc1->priv_key, sshc2->priv_key) &&
+         Curl_safecmp(sshc1->pub_key, sshc2->pub_key);
 }
 #endif
 
@@ -942,7 +942,7 @@ static bool url_match_proto_config(struct connectdata *conn,
 #endif
 #ifndef CURL_DISABLE_FTP
   else if(get_protocol_family(m->needle->scheme) & PROTO_FAMILY_FTP) {
-    if(!ftp_conns_match(m->needle, conn))
+    if(!Curl_ftp_conns_match(m->needle, conn))
       return FALSE;
   }
 #endif

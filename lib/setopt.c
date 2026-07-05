@@ -1449,6 +1449,26 @@ static CURLcode setopt_mimepost(struct Curl_easy *data, curl_mime *mimep)
 #endif /* !CURL_DISABLE_MIME */
 #endif /* !CURL_DISABLE_HTTP || !CURL_DISABLE_SMTP || !CURL_DISABLE_IMAP */
 
+static CURLcode setopt_share(struct Curl_easy *data, struct Curl_share *set)
+{
+  CURLcode result;
+
+  if(data->conn) {
+    /* As this handle already has a connection attached, changing share now
+       would be complicated and error-prone */
+    infof(data, "Cannot change share object while in use");
+    result = CURLE_BAD_FUNCTION_ARGUMENT;
+  }
+  else {
+    /* disconnect from old share, if any and possible */
+    result = Curl_share_easy_unlink(data);
+    if(!result && GOOD_SHARE_HANDLE(set))
+      /* use new share if it set */
+      result = Curl_share_easy_link(data, set);
+  }
+  return result;
+}
+
 /* assorted pointer type arguments */
 static CURLcode setopt_pointers(struct Curl_easy *data, CURLoption option,
                                 va_list param)
@@ -1496,22 +1516,8 @@ static CURLcode setopt_pointers(struct Curl_easy *data, CURLoption option,
     if(!s->err)
       s->err = stderr;
     break;
-  case CURLOPT_SHARE: {
-    struct Curl_share *set = va_arg(param, struct Curl_share *);
-
-    /* disconnect from old share, if any and possible */
-    result = Curl_share_easy_unlink(data);
-    if(result)
-      return result;
-
-    /* use new share if it set */
-    if(GOOD_SHARE_HANDLE(set)) {
-      result = Curl_share_easy_link(data, set);
-      if(result)
-        return result;
-    }
-    break;
-  }
+  case CURLOPT_SHARE:
+    return setopt_share(data, va_arg(param, struct Curl_share *));
 
   default:
     return CURLE_UNKNOWN_OPTION;
@@ -2404,26 +2410,13 @@ static CURLcode setopt_cptr_misc(struct Curl_easy *data, CURLoption option,
     s->rtp_out = ptr;
     break;
 #endif /* !CURL_DISABLE_RTSP */
-#ifdef USE_TLS_SRP
   case CURLOPT_TLSAUTH_USERNAME:
-    return Curl_setstropt(&s->str[STRING_TLSAUTH_USERNAME], ptr);
   case CURLOPT_TLSAUTH_PASSWORD:
-    return Curl_setstropt(&s->str[STRING_TLSAUTH_PASSWORD], ptr);
   case CURLOPT_TLSAUTH_TYPE:
-    if(ptr && !curl_strequal(ptr, "SRP"))
-      result = CURLE_BAD_FUNCTION_ARGUMENT;
-    break;
-#ifndef CURL_DISABLE_PROXY
   case CURLOPT_PROXY_TLSAUTH_USERNAME:
-    return Curl_setstropt(&s->str[STRING_TLSAUTH_USERNAME_PROXY], ptr);
   case CURLOPT_PROXY_TLSAUTH_PASSWORD:
-    return Curl_setstropt(&s->str[STRING_TLSAUTH_PASSWORD_PROXY], ptr);
   case CURLOPT_PROXY_TLSAUTH_TYPE:
-    if(ptr && !curl_strequal(ptr, "SRP"))
-      result = CURLE_BAD_FUNCTION_ARGUMENT;
-    break;
-#endif
-#endif
+    return CURLE_NOT_BUILT_IN;
 #ifndef CURL_DISABLE_HSTS
   case CURLOPT_HSTSREADDATA:
     s->hsts_read_userp = ptr;

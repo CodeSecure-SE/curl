@@ -43,10 +43,10 @@ env:
   # renovate: datasource=github-tags depName=libressl/portable versioning=semver registryUrl=https://github.com
   LIBRESSL_VERSION: 4.3.2
   # renovate: datasource=github-tags depName=Mbed-TLS/mbedtls versioning=semver registryUrl=https://github.com
-  MBEDTLS_VERSION: 4.0.0
+  MBEDTLS_VERSION: 4.2.0
   # manually bumped
-  MBEDTLS_PREV_VERSION: 3.6.5
-  MBEDTLS_PREV_SHA256: 4a11f1777bb95bf4ad96721cac945a26e04bf19f57d905f241fe77ebeddf46d8
+  MBEDTLS_PREV_VERSION: 3.6.7
+  MBEDTLS_PREV_SHA256: a7e8bcbec0e6f761b4af24f25677626b35f762f68eef79c08677a363212d11f6
   # renovate: datasource=github-tags depName=nghttp2/nghttp2 versioning=semver registryUrl=https://github.com
   NGHTTP2_VERSION: 1.69.0
   # handled in renovate.json
@@ -598,9 +598,6 @@ jobs:
             --location --proto-redir =https "https://github.com/wolfSSL/wolfssl/archive/v${WOLFSSL_VERSION}-stable.tar.gz" --output pkg.bin
           sha256sum pkg.bin && tar -xzf pkg.bin && rm -f pkg.bin
           cd "wolfssl-${WOLFSSL_VERSION}-stable"
-          curl --disable --fail --silent --show-error --connect-timeout 15 --max-time 30 --retry 6 --retry-connrefused \
-            https://github.com/wolfSSL/wolfssl/commit/7dd269fc52228cbc854b9f0ed8c3938b95d8a2c8.diff --output pkg.patch
-          patch -p1 -i pkg.patch
           ./autogen.sh
           ./configure --disable-dependency-tracking --prefix=/home/runner/wolfssl-all \
             --enable-tls13 --enable-harden --enable-all \
@@ -624,9 +621,6 @@ jobs:
             --location --proto-redir =https "https://github.com/wolfSSL/wolfssl/archive/v${WOLFSSL_VERSION}-stable.tar.gz" --output pkg.bin
           sha256sum pkg.bin && tar -xzf pkg.bin && rm -f pkg.bin
           cd "wolfssl-${WOLFSSL_VERSION}-stable"
-          curl --disable --fail --silent --show-error --connect-timeout 15 --max-time 30 --retry 6 --retry-connrefused \
-            https://github.com/wolfSSL/wolfssl/commit/7dd269fc52228cbc854b9f0ed8c3938b95d8a2c8.diff --output pkg.patch
-          patch -p1 -i pkg.patch
           ./autogen.sh
           ./configure --disable-dependency-tracking --prefix=/home/runner/wolfssl-opensslextra \
             --enable-tls13 --enable-harden --enable-ech --enable-ed25519 --enable-opensslextra \
@@ -650,9 +644,6 @@ jobs:
             --location --proto-redir =https "https://github.com/wolfSSL/wolfssl/archive/v${WOLFSSL_VERSION}-stable.tar.gz" --output pkg.bin
           sha256sum pkg.bin && tar -xzf pkg.bin && rm -f pkg.bin
           cd "wolfssl-${WOLFSSL_VERSION}-stable"
-          curl --disable --fail --silent --show-error --connect-timeout 15 --max-time 30 --retry 6 --retry-connrefused \
-            https://github.com/wolfSSL/wolfssl/commit/7dd269fc52228cbc854b9f0ed8c3938b95d8a2c8.diff --output pkg.patch
-          patch -p1 -i pkg.patch
           ./autogen.sh
           ./configure --disable-dependency-tracking --prefix=/home/runner/wolfssl-opensslextra \
             --enable-tls13 --enable-harden --enable-ech --enable-ed25519 --enable-opensslextra \

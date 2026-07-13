@@ -513,6 +513,13 @@ class Env:
         return Env.CONFIG.curl_props["version_string"]
 
     @staticmethod
+    def curl_version_at_least(min_version) -> bool:
+        version = Env.curl_version()
+        return Env.CONFIG.versiontuple(min_version) <= Env.CONFIG.versiontuple(
+                version
+            )
+
+    @staticmethod
     def curl_features_string() -> str:
         return Env.CONFIG.curl_props["features_string"]
 
@@ -854,10 +861,6 @@ class Env:
     @property
     def vsftpd(self) -> str:
         return self.CONFIG.vsftpd
-
-    @property
-    def ws_port(self) -> int:
-        return self.CONFIG.ports["ws"]
 
     @property
     def curl(self) -> str:

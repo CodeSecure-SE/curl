@@ -2671,6 +2671,9 @@ if test "$CURL_DISABLE_LDAP" != "1" && test "$want_ldap" != "no"; then
   CURL_CHECK_HEADER_LDAP
   CURL_CHECK_HEADER_LDAP_SSL
 
+  dnl Default to failure; AC_CHECK_LIB success paths set this to yes.
+  ldap_lib_ok="no"
+
   if test -z "$LDAPLIBNAME"; then
     if test "$curl_cv_native_windows" = "yes" && test "$curl_cv_winuwp" != "yes"; then
       dnl Windows uses a single and unique LDAP library name
@@ -5276,7 +5279,6 @@ if test "$CURL_DISABLE_HTTP" != "1"; then
        test "$GNUTLS_ENABLED" = "1" ||
        test "$RUSTLS_ENABLED" = "1" ||
        test "$SCHANNEL_ENABLED" = "1" ||
-       test "$GNUTLS_ENABLED" = "1" ||
        test "$MBEDTLS_ENABLED" = "1"; then
       SUPPORT_FEATURES="$SUPPORT_FEATURES HTTPS-proxy"
       AC_MSG_RESULT([yes])

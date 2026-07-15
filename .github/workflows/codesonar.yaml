@@ -91,7 +91,7 @@ jobs:
           body: file://diff.md
           convert_markdown: true
           from: "CodeSonar Analyzer"
-          to: "mark@hermeling.org, daniel@haxx.se"
+          to: "mark@hermeling.org"
           reply_to: "mark@hermeling.org"
           attachments: diff.sarif.tgz
       - name: cleanup

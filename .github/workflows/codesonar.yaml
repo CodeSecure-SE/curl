@@ -37,13 +37,13 @@ jobs:
       - name: Set parallelism
         run:  echo "PARALLEL=`nproc`" >> $GITHUB_ENV
       - name: Checkout 
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Safe directory
         run: git config --global --add safe.directory `pwd`
       - name : configure
         run: autoreconf -fi; ./configure --with-openssl
       - name: Checkout CodeSonar CI-Script
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: CodeSecure-SE/codesonar_ci
           path: codesonar-scripts
@@ -65,7 +65,7 @@ jobs:
       - name: Create tgz copy of SARIF results
         run: tar czf diff.sarif.tgz diff.sarif
       - name: Upload artefact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: SARIF results summary
           path: |
@@ -81,7 +81,7 @@ jobs:
           fi
       - name: Email results
         if: steps.check_diff.outputs.send_mail == 'true'
-        uses: dawidd6/action-send-mail@v3
+        uses: dawidd6/action-send-mail@v18
         with:
           server_address: smtp.gmail.com
           server_port: 465

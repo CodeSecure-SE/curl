@@ -92,7 +92,7 @@ jobs:
           convert_markdown: true
           from: "CodeSonar Analyzer"
           to: "mark@hermeling.org"
-          reply_to: "mark@hermeling.org"
+          reply_to: "mark@hermeling.org, daniel@haxx.se"
           attachments: diff.sarif.tgz
       - name: cleanup
         run: rm hubpwfile

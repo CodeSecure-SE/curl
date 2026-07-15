@@ -90,7 +90,7 @@ jobs:
           subject: CodeSonar results for ${{ github.repository }}
           body: file://diff.md
           convert_markdown: true
-          from: "CodeSonar Analyzer"
+          from: "CodeSonar Analyzer <${{ secrets.GMAIL_USERNAME }}>"
           to: "mark@hermeling.org"
           reply_to: "mark@hermeling.org, daniel@haxx.se"
           attachments: diff.sarif.tgz

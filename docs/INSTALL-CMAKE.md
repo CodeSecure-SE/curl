@@ -203,6 +203,7 @@ target_link_libraries(my_target PRIVATE CURL::libcurl)
 - `CURL_COMPLETION_FISH_DIR`:               Custom fish completion install directory.
 - `CURL_COMPLETION_ZSH`:                    Install zsh completions. Default: `OFF`
 - `CURL_COMPLETION_ZSH_DIR`:                Custom zsh completion install directory.
+- `CURL_DEBUG_GLOBAL_MEM`:                  Debug `curl_global_init_mem`. Default: `OFF`
 - `CURL_DEFAULT_SSL_BACKEND`:               Override default TLS backend in MultiSSL builds.
                                             Accepted values in order of default priority:
                                             `wolfssl`, `gnutls`, `mbedtls`, `openssl`, `schannel`, `rustls`
@@ -516,6 +517,7 @@ the parent project, ideally in the "extra" find package redirect file:
 Available variables:
 
 - `HAVE_DES_ECB_ENCRYPT`:                   `DES_ecb_encrypt` present in OpenSSL (or fork).
+- `HAVE_GSS_SET_NEG_MECHS`:                 `gss_set_neg_mechs` present in GSS-API library.
 - `HAVE_LDAP_INIT_FD`:                      `ldap_init_fd` present in LDAP library.
 - `HAVE_LDAP_URL_PARSE`:                    `ldap_url_parse` present in LDAP library.
 - `HAVE_MBEDTLS_DES_CRYPT_ECB`:             `mbedtls_des_crypt_ecb` present in mbedTLS <4.

@@ -2852,6 +2852,28 @@ AC_SUBST([CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME], ["4"])  dnl Keep in sync with 
 AM_CONDITIONAL([CURL_LT_SHLIB_USE_VERSIONED_SYMBOLS],
   [test "$versioned_symbols" = "yes"])
 
+dnl ---------------------------
+dnl check Apple fast UDP option
+dnl ---------------------------
+
+if test "$curl_cv_apple" = "yes"; then
+  AC_MSG_CHECKING([whether to use Apple fast UDP])
+  AC_ARG_ENABLE(apple-fast-udp,
+AS_HELP_STRING([--enable-apple-fast-udp],[Enable using Apple fast UDP (experimental)])
+AS_HELP_STRING([--disable-apple-fast-udp],[Disable using Apple fast UDP (experimental) (default)]),
+  [ case "$enableval" in
+    yes)
+      AC_MSG_RESULT([yes])
+      AC_DEFINE(USE_APPLE_FAST_UDP, 1, [to use Apple fast UDP (SYS_recvmsg_x, SYS_sendmsg_x)])
+      ;;
+    *)
+      AC_MSG_RESULT([no])
+      ;;
+    esac ],
+      AC_MSG_RESULT([no])
+  )
+fi
+
 dnl ----------------------------
 dnl check Windows Unicode option
 dnl ----------------------------
@@ -4577,7 +4599,6 @@ AS_HELP_STRING([--disable-httpsig],[Disable HTTP Message Signatures support (exp
 [ case "$enableval" in
   no)
     AC_MSG_RESULT(no)
-    AC_DEFINE(CURL_DISABLE_HTTPSIG, 1, [to disable HTTP Message Signatures support])
     want_httpsig="no"
     ;;
   *)
@@ -4586,9 +4607,16 @@ AS_HELP_STRING([--disable-httpsig],[Disable HTTP Message Signatures support (exp
     ;;
   esac ],
     AC_MSG_RESULT(no)
-    AC_DEFINE(CURL_DISABLE_HTTPSIG, 1, [to disable HTTP Message Signatures support])
     want_httpsig="no"
 )
+
+if test "$want_httpsig" = "yes" && test "$OPENSSL_ENABLED" != "1" && test "$WOLFSSL_ENABLED" != "1"; then
+  AC_MSG_WARN([HTTPSIG requires OpenSSL or wolfSSL. HTTPSIG support disabled.])
+  want_httpsig="no"
+fi
+if test "$want_httpsig" != "yes"; then
+  AC_DEFINE(CURL_DISABLE_HTTPSIG, 1, [to disable HTTP Message Signatures support])
+fi
 
 dnl ************************************************************
 dnl disable NTLM support

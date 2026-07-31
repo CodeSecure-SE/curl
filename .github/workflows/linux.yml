@@ -34,10 +34,11 @@ env:
   CURL_CI: github
   CURL_TEST_MIN: 1660
   DO_NOT_TRACK: '1'
+  HOMEBREW_NO_INSTALL_CLEANUP: '1'
   # renovate: datasource=github-tags depName=awslabs/aws-lc versioning=semver registryUrl=https://github.com
   AWSLC_VERSION: 5.1.0
   # renovate: datasource=github-tags depName=google/boringssl versioning=semver registryUrl=https://github.com
-  BORINGSSL_VERSION: 0.20260728.0
+  BORINGSSL_VERSION: 0.20260730.0
   # renovate: datasource=github-releases depName=pizlonator/fil-c versioning=semver-coerced registryUrl=https://github.com
   FIL_C_VERSION: 0.681
   # renovate: datasource=github-tags depName=libressl/portable versioning=semver registryUrl=https://github.com
@@ -295,13 +296,13 @@ jobs:
             install_packages: libnghttp2-dev libssh2-1-dev libc-ares-dev
             tflags: '-t --shallow=25 --min=960 1 to 1000'
             torture: true
-            generate: -DCURL_USE_OPENSSL=ON -DENABLE_DEBUG=ON -DENABLE_ARES=ON -DCURL_ENABLE_NTLM=ON
+            generate: -DCURL_USE_OPENSSL=ON -DENABLE_DEBUG=ON -DENABLE_ARES=ON -DCURL_ENABLE_NTLM=ON -DCURL_DISABLE_HTTPSIG=OFF
 
           - name: 'openssl torture 2'
             install_packages: libnghttp2-dev libssh2-1-dev libc-ares-dev
             tflags: '-t --shallow=25 --min=915 1001 to 9999'
             torture: true
-            generate: -DCURL_USE_OPENSSL=ON -DENABLE_DEBUG=ON -DENABLE_ARES=ON -DCURL_ENABLE_NTLM=ON
+            generate: -DCURL_USE_OPENSSL=ON -DENABLE_DEBUG=ON -DENABLE_ARES=ON -DCURL_ENABLE_NTLM=ON -DCURL_DISABLE_HTTPSIG=OFF
 
           - name: 'openssl i686'
             install_packages: gcc-14-i686-linux-gnu libssl-dev:i386 libssh2-1-dev:i386 libidn2-dev:i386 libc-ares-dev:i386 zlib1g-dev:i386

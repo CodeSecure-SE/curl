@@ -34,6 +34,7 @@ static CURLcode test_lib5004(const char *URL)
   CURLcode result = TEST_ERR_MAJOR_BAD;
   struct curl_slist *connect_to = NULL;
   struct curl_slist *headers = NULL;
+  struct curl_slist *nheaders;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");
@@ -48,7 +49,7 @@ static CURLcode test_lib5004(const char *URL)
   }
 
   easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-  easy_setopt(curl, CURLOPT_HTTPSIG_ALGORITHM, (long)CURLHTTPSIG_ED25519);
+  easy_setopt(curl, CURLOPT_HTTPSIG_ALGORITHM, CURLHTTPSIG_ED25519);
   easy_setopt(curl, CURLOPT_HTTPSIG_KEY,
               "9f8362f87a484a954e6e740c5b4c0e84"
               "229139a20aa8ab56ff66586f6a7d29c5");
@@ -57,18 +58,28 @@ static CURLcode test_lib5004(const char *URL)
               "date: method path authority content-type: content-length:");
   easy_setopt(curl, CURLOPT_POSTFIELDS, "{\"hello\": \"world\"}");
 
-  headers = curl_slist_append(headers,
-                              "Date: Tue, 20 Apr 2021 02:07:55 GMT");
-  headers = curl_slist_append(headers,
-                              "Content-Type: application/json");
-  headers = curl_slist_append(headers,
-                              "Content-Length: 18");
+  headers = curl_slist_append(NULL, "Date: Tue, 20 Apr 2021 02:07:55 GMT");
+  if(!headers)
+    goto test_cleanup;
+
+  nheaders = curl_slist_append(headers, "Content-Type: application/json");
+  if(!nheaders)
+    goto test_cleanup;
+  headers = nheaders;
+
+  nheaders = curl_slist_append(headers, "Content-Length: 18");
+  if(!nheaders)
+    goto test_cleanup;
+  headers = nheaders;
+
   easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
   easy_setopt(curl, CURLOPT_HEADER, 0L);
   easy_setopt(curl, CURLOPT_URL, URL);
   if(libtest_arg2) {
-    connect_to = curl_slist_append(connect_to, libtest_arg2);
+    connect_to = curl_slist_append(NULL, libtest_arg2);
+    if(!connect_to)
+      goto test_cleanup;
   }
   easy_setopt(curl, CURLOPT_CONNECT_TO, connect_to);
 

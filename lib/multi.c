@@ -578,22 +578,6 @@ CURLMcode curl_multi_add_handle(CURLM *m, CURL *curl)
   return mresult;
 }
 
-#if 0
-/* Debug-function, used like this:
- *
- * Curl_hash_print(&multi->sockhash, debug_print_sock_hash);
- *
- * Enable the hash print function first by editing hash.c
- */
-static void debug_print_sock_hash(void *p)
-{
-  struct Curl_sh_entry *sh = (struct Curl_sh_entry *)p;
-
-  curl_mfprintf(stderr, " [readers %u][writers %u]",
-                sh->readers, sh->writers);
-}
-#endif
-
 struct multi_done_ctx {
   BIT(premature);
 };
@@ -3130,7 +3114,7 @@ void Curl_multi_will_close(struct Curl_easy *data, curl_socket_t s)
  * timeout to use (skip the already expired ones) and add this node back to
  * the splay tree again.
  *
- * The splay tree only has each sessionhandle as a single node and the nearest
+ * The splay tree only has each Curl_easy as a single node and the nearest
  * timeout is used to sort it on.
  */
 static CURLMcode add_next_timeout(const struct curltime *pnow,

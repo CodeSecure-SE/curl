@@ -348,7 +348,7 @@ static SIGHANDLER_T old_sigint_handler  = SIG_ERR;
 #ifdef SIGTERM
 static SIGHANDLER_T old_sigterm_handler = SIG_ERR;
 #endif
-#if defined(SIGBREAK) && defined(_WIN32)
+#ifdef _WIN32
 static SIGHANDLER_T old_sigbreak_handler = SIG_ERR;
 #endif
 
@@ -399,8 +399,11 @@ static void exit_signal_handler(int signum)
     }
     else {
       static const char msg[] = "exit_signal_handler: failed opening ";
+      const char *str;
       (void)write(STDERR_FILENO, msg, CURL_CSTRLEN(msg));
-      (void)write(STDERR_FILENO, serverlogfile, strlen(serverlogfile));
+      str = serverlogfile;
+      while(*str)
+        (void)write(STDERR_FILENO, str++, 1);
       (void)write(STDERR_FILENO, "\n", 1);
     }
   }
@@ -412,7 +415,9 @@ static void exit_signal_handler(int signum)
       (void)SetEvent(exit_event);
 #endif
   }
+#if !(defined(HAVE_SIGACTION) && defined(SA_RESTART))
   (void)signal(signum, exit_signal_handler);
+#endif
   errno = old_errno;
 }
 #if defined(CURL_HAVE_DIAG) && !defined(__clang__)
@@ -441,21 +446,15 @@ static BOOL WINAPI ctrl_event_handler(DWORD dwCtrlType)
   int signum = 0;
   logmsg("ctrl_event_handler: %lu", dwCtrlType);
   switch(dwCtrlType) {
-#ifdef SIGINT
   case CTRL_C_EVENT:
     signum = SIGINT;
     break;
-#endif
-#ifdef SIGTERM
   case CTRL_CLOSE_EVENT:
     signum = SIGTERM;
     break;
-#endif
-#ifdef SIGBREAK
   case CTRL_BREAK_EVENT:
     signum = SIGBREAK;
     break;
-#endif
   default:
     return FALSE;
   }
@@ -481,11 +480,9 @@ static LRESULT CALLBACK main_window_proc(HWND hwnd, UINT uMsg,
   int signum = 0;
   if(hwnd == hidden_main_window) {
     switch(uMsg) {
-#ifdef SIGTERM
     case WM_CLOSE:
       signum = SIGTERM;
       break;
-#endif
     case WM_DESTROY:
       PostQuitMessage(0);
       break;
@@ -633,14 +630,12 @@ void install_signal_handlers(bool keep_sigalrm)
     logmsg("cannot install SIGTERM handler: (%d) %s",
            errno, curlx_strerror(errno, errbuf, sizeof(errbuf)));
 #endif
-#if defined(SIGBREAK) && defined(_WIN32)
+#ifdef _WIN32
   /* handle SIGBREAK signal with our exit_signal_handler */
   old_sigbreak_handler = set_signal(SIGBREAK, exit_signal_handler, 1);
   if(old_sigbreak_handler == SIG_ERR)
     logmsg("cannot install SIGBREAK handler: (%d) %s",
            errno, curlx_strerror(errno, errbuf, sizeof(errbuf)));
-#endif
-#ifdef _WIN32
   if(!SetConsoleCtrlHandler(ctrl_event_handler, TRUE))
     logmsg("cannot install CTRL event handler");
 
@@ -679,11 +674,9 @@ void restore_signal_handlers(bool keep_sigalrm)
   if(old_sigterm_handler != SIG_ERR)
     (void)set_signal(SIGTERM, old_sigterm_handler, 0);
 #endif
-#if defined(SIGBREAK) && defined(_WIN32)
+#ifdef _WIN32
   if(old_sigbreak_handler != SIG_ERR)
     (void)set_signal(SIGBREAK, old_sigbreak_handler, 0);
-#endif
-#ifdef _WIN32
   (void)SetConsoleCtrlHandler(ctrl_event_handler, FALSE);
 #ifndef CURL_WINDOWS_UWP
   if(thread_main_window && thread_main_id) {
@@ -696,12 +689,9 @@ void restore_signal_handlers(bool keep_sigalrm)
       }
     }
   }
-  if(exit_event) {
-    if(CloseHandle(exit_event)) {
-      exit_event = NULL;
-    }
-  }
 #endif
+  if(exit_event && CloseHandle(exit_event))
+    exit_event = NULL;
 #endif
 }
 

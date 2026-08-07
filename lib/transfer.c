@@ -71,6 +71,7 @@
 #include "setopt.h"
 #include "headers.h"
 #include "bufref.h"
+#include "rtsp.h"
 
 #if !defined(CURL_DISABLE_HTTP) || !defined(CURL_DISABLE_SMTP) || \
   !defined(CURL_DISABLE_IMAP)
@@ -524,7 +525,9 @@ CURLcode Curl_pretransfer(struct Curl_easy *data)
     data->state.infilesize = 0;
 
   /* If there is a list of cookie files to read, do it now! */
-  result = Curl_cookie_loadfiles(data);
+  result = Curl_cookie_loadfiles(data,
+                                 data->set.cookiesession ?
+                                 COOKIE_NOSESSION : 0);
   if(!result)
     Curl_cookie_run(data); /* activate */
 

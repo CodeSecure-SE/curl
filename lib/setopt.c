@@ -355,46 +355,10 @@ static CURLcode setopt_RTSP_REQUEST(struct Curl_easy *data, long arg)
    * Set the RTSP request method (OPTIONS, SETUP, PLAY, etc...) Would this be
    * better if the RTSPREQ_* were moved into here?
    */
-  Curl_RtspReq rtspreq = RTSPREQ_NONE;
-  switch(arg) {
-  case CURL_RTSPREQ_OPTIONS:
-    rtspreq = RTSPREQ_OPTIONS;
-    break;
-  case CURL_RTSPREQ_DESCRIBE:
-    rtspreq = RTSPREQ_DESCRIBE;
-    break;
-  case CURL_RTSPREQ_ANNOUNCE:
-    rtspreq = RTSPREQ_ANNOUNCE;
-    break;
-  case CURL_RTSPREQ_SETUP:
-    rtspreq = RTSPREQ_SETUP;
-    break;
-  case CURL_RTSPREQ_PLAY:
-    rtspreq = RTSPREQ_PLAY;
-    break;
-  case CURL_RTSPREQ_PAUSE:
-    rtspreq = RTSPREQ_PAUSE;
-    break;
-  case CURL_RTSPREQ_TEARDOWN:
-    rtspreq = RTSPREQ_TEARDOWN;
-    break;
-  case CURL_RTSPREQ_GET_PARAMETER:
-    rtspreq = RTSPREQ_GET_PARAMETER;
-    break;
-  case CURL_RTSPREQ_SET_PARAMETER:
-    rtspreq = RTSPREQ_SET_PARAMETER;
-    break;
-  case CURL_RTSPREQ_RECORD:
-    rtspreq = RTSPREQ_RECORD;
-    break;
-  case CURL_RTSPREQ_RECEIVE:
-    rtspreq = RTSPREQ_RECEIVE;
-    break;
-  default:
+  if((arg <= CURL_RTSPREQ_NONE) || (arg >= CURL_RTSPREQ_LAST))
     return CURLE_BAD_FUNCTION_ARGUMENT;
-  }
 
-  data->set.rtspreq = rtspreq;
+  data->set.rtspreq = (unsigned char)arg;
   return CURLE_OK;
 }
 #endif /* !CURL_DISABLE_RTSP */
@@ -1563,7 +1527,9 @@ static CURLcode cookielist(struct Curl_easy *data, const char *ptr)
   }
   else if(curl_strequal(ptr, "RELOAD")) {
     /* reload cookies from file */
-    return Curl_cookie_loadfiles(data);
+    return Curl_cookie_loadfiles(data, COOKIE_NOPSL |
+                                 (data->set.cookiesession ?
+                                  COOKIE_NOSESSION : 0));
   }
   else {
     if(!data->cookies) {
@@ -1578,15 +1544,20 @@ static CURLcode cookielist(struct Curl_easy *data, const char *ptr)
     if(strlen(ptr) > CURL_MAX_INPUT_LENGTH)
       return CURLE_BAD_FUNCTION_ARGUMENT;
 
+    /* Adding these cookies without the PSL check, because the PSL is not
+       initialized until *perform() time, and this might be called before
+       that */
     Curl_share_lock(data, CURL_LOCK_DATA_COOKIE, CURL_LOCK_ACCESS_SINGLE);
     if(checkprefix("Set-Cookie:", ptr))
       /* HTTP Header format line */
-      result = Curl_cookie_add(data, data->cookies, TRUE, FALSE, ptr + 11,
-                               NULL, NULL, TRUE);
+      result = Curl_cookie_add(data, data->cookies, ptr + 11,
+                               NULL, NULL,
+                               COOKIE_HTTPHEADER | COOKIE_SECURE |
+                               COOKIE_NOPSL);
     else
       /* Netscape format line */
-      result = Curl_cookie_add(data, data->cookies, FALSE, FALSE, ptr, NULL,
-                               NULL, TRUE);
+      result = Curl_cookie_add(data, data->cookies, ptr, NULL,
+                               NULL, COOKIE_SECURE | COOKIE_NOPSL);
     Curl_share_unlock(data, CURL_LOCK_DATA_COOKIE);
   }
   return result;

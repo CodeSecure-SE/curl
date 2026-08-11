@@ -36,11 +36,11 @@ env:
   DO_NOT_TRACK: '1'
   HOMEBREW_NO_INSTALL_CLEANUP: '1'
   # renovate: datasource=github-tags depName=awslabs/aws-lc versioning=semver registryUrl=https://github.com
-  AWSLC_VERSION: 5.1.0
+  AWSLC_VERSION: 5.5.0
   # renovate: datasource=github-tags depName=google/boringssl versioning=semver registryUrl=https://github.com
   BORINGSSL_VERSION: 0.20260730.0
   # renovate: datasource=github-releases depName=pizlonator/fil-c versioning=semver-coerced registryUrl=https://github.com
-  FIL_C_VERSION: 0.682
+  FIL_C_VERSION: 0.683
   # renovate: datasource=github-tags depName=libressl/portable versioning=semver registryUrl=https://github.com
   LIBRESSL_VERSION: 4.3.2
   # renovate: datasource=github-tags depName=Mbed-TLS/mbedtls versioning=semver registryUrl=https://github.com
@@ -414,9 +414,9 @@ jobs:
             install_packages: clang-22 libtsan2
             install_steps: pytest openssl-tsan
             CC: clang-22
-            CFLAGS: -fsanitize=thread -g
+            CFLAGS: -fsanitize=thread
             LDFLAGS: -fsanitize=thread
-            generate: -DOPENSSL_ROOT_DIR=/home/runner/openssl -DUSE_ECH=ON -DENABLE_DEBUG=ON
+            generate: -DCMAKE_BUILD_TYPE=Debug -DENABLE_DEBUG=ON -DOPENSSL_ROOT_DIR=/home/runner/openssl -DUSE_ECH=ON
 
           - name: 'memory-sanitizer'
             image: ubuntu-26.04

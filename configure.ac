@@ -1841,7 +1841,7 @@ dnl **********************************************************************
 
 AC_MSG_CHECKING([if argv can be written to])
 CURL_RUN_IFELSE([[
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
 #ifdef _WIN32
   /* on Windows, writing to the argv does not hide the argument in
@@ -2814,7 +2814,7 @@ AS_HELP_STRING([--disable-versioned-symbols], [Disable versioned symbols in shar
   *)
     AC_MSG_RESULT(yes)
     AC_MSG_CHECKING([if libraries can be versioned])
-    GLD=`$LD --help < /dev/null 2>/dev/null | grep version-script`
+    GLD=`$LD --help < /dev/null 2>/dev/null | $GREP version-script`
     if test -z "$GLD"; then
       AC_MSG_RESULT(no)
       AC_MSG_WARN([You need an ld version supporting the --version-script option])
@@ -5209,12 +5209,18 @@ dnl Merge pkg-config private fields into public ones when static-only
 if test "$enable_shared" = "no"; then
   LIBCURL_PC_REQUIRES=$LIBCURL_PC_REQUIRES_PRIVATE
   LIBCURL_PC_LIBS=$LIBCURL_PC_LIBS_PRIVATE
+  LIBCURL_PC_REQUIRES_PRIVATE=
 else
   LIBCURL_PC_REQUIRES=
   LIBCURL_PC_LIBS=
 fi
 AC_SUBST(LIBCURL_PC_REQUIRES)
 AC_SUBST(LIBCURL_PC_LIBS)
+
+if test -n "$CURL_CI"; then
+  CURL_PACKAGE_MAINTAINER=https://curl.se/
+  AC_SUBST(CURL_PACKAGE_MAINTAINER)
+fi
 
 rm "$compilersh"
 
@@ -5559,8 +5565,8 @@ AC_CONFIG_FILES([\
 ])
 AC_CONFIG_FILES([curl-config], [chmod +x curl-config])
 AC_CONFIG_FILES([libcurl.pc], [
-  dnl strip trailing spaces, and duplicate spaces after colon
-  "$SED" -e 's/ *$//g' -e 's/^Libs\.private:  */Libs.private: /g' libcurl.pc > libcurl.pc.tmp && mv libcurl.pc.tmp libcurl.pc
+  dnl strip trailing spaces, duplicate spaces after colon, empty properties
+  "$SED" -e 's/ *$//g' -e 's/^Libs\.private:  */Libs.private: /' -e '/^@<:@A-Za-z.@:>@*:$/d' libcurl.pc > libcurl.pc.tmp && mv libcurl.pc.tmp libcurl.pc
 ], [SED="$SED"])
 AC_OUTPUT
 

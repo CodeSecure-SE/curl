@@ -48,7 +48,7 @@ bool Curl_auth_is_spnego_supported(void)
 
   /* Query the security package for Negotiate */
   status = Curl_pSecFn->QuerySecurityPackageInfo(
-                                (TCHAR *)CURL_UNCONST(TEXT(SP_NAME_NEGOTIATE)),
+                                CURL_UNCONST(TEXT(SP_NAME_NEGOTIATE)),
                                 &SecurityPackage);
 
   /* Release the package buffer as it is not required anymore */
@@ -114,7 +114,7 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
   if(!nego->output_token) {
     /* Query the security package for Negotiate */
     nego->status = Curl_pSecFn->QuerySecurityPackageInfo(
-                                (TCHAR *)CURL_UNCONST(TEXT(SP_NAME_NEGOTIATE)),
+                                CURL_UNCONST(TEXT(SP_NAME_NEGOTIATE)),
                                 &SecurityPackage);
     if(nego->status != SEC_E_OK) {
       failf(data, "SSPI: could not get auth info");
@@ -163,14 +163,12 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
     }
 
     /* Use the special name "!ntlm" to prevent NTLM from being used:
-     * https://learn.microsoft.com/en-us/windows/win32/api/sspi/ns-sspi-sec_winnt_auth_identity_exa
+     * https://learn.microsoft.com/windows/win32/api/sspi/ns-sspi-sec_winnt_auth_identity_exa
      */
 #ifdef UNICODE
-    nego->identity.PackageList =
-      (unsigned short *)CURL_UNCONST(TEXT("!ntlm"));
+    nego->identity.PackageList = CURL_UNCONST(TEXT("!ntlm"));
 #else
-    nego->identity.PackageList =
-      (unsigned char *)CURL_UNCONST(TEXT("!ntlm"));
+    nego->identity.PackageList = CURL_UNCONST(TEXT("!ntlm"));
 #endif
     nego->identity.PackageListLength = 5;
 
@@ -181,7 +179,7 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
 
     /* Acquire our credentials handle */
     nego->status = Curl_pSecFn->AcquireCredentialsHandle(NULL,
-                                (TCHAR *)CURL_UNCONST(TEXT(SP_NAME_NEGOTIATE)),
+                                CURL_UNCONST(TEXT(SP_NAME_NEGOTIATE)),
                                 SECPKG_CRED_OUTBOUND, NULL,
                                 nego->p_identity, NULL, NULL,
                                 nego->credentials, NULL);

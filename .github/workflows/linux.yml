@@ -423,7 +423,7 @@ jobs:
             install_packages: clang-22
             install_steps: randcurl
             CC: clang-22
-            CFLAGS: -fsanitize=memory -Wformat -Werror=format-security -Werror=array-bounds -g
+            CFLAGS: -fsanitize=memory -Wformat -Werror=format-security -Werror=array-bounds
             LDFLAGS: -fsanitize=memory
             LIBS: -ldl
             configure: --without-ssl --without-zlib --without-brotli --without-zstd --without-libpsl --without-nghttp2 --enable-debug
@@ -885,6 +885,12 @@ jobs:
         run: |
           echo '::group::raw'; cat bld/lib/curl_config.h || true; echo '::endgroup::'
           grep -F '#define' bld/lib/curl_config.h | sort || true
+
+      - name: 'libcurl.pc, curl-config'
+        run: |
+          for f in libcurl.pc curl-config; do
+            echo "::group::${f}"; grep -v '^#' bld/"${f}" || true; echo '::endgroup::'
+          done
 
       - name: 'test configs'
         run: grep -H -v '^#' bld/tests/config bld/tests/http/config.ini || true

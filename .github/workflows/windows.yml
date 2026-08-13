@@ -105,7 +105,7 @@ jobs:
           # https://cygwin.com/cgi-bin2/package-grep.cgi
           packages: >-
             ${{ matrix.build == 'autotools' && 'autoconf automake libtool make' || 'cmake ninja' }}
-            gcc-core binutils perl
+            gcc-core binutils perl pkgconf
             openssh
             libpsl-devel
             zlib-devel
@@ -155,6 +155,14 @@ jobs:
           PATH=/usr/bin
           echo '::group::raw'; cat bld/lib/curl_config.h || true; echo '::endgroup::'
           grep -F '#define' bld/lib/curl_config.h | sort || true
+
+      - name: 'libcurl.pc, curl-config'
+        run: |
+          for f in libcurl.pc curl-config; do
+            echo "::group::${f}"; grep -v '^#' bld/"${f}" || true; echo '::endgroup::'
+          done
+          pccritic --version
+          pccritic --min-score 100 bld/libcurl.pc
 
       - name: 'build'
         timeout-minutes: 10
@@ -417,7 +425,17 @@ jobs:
         run: |
           echo '::group::raw'; cat bld/lib/curl_config.h || true; echo '::endgroup::'
           grep -F '#define' bld/lib/curl_config.h | sort || true
-          cat bld/cmake_install.cmake || true
+
+      - name: 'libcurl.pc, curl-config, cmake_install.cmake'
+        run: |
+          for f in libcurl.pc curl-config cmake_install.cmake; do
+            echo "::group::${f}"; grep -v '^#' bld/"${f}" || true; echo '::endgroup::'
+          done
+          if command -v pccritic >/dev/null 2>&1; then
+            sed -i.bak 's/\x0d//g' bld/libcurl.pc  # to suppress pccritic warning: style/PC061
+            pccritic --version
+            pccritic --min-score 100 bld/libcurl.pc
+          fi
 
       - name: 'build'
         timeout-minutes: 10
@@ -703,6 +721,12 @@ jobs:
           echo '::group::raw'; cat bld/lib/curl_config.h || true; echo '::endgroup::'
           grep -F '#define' bld/lib/curl_config.h | sort || true
 
+      - name: 'libcurl.pc, curl-config'
+        run: |
+          for f in libcurl.pc curl-config; do
+            echo "::group::${f}"; grep -v '^#' bld/"${f}" || true; echo '::endgroup::'
+          done
+
       - name: 'build'
         timeout-minutes: 5
         run: |
@@ -843,6 +867,12 @@ jobs:
         run: |
           echo '::group::raw'; cat bld/lib/curl_config.h || true; echo '::endgroup::'
           grep -F '#define' bld/lib/curl_config.h | sort || true
+
+      - name: 'libcurl.pc, curl-config'
+        run: |
+          for f in libcurl.pc curl-config; do
+            echo "::group::${f}"; grep -v '^#' bld/"${f}" || true; echo '::endgroup::'
+          done
 
       - name: 'build'
         run: |
@@ -1034,8 +1064,9 @@ jobs:
               # Officially this requires the vcvarsall.bat MS-DOS batch file (as of
               # VS2022). Since it integrates badly with CI steps and shell scripts,
               # reproduce the necessary build configuration manually, without envs.
-              # The option is likely called: IgnoreStandardErrorWarningFormat=true,
-              # but there seems to be no option to pass it via CMake or CLI.
+              # The option to disable the MSBuild heuristics is likely called:
+              # IgnoreStandardErrorWarningFormat=true, but there seems to be no
+              # facility to pass it via CMake or CLI.
               MSVC_EDITION='2022/Enterprise/vc/tools/msvc'
               [[ "${MATRIX_IMAGE}" = *'windows-2025'* ]] && MSVC_EDITION='18/Enterprise/vc/tools/msvc'
               [[ "$(uname -s)" = *'ARM64'* ]] && MSVC_HOST='arm64' || MSVC_HOST='x64'  # x86
@@ -1104,9 +1135,21 @@ jobs:
           echo '::group::raw'; cat bld/lib/curl_config.h || true; echo '::endgroup::'
           grep -F '#define' bld/lib/curl_config.h | sort || true
 
+      - name: 'libcurl.pc, curl-config'
+        run: |
+          for f in libcurl.pc curl-config; do
+            echo "::group::${f}"; grep -v '^#' bld/"${f}" || true; echo '::endgroup::'
+          done
+
       - name: 'build'
         timeout-minutes: 5
         run: cmake --build bld --config "${MATRIX_TYPE}" --parallel 5
+
+      - name: 'libcurl.pc, curl-config'
+        run: |
+          for f in libcurl.pc curl-config; do
+            echo "::group::${f}"; grep -v '^#' bld/"${f}" || true; echo '::endgroup::'
+          done
 
       - name: 'curl -V'
         timeout-minutes: 1

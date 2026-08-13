@@ -1806,7 +1806,7 @@ if(NOT WIN32 AND NOT CMAKE_CROSSCOMPILING)
   # On non-Windows and not cross-compiling, check for writable argv[]
   include(CheckCSourceRuns)
   check_c_source_runs("
-    int main(int argc, char **argv)
+    int main(int argc, char *argv[])
     {
       (void)argc;
       argv[0][0] = ' ';
@@ -2301,6 +2301,7 @@ if(NOT CURL_DISABLE_INSTALL)
     set(LIBCURL_PC_REQUIRES "${LIBCURL_PC_REQUIRES_PRIVATE}")
     set(LIBCURL_PC_LIBS     "${LIBCURL_PC_LIBS_PRIVATE}")
     set(LIBCURL_PC_CFLAGS   "${LIBCURL_PC_CFLAGS_PRIVATE}")
+    set(LIBCURL_PC_REQUIRES_PRIVATE "")
   endif()
   if(BUILD_STATIC_LIBS)
     set(ENABLE_STATIC       "yes")
@@ -2340,6 +2341,7 @@ if(NOT CURL_DISABLE_INSTALL)
 
   # Generate a pkg-config file matching this config.
   # Consumed variables:
+  #   CURL_PACKAGE_MAINTAINER
   #   CURLVERSION
   #   exec_prefix
   #   includedir
@@ -2359,13 +2361,17 @@ if(NOT CURL_DISABLE_INSTALL)
   #   https://manpages.debian.org/unstable/pkgconf/pkg-config.1.en.html
   #   https://manpages.debian.org/unstable/pkg-config/pkg-config.1.en.html
   #   https://www.msys2.org/docs/pkgconfig/
+  if(NOT "$ENV{CURL_CI}" STREQUAL "")
+    set(CURL_PACKAGE_MAINTAINER "https://curl.se/")
+  endif()
   configure_file(
     "${PROJECT_SOURCE_DIR}/libcurl.pc.in"
     "${PROJECT_BINARY_DIR}/libcurl.pc" @ONLY)
-  # Strip trailing spaces, and duplicate spaces after colon
+  # Strip trailing spaces, duplicate spaces after colon, empty properties
   file(READ "${PROJECT_BINARY_DIR}/libcurl.pc" _libcurl_pc)
   string(REGEX REPLACE " +\n" "\n" _libcurl_pc "${_libcurl_pc}")
   string(REGEX REPLACE "\nLibs\.private: +" "\nLibs.private: " _libcurl_pc "${_libcurl_pc}")
+  string(REGEX REPLACE "\n([A-Za-z.]+:\n)+" "\n" _libcurl_pc "${_libcurl_pc}")
   file(WRITE "${PROJECT_BINARY_DIR}/libcurl.pc" "${_libcurl_pc}")
   install(FILES "${PROJECT_BINARY_DIR}/libcurl.pc"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")

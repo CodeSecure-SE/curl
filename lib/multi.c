@@ -77,7 +77,7 @@ static CURLMcode add_next_timeout(const struct curltime *pnow,
                                   struct Curl_easy *data);
 static void multi_timeout(struct Curl_multi *multi,
                           struct curltime *expire_time,
-                          long *timeout_ms);
+                          int *timeout_ms);
 static void multi_schedule_pending(struct Curl_multi *multi);
 static void multi_xfer_bufs_free(struct Curl_multi *multi);
 #ifdef DEBUGBUILD
@@ -432,6 +432,8 @@ static CURLMcode multi_xfers_add(struct Curl_multi *multi,
         /* make it a 64 multiple, since our bitsets grow by that and
          * small (easy_multi) grows to at least 64 on first resize. */
         new_size = (((used + min_unused) + 63) / 64) * 64;
+        if(new_size < 256) /* don't be too shy about it */
+          new_size = 256;
       }
     }
   }
@@ -642,7 +644,6 @@ static void multi_done_locked(struct connectdata *conn,
   }
 
   data->state.done = TRUE; /* called now! */
-  data->state.recent_conn_id = conn->connection_id;
 
   Curl_dnscache_prune(data);
 
@@ -952,6 +953,7 @@ void Curl_attach_connection(struct Curl_easy *data,
   DEBUGASSERT(conn);
   DEBUGASSERT(conn->attached_xfers < UINT32_MAX);
   data->conn = conn;
+  data->state.recent_conn_id = conn->connection_id;
   conn->attached_xfers++;
   /* all attached transfers must be from the same multi */
   if(!conn->attached_multi)
@@ -1536,7 +1538,7 @@ static CURLMcode multi_wait(struct Curl_multi *multi,
 {
   size_t i;
   struct curltime expire_time;
-  long timeout_internal;
+  int timeout_internal;
   int nevents = 0;
   struct easy_pollset ps;
   struct pollfd a_few_on_stack[NUM_POLLS_ON_STACK];
@@ -1615,11 +1617,11 @@ static CURLMcode multi_wait(struct Curl_multi *multi,
    * If we are called with `!extrawait` and multi_timeout() reports no
    * timeouts exist, do not wait. */
   multi_timeout(multi, &expire_time, &timeout_internal);
-  if((timeout_internal >= 0) && (timeout_internal < (long)timeout_ms))
-    timeout_ms = (int)timeout_internal;
+  if((timeout_internal >= 0) && (timeout_internal < timeout_ms))
+    timeout_ms = timeout_internal;
 
   if(data)
-    CURL_TRC_M(data, "multi_wait(fds=%u, timeout=%d) tinternal=%ld",
+    CURL_TRC_M(data, "multi_wait(fds=%u, timeout=%d) tinternal=%d",
                cpfds.n, timeout_ms, timeout_internal);
 
 #ifdef USE_WINSOCK
@@ -1826,29 +1828,25 @@ static bool multi_handle_timeout(struct Curl_easy *data,
   timeout_ms = Curl_timeleft_ms(data);
   if(timeout_ms < 0) {
     /* Handle timed out */
-    struct curltime since;
-    if(Curl_is_connecting(data))
-      since = data->progress.t_startsingle;
-    else
-      since = data->progress.t_startop;
+    timerid base_timer = Curl_is_connecting(data) ?
+                         TIMER_STARTSINGLE : TIMER_STARTOP;
+    timediff_t elapsed_ms = Curl_pgrs_since_ms(data, NULL, base_timer);
     if(data->mstate == MSTATE_CONNECTING)
       failf(data, "%s timed out after %" FMT_TIMEDIFF_T " milliseconds",
             data->conn->bits.dns_resolved ? "Connection" : "Resolving",
-            curlx_ptimediff_ms(Curl_pgrs_now(data), &since));
+            elapsed_ms);
     else {
       struct SingleRequest *k = &data->req;
       if(k->size != -1) {
         failf(data, "Operation timed out after %" FMT_TIMEDIFF_T
               " milliseconds with %" FMT_OFF_T " out of %"
               FMT_OFF_T " bytes received",
-              curlx_ptimediff_ms(Curl_pgrs_now(data), &since),
-              k->bytecount, k->size);
+              elapsed_ms, k->bytecount, k->size);
       }
       else {
         failf(data, "Operation timed out after %" FMT_TIMEDIFF_T
               " milliseconds with %" FMT_OFF_T " bytes received",
-              curlx_ptimediff_ms(Curl_pgrs_now(data), &since),
-              k->bytecount);
+              elapsed_ms, k->bytecount);
       }
     }
     *result = CURLE_OPERATION_TIMEDOUT;
@@ -3506,7 +3504,7 @@ static bool multi_has_dirties(struct Curl_multi *multi)
 
 static void multi_timeout(struct Curl_multi *multi,
                           struct curltime *expire_time,
-                          long *timeout_ms)
+                          int *timeout_ms)
 {
   static const struct curltime tv_zero = { 0, 0 };
   VERBOSE(struct Curl_easy *data = NULL);
@@ -3538,9 +3536,9 @@ static void multi_timeout(struct Curl_multi *multi,
       timediff_t diff_ms =
         curlx_timediff_ceil_ms(multi->timetree->key, *pnow);
       VERBOSE(data = Curl_splayget(multi->timetree));
-      /* this should be safe even on 32-bit archs, as we do not use that
-         overly long timeouts */
-      *timeout_ms = (long)diff_ms;
+      if(diff_ms > INT_MAX)
+        diff_ms = INT_MAX;
+      *timeout_ms = (int)diff_ms;
     }
     else {
       if(multi->timetree)
@@ -3558,7 +3556,7 @@ static void multi_timeout(struct Curl_multi *multi,
   if(CURL_TRC_TIMER_is_verbose(data) &&
      (data->state.timeouts.first < EXPIRE_LAST)) {
     CURL_TRC_TIMER(data, data->state.timeouts.first,
-                   "gives multi timeout in %ldms", *timeout_ms);
+                   "gives multi timeout in %dms", *timeout_ms);
   }
 #endif
 }
@@ -3571,8 +3569,10 @@ CURLMcode curl_multi_timeout(CURLM *m,
 
   if(CURL_MAPI_ENTER(&guard, m, multi_timeout, &mresult)) {
     struct curltime expire_time;
+    int itimeout_ms;
 
-    multi_timeout(m, &expire_time, timeout_ms);
+    multi_timeout(m, &expire_time, &itimeout_ms);
+    *timeout_ms = (long)itimeout_ms;
     mresult = CURLM_OK;
   }
   CURL_MAPI_LEAVE(&guard);
@@ -3586,7 +3586,7 @@ CURLMcode curl_multi_timeout(CURLM *m,
 CURLMcode Curl_update_timer(struct Curl_multi *multi)
 {
   struct curltime expire_ts = { 0, 0 };
-  long timeout_ms;
+  int timeout_ms;
   int rc;
   bool set_value = FALSE;
 
@@ -3604,14 +3604,14 @@ CURLMcode Curl_update_timer(struct Curl_multi *multi)
     set_value = TRUE;
   }
   else if(multi->last_timeout_ms < 0) {
-    CURL_TRC_M(multi->admin, "[TIMER] set %ldms, none before", timeout_ms);
+    CURL_TRC_M(multi->admin, "[TIMER] set %dms, none before", timeout_ms);
     set_value = TRUE;
   }
   else if(curlx_ptimediff_us(&multi->last_expire_ts, &expire_ts)) {
     /* We had a timeout before and have one now, the absolute timestamp
      * differs. The relative timeout_ms may be the same, but the starting
      * point differs. Let the application restart its timer. */
-    CURL_TRC_M(multi->admin, "[TIMER] set %ldms, replace previous",
+    CURL_TRC_M(multi->admin, "[TIMER] set %dms, replace previous",
                timeout_ms);
     set_value = TRUE;
   }

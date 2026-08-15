@@ -92,7 +92,7 @@ static struct curl_trc_feat Curl_trc_feat_ids = {
 
 static size_t trc_print_ids(struct Curl_easy *data, char *buf, size_t maxlen)
 {
-  curl_off_t cid = data->state.recent_conn_id;
+  curl_off_t cid = data->state.lastconnect_id;
   if(data->id >= 0) {
     if(cid >= 0)
       return curl_msnprintf(buf, maxlen, CURL_TRC_FMT_IDSDC, data->id, cid);
@@ -339,14 +339,15 @@ void Curl_trc_timer(struct Curl_easy *data, int tid, const char *fmt, ...)
 
 void Curl_trc_easy_timers(struct Curl_easy *data)
 {
-  if(CURL_TRC_TIMER_is_verbose(data)) {
+  if(CURL_TRC_TIMER_is_verbose(data) && data->multi) {
     if(data->state.timeouts.first < EXPIRE_LAST) {
       struct expire_timers *timeouts = &data->state.timeouts;
-      const struct curltime *pnow = Curl_pgrs_now(data);
+      timediff_t base_us =
+        Curl_timeouts_offset_us(&data->multi->timeouts, Curl_pgrs_now(data));
       expire_id eid = data->state.timeouts.first;
       for(; eid < EXPIRE_LAST; eid = timeouts->next[eid]) {
         CURL_TRC_TIMER(data, eid, "expires in %" FMT_TIMEDIFF_T "us",
-                       curlx_ptimediff_us(&timeouts->time[eid], pnow));
+                       timeouts->offset_us[eid] - base_us);
       }
     }
   }

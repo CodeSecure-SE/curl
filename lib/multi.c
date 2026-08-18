@@ -235,8 +235,23 @@ struct Curl_multi *Curl_multi_handle(uint32_t xfer_table_size,
 
   multi->magic = CURLMULTI_MAGIC_NUMBER;
 
+  /* Initialisation order is important here!
+   * easy_init() does a lazy check on curl_global_init() which sets
+   * up platform specific things we need. For example calling curlx_pnow()
+   * before this is not safe. */
+  multi->admin = curl_easy_init();
+  if(!multi->admin) {
+    curlx_free(multi);
+    return NULL;
+  }
+  multi->admin->multi = multi;
+  multi->admin->state.internal = TRUE;
+
+  /* Now we can use curlx_* things safely */
   curlx_pnow(&multi->now);
   Curl_timeouts_init(&multi->timeouts, &multi->now);
+  multi_timeouts_init(multi->admin);
+
   Curl_dnscache_init(&multi->dnscache, dnssize);
   Curl_mntfy_init(multi);
   Curl_multi_ev_init(multi, ev_hashsize);
@@ -268,14 +283,6 @@ struct Curl_multi *Curl_multi_handle(uint32_t xfer_table_size,
      Curl_uint32_bset_resize(&multi->msgsent, xfer_table_size) ||
      Curl_uint32_tbl_resize(&multi->xfers, xfer_table_size))
     goto error;
-
-  multi->admin = curl_easy_init();
-  if(!multi->admin)
-    goto error;
-  /* Initialize admin handle to operate inside this multi */
-  multi->admin->multi = multi;
-  multi->admin->state.internal = TRUE;
-  multi_timeouts_init(multi->admin);
 
 #ifdef DEBUGBUILD
   if(getenv("CURL_DEBUG"))
@@ -650,18 +657,19 @@ static void multi_done_locked(struct connectdata *conn,
   Curl_dnscache_prune(data);
 
   if(multi_conn_should_close(conn, data, (bool)mdctx->premature)) {
-    CURL_TRC_M(data, "multi_done, terminating conn #%" FMT_OFF_T " to %s, "
+    CURL_TRC_M(data, "multi_done, terminating conn #%" FMT_OFF_T " to %s:%u, "
                "forbid=%d, close=%d, premature=%d, conn_multiplex=%d",
-               conn->connection_id, conn->destination,
+               conn->connection_id, conn->origin->user_hostname,
+               conn->origin->port,
                data->set.reuse_forbid, conn->bits.close, mdctx->premature,
                Curl_conn_is_multiplex(conn, FIRSTSOCKET));
     connclose(conn);
     Curl_conn_close(data, conn, (bool)mdctx->premature);
   }
   else if(!Curl_conn_get_max_concurrent(data, conn, FIRSTSOCKET)) {
-    CURL_TRC_M(data, "multi_done, conn #%" FMT_OFF_T " to %s was shutdown"
+    CURL_TRC_M(data, "multi_done, conn #%" FMT_OFF_T " to %s:%u was shutdown"
                " by server, not reusing", conn->connection_id,
-               conn->destination);
+               conn->origin->user_hostname, conn->origin->port);
     connclose(conn);
     Curl_conn_close(data, conn, (bool)mdctx->premature);
   }
@@ -669,8 +677,9 @@ static void multi_done_locked(struct connectdata *conn,
     /* the connection is no longer in use by any transfer */
     if(Curl_cpool_conn_now_idle(data, conn)) {
       /* connection kept in the cpool */
-      infof(data, "Connection #%" FMT_OFF_T " to host %s left intact",
-            conn->connection_id, conn->destination);
+      infof(data, "Connection #%" FMT_OFF_T " to host %s:%u left intact",
+            conn->connection_id, conn->origin->user_hostname,
+            conn->origin->port);
     }
     else {
       /* connection was removed from the cpool and destroyed. */

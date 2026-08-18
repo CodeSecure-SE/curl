@@ -583,18 +583,6 @@ CURLcode Curl_pretransfer(struct Curl_easy *data)
     result = Curl_hsts_loadcb(data, data->hsts);
   }
 
-  /*
-   * Set user-agent. Used for HTTP, but since we can attempt to tunnel
-   * anything through an HTTP proxy we cannot limit this based on protocol.
-   */
-  if(!result && data->set.str[STRING_USERAGENT]) {
-    curlx_free(data->state.aptr.uagent);
-    data->state.aptr.uagent =
-      curl_maprintf("User-Agent: %s\r\n", data->set.str[STRING_USERAGENT]);
-    if(!data->state.aptr.uagent)
-      return CURLE_OUT_OF_MEMORY;
-  }
-
   data->req.headerbytecount = 0;
   Curl_headers_cleanup(data);
   return result;
@@ -669,8 +657,8 @@ CURLcode Curl_retry_request(struct Curl_easy *data, char **url)
 
 static void xfer_setup(
   struct Curl_easy *data,   /* transfer */
-  int send_idx,             /* sockindex to send on or -1 */
-  int recv_idx,             /* sockindex to receive on or -1 */
+  int8_t send_idx,             /* sockindex to send on or -1 */
+  int8_t recv_idx,             /* sockindex to receive on or -1 */
   curl_off_t recv_size      /* how much to receive, -1 if unknown */
   )
 {
@@ -718,20 +706,20 @@ void Curl_xfer_setup_nop(struct Curl_easy *data)
 }
 
 void Curl_xfer_setup_sendrecv(struct Curl_easy *data,
-                              int sockindex,
+                              int8_t sockindex,
                               curl_off_t recv_size)
 {
   xfer_setup(data, sockindex, sockindex, recv_size);
 }
 
 void Curl_xfer_setup_send(struct Curl_easy *data,
-                          int sockindex)
+                          int8_t sockindex)
 {
   xfer_setup(data, sockindex, -1, -1);
 }
 
 void Curl_xfer_setup_recv(struct Curl_easy *data,
-                          int sockindex,
+                          int8_t sockindex,
                           curl_off_t recv_size)
 {
   xfer_setup(data, -1, sockindex, recv_size);

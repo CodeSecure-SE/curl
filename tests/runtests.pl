@@ -2348,9 +2348,13 @@ if(@ARGV && $ARGV[-1] eq '$TFLAGS') {
 
 $args = join(' ', @ARGV);
 
+my $mintotalany = 0;
+
 $valgrind = checktestcmd("valgrind");
 my $number = 0;
 my $fromnum = -1;
+my $useshares;
+my $usepart;
 my @testthis;
 while(@ARGV) {
     if($ARGV[0] eq "-v") {
@@ -2444,6 +2448,7 @@ while(@ARGV) {
     elsif($ARGV[0] =~ /--min=(\d+)/) {
         my ($num) = ($1);
         $mintotal = $num;
+        $mintotalany = 1;
     }
     elsif($ARGV[0] eq "-n") {
         # no valgrind
@@ -2464,6 +2469,14 @@ while(@ARGV) {
 
         if($xtra =~ s/(\d+)$//) {
             $tortalloc = $1;
+        }
+    }
+    elsif($ARGV[0] =~ /^--subset=(\d+)\/(\d+)$/) {
+        # split all tests into $2 parts.
+        # this invoke then runs the part number $1 (0-indexed)
+        ($usepart, $useshares) = ($1, $2);
+        if($useshares < 1 || $usepart >= $useshares) {
+            die "illegal subset specified";
         }
     }
     elsif($ARGV[0] =~ /--shallow=(\d+)/) {
@@ -2747,8 +2760,11 @@ if(!$jobs) {
     setlogfunc(\&logmsg);
 }
 
-if(!$mintotal && $ENV{"CURL_TEST_MIN"}) {
+if(!$mintotalany && $ENV{"CURL_TEST_MIN"}) {
     $mintotal = $ENV{"CURL_TEST_MIN"};
+    if($useshares) {
+        $mintotal /= $useshares;
+    }
 }
 
 #######################################################################
@@ -2895,6 +2911,25 @@ if($scrambleorder) {
         $TESTCASES = join(" ", @all);
     }
     $TESTCASES = join(" ", @rand);
+}
+
+if($useshares) {
+    my @a = grep { length($_) } split(/ +/, $TESTCASES);
+    my $n = scalar(@a);
+
+    if($useshares < 1 || $usepart >= $useshares) {
+        die "illegal subset specified";
+    }
+
+    my $start = int(($n * $usepart) / $useshares);
+    my $end = int(($n * ($usepart + 1)) / $useshares); # one past last index
+    my $run = $end - $start;
+
+    printf STDERR "Subset: 1/%u of the tests (run %u tests out of %u). Part %u\n",
+        $useshares, $run, $n, $usepart;
+
+    my @s = $run ? @a[$start .. $end - 1] : ();
+    $TESTCASES = join(" ", @s);
 }
 
 # Display the contents of the given file.  Line endings are canonicalized

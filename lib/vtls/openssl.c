@@ -2999,7 +2999,6 @@ static CURLcode ossl_load_trust_anchors(struct Curl_cfilter *cf,
                                         X509_STORE *store)
 {
   struct ssl_primary_config *conn_config = Curl_ssl_cf_get_primary_config(cf);
-  struct ssl_config_data *ssl_config = Curl_ssl_cf_get_config(cf, data);
   CURLcode result = CURLE_OK;
   const char * const ssl_cafile =
     /* CURLOPT_CAINFO_BLOB overrides CURLOPT_CAINFO */
@@ -3008,7 +3007,7 @@ static CURLcode ossl_load_trust_anchors(struct Curl_cfilter *cf,
   bool have_native_check = FALSE;
 
   octx->store_is_empty = TRUE;
-  if(ssl_config->native_ca_store) {
+  if(conn_config->native_ca_store) {
 #ifdef USE_WIN32_CRYPTO
     bool added = FALSE;
     result = ossl_windows_load_anchors(cf, data, store, &added);
@@ -3316,7 +3315,7 @@ CURLcode Curl_ssl_setup_x509_store(struct Curl_cfilter *cf,
     !conn_config->CApath &&
     !conn_config->ca_info_blob &&
     !ssl_config->primary.CRLfile &&
-    !ssl_config->native_ca_store;
+    !conn_config->native_ca_store;
 
   ERR_set_mark();
 
@@ -3370,7 +3369,7 @@ static bool ossl_apply_session(
          (SSL_get_verify_result(octx->ssl) != X509_V_OK)
 #ifdef USE_APPLE_SECTRUST
          /* if sectrust is used and verified the session before */
-         && (!ssl_config->native_ca_store || !scs->sectrust_verified)
+         && (!conn_cfg->native_ca_store || !scs->sectrust_verified)
 #endif
         ) {
         /* Session was from unverified connection, cannot reuse here */
@@ -3756,6 +3755,11 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
           ossl_strerror(ERR_peek_error(), error_buffer, sizeof(error_buffer)));
     return CURLE_OUT_OF_MEMORY;
   }
+#ifdef OPENSSL_HAS_PROVIDERS
+  if(data->state.libctx)
+    /* forbid connection reuse with provider/engine use */
+    connclose(data->conn);
+#endif
 
   if(cb_setup) {
     result = cb_setup(cf, data, cb_user_data);
@@ -4592,21 +4596,24 @@ out:
   return result;
 }
 
+static const char *pinned(struct Curl_cfilter *cf,
+                          struct Curl_easy *data)
+{
+  (void)cf;
+  return
+#ifndef CURL_DISABLE_PROXY
+    Curl_ssl_cf_is_proxy(cf) ?
+    CURL_EASY_STR(data, STRING_SSL_PINNEDPUBLICKEY_PROXY) :
+#endif
+    CURL_EASY_STR(data, STRING_SSL_PINNEDPUBLICKEY);
+}
+
 static CURLcode ossl_check_pinned_key(struct Curl_cfilter *cf,
                                       struct Curl_easy *data,
                                       X509 *server_cert)
 {
-  const char *ptr;
   CURLcode result = CURLE_OK;
-
-  (void)cf;
-#ifndef CURL_DISABLE_PROXY
-  ptr = Curl_ssl_cf_is_proxy(cf) ?
-    CURL_EASY_STR(data, STRING_SSL_PINNEDPUBLICKEY_PROXY) :
-    CURL_EASY_STR(data, STRING_SSL_PINNEDPUBLICKEY);
-#else
-  ptr = CURL_EASY_STR(data, STRING_SSL_PINNEDPUBLICKEY);
-#endif
+  const char *ptr = pinned(cf, data);
   if(ptr) {
     result = ossl_pkp_pin_peer_pubkey(data, server_cert, ptr);
     if(result)
@@ -4795,7 +4802,8 @@ CURLcode Curl_ossl_check_peer_cert(struct Curl_cfilter *cf,
   server_cert = SSL_get1_peer_certificate(octx->ssl);
   if(!server_cert) {
     /* no verification at all, this maybe acceptable */
-    if(!(conn_config->verifypeer || conn_config->verifyhost))
+    if(!(conn_config->verifypeer || conn_config->verifyhost) &&
+       !pinned(cf, data))
       goto out;
 
     failf(data, "SSL: could not get peer certificate");
@@ -4826,7 +4834,7 @@ CURLcode Curl_ossl_check_peer_cert(struct Curl_cfilter *cf,
     infof(data, "SSL certificate verified via OpenSSL.");
 
 #ifdef USE_APPLE_SECTRUST
-  if(!verified && conn_config->verifypeer && ssl_config->native_ca_store) {
+  if(!verified && conn_config->verifypeer && conn_config->native_ca_store) {
     /* we verify using Apple SecTrust *unless* OpenSSL already verified.
      * This may happen if the application intercepted the OpenSSL callback
      * and installed its own. */

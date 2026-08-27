@@ -87,11 +87,11 @@
 #ifdef LIBRESSL_VERSION_NUMBER
 /* As of LibreSSL 2.0.0-4.0.0: OPENSSL_VERSION_NUMBER == 0x20000000L */
 #  if LIBRESSL_VERSION_NUMBER < 0x2090100fL /* 2019-04-13 */
-#    error "LibreSSL 2.9.1 or later required"
+#    error "LibreSSL 2.9.1 or greater required"
 #  endif
 #elif !defined(HAVE_BORINGSSL_LIKE)
 #  ifndef HAVE_OPENSSL3 /* 2021-09-07 */
-#    error "OpenSSL 3.0.0 or later required"
+#    error "OpenSSL 3.0.0 or greater required"
 #  endif
 #endif
 
@@ -4755,8 +4755,9 @@ static CURLcode ossl_apple_verify(struct Curl_cfilter *cf,
       ocsp_len = (long)SSL_get_tlsext_status_ocsp_resp(octx->ssl, &ocsp_data);
 
     /* SSL_get_tlsext_status_ocsp_resp() returns the length of the OCSP
-       response data or -1 if there is no OCSP response data. */
-    if(ocsp_len < 0) {
+       response data or -1 if there is no OCSP response data.
+       AWS-LC breaks the API and returns 0 when there is no data. */
+    if(ocsp_len <= 0) {
       ocsp_len = 0; /* no data available */
       ocsp_missing = TRUE;
     }

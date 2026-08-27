@@ -97,7 +97,7 @@ if(PICKY_COMPILER)
     #        to suppress undesired warnings in case -Weverything is passed as a custom option.
 
     # Assume these options always exist with both clang and gcc.
-    # Require clang 3.0 / gcc 2.95 or later.
+    # Require clang 3.0 / gcc 2.95 or greater.
     list(APPEND _picky_enable
       -Wbad-function-cast                  # clang  2.7  gcc  2.95
       -Wconversion                         # clang  2.7  gcc  2.95
@@ -451,6 +451,9 @@ if(_picky_nocheck OR _picky)
   string(REPLACE ";" " " _picky_tmp "${_picky_tmp}")
   string(STRIP "${_picky_tmp}" _picky_tmp)
   message(STATUS "Picky compiler options: ${_picky_tmp}")
+  if(_CURL_SAVE_PICKY_OPTIONS)
+    file(WRITE "${PROJECT_BINARY_DIR}/picky-options.txt" "${_picky_tmp}")
+  endif()
   set_property(DIRECTORY APPEND PROPERTY COMPILE_OPTIONS "${_picky_nocheck}" "${_picky}")
 
   # Apply to all feature checks

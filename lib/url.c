@@ -723,6 +723,10 @@ static bool url_match_ssl_use(struct connectdata *conn,
     if(!(m->needle->scheme->flags & PROTOPT_SSL_REUSE) ||
        (get_protocol_family(conn->scheme) != m->needle->scheme->protocol))
       return FALSE;
+    /* We may reuse this as an auto-TLS upgrade, but only if the SSL
+     * config parameters match. */
+    if(!Curl_ssl_conn_config_match(m->data, conn, FALSE))
+      return FALSE;
   }
   else if(m->require_tls)
     /* a clear-text STARTTLS protocol with required TLS */
@@ -1572,11 +1576,6 @@ static CURLcode url_set_conn_origin_etc(struct Curl_easy *data,
     }
   }
 
-#ifdef USE_IPV6
-  conn->scope_id = data->set.scope_id ?
-                   data->set.scope_id : data->state.origin->scopeid;
-#endif
-
 out:
   return result;
 }
@@ -1654,6 +1653,17 @@ static CURLcode setup_connection_internals(struct Curl_easy *data,
 
   Curl_strntolower(conn->destination, conn->destination,
                    strlen(conn->destination));
+
+#ifdef USE_IPV6
+  if(data->set.scope_id)
+    conn->scope_id = data->set.scope_id;
+  else {
+    struct Curl_peer *first = Curl_conn_get_first_peer(conn, FIRSTSOCKET);
+    if(!first)
+      return CURLE_FAILED_INIT;
+    conn->scope_id = first->scopeid;
+  }
+#endif
 
   return CURLE_OK;
 }

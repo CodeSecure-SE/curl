@@ -48,7 +48,6 @@
 #include "curlx/fopen.h"
 #include "curlx/multibyte.h"
 #include "vtls/x509asn1.h"
-#include "system_win32.h"
 #include "curlx/version_win32.h"
 #include "curlx/winapi.h"
 #include "curlx/strparse.h"
@@ -737,7 +736,7 @@ static CURLcode schannel_acquire_credential_handle(struct Curl_cfilter *cf,
   DWORD enabled_protocols = 0;
 
   struct schannel_ssl_backend_data *backend =
-    (struct schannel_ssl_backend_data *)(connssl->backend);
+    (struct schannel_ssl_backend_data *)connssl->backend;
 
   DEBUGASSERT(backend);
 

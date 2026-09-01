@@ -138,6 +138,11 @@ static CURLcode global_init(long flags, bool memoryfuncs)
     Curl_ccalloc = (curl_calloc_callback)calloc;
   }
 
+  if(Curl_win32_init(flags)) {
+    DEBUGF(curl_mfprintf(stderr, "Error: win32_init failed\n"));
+    goto fail;
+  }
+
   if(Curl_trc_init()) {
     DEBUGF(curl_mfprintf(stderr, "Error: Curl_trc_init failed\n"));
     goto fail;
@@ -153,11 +158,6 @@ static CURLcode global_init(long flags, bool memoryfuncs)
     goto fail;
   }
 
-  if(Curl_win32_init(flags)) {
-    DEBUGF(curl_mfprintf(stderr, "Error: win32_init failed\n"));
-    goto fail;
-  }
-
   if(Curl_amiga_init()) {
     DEBUGF(curl_mfprintf(stderr, "Error: Curl_amiga_init failed\n"));
     goto fail;
@@ -169,7 +169,7 @@ static CURLcode global_init(long flags, bool memoryfuncs)
   }
 
   if(Curl_async_global_init()) {
-    DEBUGF(curl_mfprintf(stderr, "Error: resolver_global_init failed\n"));
+    DEBUGF(curl_mfprintf(stderr, "Error: Curl_async_global_init failed\n"));
     goto fail;
   }
 

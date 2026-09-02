@@ -600,12 +600,10 @@ static DOHcode doh_rdata(const unsigned char *doh,
     doh_store_aaaa(doh, index, d);
     break;
 #ifdef USE_HTTPSRR
-  case CURL_DNS_TYPE_HTTPS: {
-    DOHcode rc = doh_store_https(doh, index, d, rdlength);
-    if(rc)
-      return rc;
-    break;
-  }
+  case CURL_DNS_TYPE_HTTPS:
+    if(rdlength < 3)
+      return DOH_DNS_RDATA_LEN;
+    return doh_store_https(doh, index, d, rdlength);
 #endif
   default:
     /* unsupported type, or type we do not store, skip it */
@@ -998,7 +996,6 @@ UNITTEST CURLcode doh_resp_decode_httpsrr(struct Curl_easy *data,
     len -= plen;
     expected_min_pcode = pcode + 1;
   }
-  DEBUGASSERT(!len);
   *hrr = lhrr;
   return CURLE_OK;
 err:

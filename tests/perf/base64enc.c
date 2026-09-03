@@ -23,13 +23,15 @@
  ***************************************************************************/
 #include "first.h"
 
-static int test_percent(int argc, const char **argv)
+static int test_base64enc(int argc, const char **argv)
 {
   struct curltime start;
   struct curltime end;
   timediff_t us;
   long long hn;
-  curl_off_t loops = 2500000, loop;
+
+  curl_off_t loops = 10000000, loop;
+
   unsigned char array[256];
   unsigned int c;
 
@@ -40,29 +42,21 @@ static int test_percent(int argc, const char **argv)
       loops = num;
   }
 
-  for(c = 0; c < 256; c++)
+  for(c = 0; c < 256; c++) {
     array[c] = (unsigned char)c;
+  }
 
   start = curlx_now();
   for(loop = 0; loop < loops; loop++) {
-    char *encoded =
-      curl_easy_escape(NULL, (char *)array, (int)sizeof(array));
-    if(encoded) {
-      char *unesc = NULL;
-      int unlen = 0;
-      /* now unescape it again */
-      unesc = curl_easy_unescape(NULL, encoded, 0, &unlen);
-      if(!unesc) {
-        curl_mfprintf(stderr, "unexpected unescape error\n");
-        return 1;
-      }
-      curl_free(unesc);
-    }
-    else {
-      curl_mfprintf(stderr, "unexpected escape error\n");
+    char *encoded = NULL;
+    size_t enclen;
+    CURLcode result =
+      curlx_base64_encode(array, sizeof(array), &encoded, &enclen);
+    if(result) {
+      curl_mfprintf(stderr, "unexpected coding error: %d\n", (int)result);
       return 1;
     }
-    curl_free(encoded);
+    curlx_free(encoded);
   }
   end = curlx_now();
   us = curlx_timediff_us(end, start); /* how many microseconds */

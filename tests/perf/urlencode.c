@@ -23,15 +23,13 @@
  ***************************************************************************/
 #include "first.h"
 
-static int test_base64(int argc, const char **argv)
+static int test_urlencode(int argc, const char **argv)
 {
   struct curltime start;
   struct curltime end;
   timediff_t us;
   long long hn;
-
-  curl_off_t loops = 10000000, loop;
-
+  curl_off_t loops = 2500000, loop;
   unsigned char array[256];
   unsigned int c;
 
@@ -42,28 +40,18 @@ static int test_base64(int argc, const char **argv)
       loops = num;
   }
 
-  for(c = 0; c < 256; c++) {
+  for(c = 0; c < 256; c++)
     array[c] = (unsigned char)c;
-  }
 
   start = curlx_now();
   for(loop = 0; loop < loops; loop++) {
-    char *encoded = NULL;
-    size_t enclen;
-    CURLcode result =
-      curlx_base64_encode(array, sizeof(array), &encoded, &enclen);
-    if(!result) {
-      unsigned char *recoded = NULL;
-      size_t reclen;
-      /* now decode it again */
-      result = curlx_base64_decode(encoded, &recoded, &reclen);
-      curlx_free(recoded);
-    }
-    if(result) {
-      curl_mfprintf(stderr, "unexpected coding error: %d\n", (int)result);
+    char *encoded =
+      curl_easy_escape(NULL, (char *)array, (int)sizeof(array));
+    if(!encoded) {
+      curl_mfprintf(stderr, "unexpected escape error\n");
       return 1;
     }
-    curlx_free(encoded);
+    curl_free(encoded);
   }
   end = curlx_now();
   us = curlx_timediff_us(end, start); /* how many microseconds */

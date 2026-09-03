@@ -43,7 +43,9 @@ CURLX_C = \
 
 # All performance test programs
 TESTS_C = \
-  base64.c \
-  percent.c \
+  base64dec.c \
+  base64enc.c \
   snprintf.c \
+  urldecode.c \
+  urlencode.c \
   urlparser.c

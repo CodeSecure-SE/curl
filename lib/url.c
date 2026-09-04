@@ -611,7 +611,7 @@ static bool url_match_connect_config(struct connectdata *conn,
      m->data->set.ipver != conn->ip_version)
     return FALSE;
 
-  if(m->needle->localdev || m->needle->localport) {
+  if((m->needle->localdev || m->needle->localport) &&
     /* If we are bound to a specific local end (IP+port), we must not reuse a
        random other one, although if we did not ask for a particular one we
        can reuse one that was bound.
@@ -622,12 +622,11 @@ static bool url_match_connect_config(struct connectdata *conn,
        this matching will assume that reuses of bound connections will most
        likely also reuse the exact same binding parameters and missing out a
        few edge cases should not hurt anyone much. */
-    if((conn->localport != m->needle->localport) ||
-       (conn->localportrange != m->needle->localportrange) ||
-       (m->needle->localdev &&
-        (!conn->localdev || strcmp(conn->localdev, m->needle->localdev))))
-      return FALSE;
-  }
+    ((conn->localport != m->needle->localport) ||
+     (conn->localportrange != m->needle->localportrange) ||
+     (m->needle->localdev &&
+      (!conn->localdev || strcmp(conn->localdev, m->needle->localdev)))))
+    return FALSE;
 
   if(!m->needle->via_peer != !conn->via_peer)
     /* do not mix connections that use the "connect to host" feature and
@@ -869,16 +868,15 @@ static bool url_match_destination(struct connectdata *conn,
   if(!Curl_peer_same_destination(m->needle->via_peer, conn->via_peer))
     return FALSE;
 
-  if(m->needle->origin->scheme != conn->origin->scheme) {
+  if(m->needle->origin->scheme != conn->origin->scheme &&
     /* `needle` and `conn` not having the same scheme.
      * This is allowed for the same family *if* conn is using TLS.
      * - IMAP+STARTTLS works for IMAPS.
      * - IMAPS works for IMAP. */
-    if(get_protocol_family(conn->origin->scheme) !=
-       m->needle->scheme->protocol) {
-      return FALSE;
-    }
-  }
+     get_protocol_family(conn->origin->scheme) !=
+     m->needle->scheme->protocol)
+    return FALSE;
+
   /* Scheme mismatch is acceptable, compare hostname/port */
   return Curl_peer_same_destination(m->needle->origin, conn->origin);
 }
@@ -1178,7 +1176,8 @@ static bool url_attach_existing(struct Curl_easy *data,
 /*
  * Allocate and initialize a new connectdata object.
  */
-static struct connectdata *allocate_conn(struct Curl_easy *data)
+static struct connectdata *allocate_conn(struct Curl_easy *data,
+                                         const struct curltime *pnow)
 {
   struct connectdata *conn = curlx_calloc(1, sizeof(struct connectdata));
   if(!conn)
@@ -1186,15 +1185,15 @@ static struct connectdata *allocate_conn(struct Curl_easy *data)
 
   /* and we setup a few fields in case we end up actually using this struct */
 
+  conn->created = *pnow;
   conn->sock[FIRSTSOCKET] = CURL_SOCKET_BAD;     /* no file descriptor */
   conn->sock[SECONDARYSOCKET] = CURL_SOCKET_BAD; /* no file descriptor */
   conn->recv_idx = 0; /* default for receiving transfer data */
   conn->send_idx = 0; /* default for sending transfer data */
   conn->connection_id = -1;    /* no ID */
   conn->attached_xfers = 0;
-
-  /* Remember time this connection started */
-  conn->lastused = conn->lastupkeep = conn->created = *Curl_pgrs_now(data);
+  conn->shutdown.start_ms[FIRSTSOCKET] =
+    conn->shutdown.start_ms[SECONDARYSOCKET] = -1;
 
 #ifndef CURL_DISABLE_FTP
   conn->bits.ftp_use_epsv = data->set.ftp_use_epsv;
@@ -1382,15 +1381,14 @@ static CURLcode url_set_data_creds_netrc(struct Curl_easy *data,
       goto out;
     }
     else if(ncreds_out) {
-      if(!(data->state.origin->scheme->flags & PROTOPT_USERPWDCTRL)) {
-        /* if the protocol cannot handle control codes in credentials, make
-           sure there are none */
-        if(str_has_ctrl(ncreds_out->user) ||
-           str_has_ctrl(ncreds_out->passwd)) {
-          failf(data, "control code detected in .netrc credentials");
-          result = CURLE_READ_ERROR;
-          goto out;
-        }
+      if(!(data->state.origin->scheme->flags & PROTOPT_USERPWDCTRL) &&
+         /* if the protocol cannot handle control codes in credentials, make
+            sure there are none */
+         (str_has_ctrl(ncreds_out->user) ||
+          str_has_ctrl(ncreds_out->passwd))) {
+        failf(data, "control code detected in .netrc credentials");
+        result = CURLE_READ_ERROR;
+        goto out;
       }
       CURL_TRC_M(data, "netrc: using credentials for %s as %s",
                  data->state.origin->hostname, ncreds_out->user);
@@ -2002,6 +2000,7 @@ static void conn_meta_freeentry(void *p)
 }
 
 static CURLcode url_create_needle(struct Curl_easy *data,
+                                  const struct curltime *pnow,
                                   struct connectdata **pneedle)
 {
   struct connectdata *needle = NULL;
@@ -2010,7 +2009,7 @@ static CURLcode url_create_needle(struct Curl_easy *data,
 
   /* Allocate a temporary connection data struct (needle) and fill in for
      comparison purposes. */
-  needle = allocate_conn(data);
+  needle = allocate_conn(data, pnow);
   if(!needle) {
     result = CURLE_OUT_OF_MEMORY;
     goto out;
@@ -2240,7 +2239,8 @@ out:
  *   a suitable connection has not determined its multiplex capability.
  * - a fatal error
  */
-static CURLcode url_find_or_create_conn(struct Curl_easy *data)
+static CURLcode url_find_or_create_conn(struct Curl_easy *data,
+                                        const struct curltime *pnow)
 {
   struct connectdata *needle = NULL;
   bool waitpipe = FALSE;
@@ -2249,7 +2249,7 @@ static CURLcode url_find_or_create_conn(struct Curl_easy *data)
   /* create the template connection for transfer data. Use this needle to
    * find an existing connection or, if none exists, convert needle
    * to a full connection and attach it to data. */
-  result = url_create_needle(data, &needle);
+  result = url_create_needle(data, pnow, &needle);
   if(result)
     goto out;
   DEBUGASSERT(needle);
@@ -2357,7 +2357,7 @@ static CURLcode url_find_or_create_conn(struct Curl_easy *data)
           CURL_TRC_M(data, "Allowing sub-requests (like DoH) to override "
                      "max connection limit");
         else {
-          infof(data, "No connections available, total of %zu reached.",
+          infof(data, "No connections available, total of %u reached.",
                 data->multi->max_total_connections);
           result = CURLE_NO_CONNECTION_AVAILABLE;
           goto out;
@@ -2440,7 +2440,7 @@ CURLcode Curl_connect(struct Curl_easy *data, bool *pconnected)
 {
   CURLcode result;
   struct connectdata *conn = NULL;
-
+  const struct curltime *pnow = NULL;
   *pconnected = FALSE;
 
   /* Set the request to virgin state based on transfer settings */
@@ -2456,7 +2456,9 @@ CURLcode Curl_connect(struct Curl_easy *data, bool *pconnected)
   }
 
   /* Get or create a connection for the transfer. */
-  result = url_find_or_create_conn(data);
+  pnow = Curl_pgrs_now(data);
+  Curl_pgrsTimeWas(data, TIMER_POSTQUEUE, *pnow);
+  result = url_find_or_create_conn(data, pnow);
   conn = data->conn;
   if(result)
     goto out;
@@ -2466,7 +2468,6 @@ CURLcode Curl_connect(struct Curl_easy *data, bool *pconnected)
     goto out;
   }
 
-  Curl_pgrsTime(data, TIMER_POSTQUEUE);
   if(conn->bits.reuse) {
     if(conn->attached_xfers > 1)
       /* multiplexed */

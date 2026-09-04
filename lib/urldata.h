@@ -292,9 +292,10 @@ struct connectdata {
   char *destination; /* hostname+port, used in conncache */
 
   struct curltime created; /* creation time */
-  struct curltime lastused; /* when returned to the connection pool as idle */
-  struct curltime lastchecked; /* when last checked alive status */
-  struct curltime lastupkeep; /* when last done conn_upkeep */
+  /* timediff_t are deltas from `created`*/
+  timediff_t lastused_ms; /* when returned to the connection pool as idle */
+  timediff_t lastchecked_ms; /* when last checked alive status */
+  timediff_t lastupkeep_ms; /* when last done conn_upkeep */
 
 #ifndef CURL_DISABLE_PROXY
   struct proxy_info socks_proxy;
@@ -311,7 +312,7 @@ struct connectdata {
 #define CONN_SOCK_IDX_VALID(i)    (((i) >= 0) && ((i) < 2))
 
   struct {
-    struct curltime start[2]; /* when filter shutdown started */
+    timediff_t start_ms[2]; /* when filter shutdown started */
     timediff_t timeout_ms; /* 0 means no timeout */
   } shutdown;
 
@@ -1178,7 +1179,7 @@ struct Curl_easy {
   struct Curl_multi *multi_easy; /* if non-NULL, points to the multi handle
                                     struct to which this "belongs" when used
                                     by the easy interface */
-  struct Curl_message msg; /* A single posted message. */
+  struct CURLMsg msg; /* A single posted message. */
 
   /* once an easy handle is tied to a connection pool a non-negative number to
      distinguish this transfer from other using the same pool. For easier

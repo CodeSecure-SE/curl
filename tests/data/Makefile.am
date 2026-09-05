@@ -1930,6 +1930,10 @@ TESTCASES = \
   test2207 \
   test2208 \
   \
+  test2270 \
+  test2271 \
+  test2272 \
+  \
   test2300 \
   test2301 \
   test2302 \
@@ -2081,6 +2085,7 @@ TESTCASES = \
   test3227 \
   test3228 \
   test3229 \
+  test3230 \
   \
   test3300 \
   test3301 \
@@ -2095,7 +2100,7 @@ TESTCASES = \
   \
   test4000 \
   test4001 \
-  \
+  test4644 \
   test5000 \
   test5001 \
   test5002 \

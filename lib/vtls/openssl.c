@@ -2166,7 +2166,7 @@ static CURLcode ossl_verifyhost(struct Curl_easy *data,
 
         if((cnlen <= 0) || !cn)
           result = CURLE_OUT_OF_MEMORY;
-        else if((size_t)cnlen != strlen((char *)cn)) {
+        else if(memchr(cn, '\0', cnlen)) {
           /* there was a null-terminator before the end of string, this
              cannot match and we return failure! */
           failf(data, "SSL: illegal cert name field");
@@ -2184,12 +2184,12 @@ static CURLcode ossl_verifyhost(struct Curl_easy *data,
     }
     else if(!Curl_cert_hostcheck((const char *)cn, cnlen,
                                  peer->origin->hostname, hostlen)) {
-      failf(data, "SSL: certificate subject name '%s' does not match "
-            "target hostname '%s'", cn, peer->origin->user_hostname);
+      failf(data, "SSL: certificate subject name '%.*s' does not match "
+            "target hostname '%s'", cnlen, cn, peer->origin->user_hostname);
       result = CURLE_PEER_FAILED_VERIFICATION;
     }
     else {
-      infof(data, " common name: %s (matched)", cn);
+      infof(data, " common name: %.*s (matched)", cnlen, cn);
     }
     if(free_cn)
       OPENSSL_free(cn);
@@ -3105,6 +3105,13 @@ static CURLcode ossl_populate_x509_store(struct Curl_cfilter *cf,
     return result;
 
   /* Does not make sense to load a CRL file without peer verification */
+#ifdef USE_APPLE_SECTRUST
+  if(ssl_crlfile && conn_config->native_ca_store) {
+    failf(data, "openssl: CRL file not supported with native CA store; "
+          "the platform verifier has no CRL attachment API");
+    return CURLE_NOT_BUILT_IN;
+  }
+#endif
   if(ssl_crlfile) {
     /* tell OpenSSL where to find CRL file that is used to check certificate
      * revocation */

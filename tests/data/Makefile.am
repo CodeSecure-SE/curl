@@ -1741,7 +1741,7 @@ TESTCASES = \
   test1849 \
   test1850 \
   test1851 \
-  \
+  test1862 \
   test1900 \
   test1901 \
   test1902 \
@@ -2056,7 +2056,7 @@ TESTCASES = \
   test3104 \
   test3105 \
   test3106 \
-  \
+  test3109 \
   test3200 \
   test3201 \
   test3202 \
@@ -2099,6 +2099,8 @@ TESTCASES = \
   \
   test3400 \
   test3401 \
+  \
+  test3500 \
   \
   test4000 \
   test4001 \

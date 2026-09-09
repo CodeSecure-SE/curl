@@ -697,9 +697,8 @@ static void wssl_x509_share_free(void *key, size_t key_len, void *p)
 static bool wssl_cached_x509_store_expired(struct Curl_easy *data,
                                            const struct wssl_x509_share *mb)
 {
-  const struct ssl_general_config *cfg = &data->set.general_ssl;
   timediff_t elapsed_ms = curlx_ptimediff_ms(Curl_pgrs_now(data), &mb->time);
-  timediff_t timeout_ms = cfg->ca_cache_timeout * (timediff_t)1000;
+  timediff_t timeout_ms = data->set.ssl_ca_cache_timeout * (timediff_t)1000;
 
   if(timeout_ms < 0)
     return FALSE;
@@ -803,7 +802,7 @@ CURLcode Curl_wssl_setup_x509_store(struct Curl_cfilter *cf,
   /* Consider the X509 store cacheable if it comes exclusively from a CAfile,
      or no source is provided and we are falling back to wolfSSL's built-in
      default. */
-  cache_criteria_met = (data->set.general_ssl.ca_cache_timeout != 0) &&
+  cache_criteria_met = (data->set.ssl_ca_cache_timeout != 0) &&
     conn_config->verifypeer &&
     !conn_config->CApath &&
     !conn_config->ca_info_blob &&
@@ -1419,14 +1418,14 @@ CURLcode Curl_wssl_ctx_init(struct wssl_ctx *wctx,
   }
 
   /* give application a chance to interfere with SSL set up. */
-  if(data->set.ssl.fsslctx) {
+  if(data->set.ssl_fsslctx) {
     if(!wctx->x509_store_setup) {
       result = Curl_wssl_setup_x509_store(cf, data, wctx);
       if(result)
         goto out;
     }
-    result = (*data->set.ssl.fsslctx)(data, wctx->ssl_ctx,
-                                      data->set.ssl.fsslctxp);
+    result = (*data->set.ssl_fsslctx)(data, wctx->ssl_ctx,
+                                      data->set.ssl_fsslctxp);
     if(result) {
       failf(data, "error signaled by SSL ctx callback");
       goto out;

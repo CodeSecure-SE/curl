@@ -914,7 +914,7 @@ static CURLcode setopt_long_ssl(struct Curl_easy *data, CURLoption option,
     if(Curl_ssl_supports(data, SSLSUPP_CA_CACHE)) {
       result = value_range(&arg, -1, -1, INT_MAX);
       if(!result)
-        s->general_ssl.ca_cache_timeout = (int)arg;
+        s->ssl_ca_cache_timeout = (int)arg;
     }
     else
       result = CURLE_NOT_BUILT_IN;
@@ -1935,7 +1935,7 @@ static CURLcode setopt_cptr_ssl(struct Curl_easy *data, CURLoption option,
      * Set an SSL_CTX callback parameter pointer
      */
     if(Curl_ssl_supports(data, SSLSUPP_SSL_CTX)) {
-      data->set.ssl.fsslctxp = ptr;
+      data->set.ssl_fsslctxp = ptr;
       break;
     }
     else
@@ -2626,7 +2626,7 @@ static CURLcode setopt_func(struct Curl_easy *data, CURLoption option,
      */
 #ifdef USE_SSL
     if(Curl_ssl_supports(data, SSLSUPP_SSL_CTX)) {
-      s->ssl.fsslctx = va_arg(param, curl_ssl_ctx_callback);
+      s->ssl_fsslctx = va_arg(param, curl_ssl_ctx_callback);
       break;
     }
     else

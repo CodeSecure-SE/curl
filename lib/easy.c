@@ -957,10 +957,10 @@ static CURLcode dupset(struct Curl_easy *dst, struct Curl_easy *src)
     if(src->set.postfieldsize == -1)
       dst->set.str_copypostfields = curlx_strdup(src->set.str_copypostfields);
     else
-      /* postfieldsize is curl_off_t, curlx_memdup() takes a size_t ... */
+      /* postfieldsize is curl_off_t, curlx_memdup0() takes a size_t ... */
       dst->set.str_copypostfields =
-        curlx_memdup(src->set.str_copypostfields,
-                     curlx_sotouz(src->set.postfieldsize));
+        curlx_memdup0(src->set.str_copypostfields,
+                      curlx_sotouz(src->set.postfieldsize));
     if(!dst->set.str_copypostfields)
       return CURLE_OUT_OF_MEMORY;
     /* point to the new copy */
@@ -1447,9 +1447,9 @@ CURLcode Curl_meta_set(struct Curl_easy *data, const char *key,
                        void *meta_data, Curl_meta_dtor *meta_dtor)
 {
   DEBUGASSERT(meta_data); /* never set to NULL */
-  if(!Curl_hash_add2(&data->meta_hash, CURL_UNCONST(key), strlen(key) + 1,
+  if(!Curl_hash_add2(&data->meta_hash, key, strlen(key) + 1,
                      meta_data, meta_dtor)) {
-    meta_dtor(CURL_UNCONST(key), strlen(key) + 1, meta_data);
+    meta_dtor(key, strlen(key) + 1, meta_data);
     return CURLE_OUT_OF_MEMORY;
   }
   return CURLE_OK;
@@ -1457,12 +1457,12 @@ CURLcode Curl_meta_set(struct Curl_easy *data, const char *key,
 
 void Curl_meta_remove(struct Curl_easy *data, const char *key)
 {
-  Curl_hash_delete(&data->meta_hash, CURL_UNCONST(key), strlen(key) + 1);
+  Curl_hash_delete(&data->meta_hash, key, strlen(key) + 1);
 }
 
 void *Curl_meta_get(struct Curl_easy *data, const char *key)
 {
-  return Curl_hash_pick(&data->meta_hash, CURL_UNCONST(key), strlen(key) + 1);
+  return Curl_hash_pick(&data->meta_hash, key, strlen(key) + 1);
 }
 
 void Curl_meta_reset(struct Curl_easy *data)

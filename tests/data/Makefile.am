@@ -1708,6 +1708,7 @@ TESTCASES = \
   test1684 \
   test1685 \
   test1686 \
+  test1687 \
   \
   test1700 \
   test1702 \
@@ -1732,7 +1733,7 @@ TESTCASES = \
   test1725 \
   test1740 \
   test1741 \
-  \
+  test1791 \
   test1800 \
   test1801 \
   test1802 \
@@ -1967,6 +1968,7 @@ TESTCASES = \
   test2412 \
   test2413 \
   test2414 \
+  test2429 \
   test2453 \
   \
   test2500 \
@@ -2156,6 +2158,7 @@ EXTRA_DIST = \
   data1465.c \
   data1481.c \
   data1679.c \
+  data1687.c \
   data1705-1.md \
   data1705-2.md \
   data1705-3.md \

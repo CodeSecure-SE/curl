@@ -136,7 +136,7 @@ static struct cpool_bundle *cpool_find_bundle(struct cpool *cpool,
                                               const char *destination)
 {
   return Curl_hash_pick(
-    &cpool->dest2bundle, CURL_UNCONST(destination), strlen(destination) + 1);
+    &cpool->dest2bundle, destination, strlen(destination) + 1);
 }
 
 static void cpool_remove_bundle(struct cpool *cpool,
@@ -144,8 +144,7 @@ static void cpool_remove_bundle(struct cpool *cpool,
 {
   if(!cpool)
     return;
-  Curl_hash_delete(&cpool->dest2bundle,
-                   CURL_UNCONST(destination), strlen(destination) + 1);
+  Curl_hash_delete(&cpool->dest2bundle, destination, strlen(destination) + 1);
 }
 
 static void cpool_remove_conn(struct cpool *cpool,
@@ -210,11 +209,11 @@ static void cpool_discard_conn(struct cpool *cpool,
     done = TRUE;
   if(!done) {
     /* Attempt to shutdown the connection right away. */
-    Curl_conn_shutdown_once(admin, conn, &done);
+    Curl_cshutdn_try_once(admin, conn, &done);
   }
 
   if(done || !data->multi)
-    Curl_conn_terminate(admin, conn, FALSE);
+    Curl_cshutdn_terminate(admin, conn, FALSE);
   else {
     struct Curl_multi *multi = data->multi;
     size_t max_shutdowns = multi->max_total_connections;
@@ -303,8 +302,7 @@ static struct cpool_bundle *cpool_add_bundle(struct cpool *cpool,
     return NULL;
 
   if(!Curl_hash_add(&cpool->dest2bundle,
-                    CURL_UNCONST(destination), strlen(destination) + 1,
-                    bundle)) {
+                    destination, strlen(destination) + 1, bundle)) {
     cpool_bundle_destroy(bundle);
     return NULL;
   }
@@ -419,7 +417,7 @@ static void cpool_conn_close(struct cpool *cpool,
   else {
     /* No multi available, terminate */
     infof(data, "closing connection #%" FMT_OFF_T, conn->connection_id);
-    Curl_conn_terminate(admin, conn, !aborted);
+    Curl_cshutdn_terminate(admin, conn, !aborted);
   }
 
   if(do_lock)
@@ -444,7 +442,7 @@ static void cpool_evict_conn(struct cpool *cpool,
 {
   if(cpool->share) {
     cpool_remove_conn(cpool, conn);
-    Curl_conn_terminate(admin, conn, TRUE);
+    Curl_cshutdn_terminate(admin, conn, TRUE);
   }
   else
     cpool_conn_close(cpool, admin, conn, FALSE);
@@ -554,7 +552,8 @@ out:
 }
 
 CURLcode Curl_cpool_add(struct Curl_easy *data,
-                        struct connectdata *conn)
+                        struct connectdata *conn,
+                        const struct curltime *pnow)
 {
   CURLcode result = CURLE_OK;
   struct cpool_bundle *bundle = NULL;
@@ -564,6 +563,10 @@ CURLcode Curl_cpool_add(struct Curl_easy *data,
   DEBUGASSERT(cpool);
   if(!cpool)
     return CURLE_FAILED_INIT;
+
+  conn->created = *pnow;
+  conn->shutdown.start_ms[FIRSTSOCKET] =
+    conn->shutdown.start_ms[SECONDARYSOCKET] = -1;
 
   CPOOL_LOCK(cpool, data);
   bundle = cpool_find_bundle(cpool, conn->destination);
@@ -703,6 +706,8 @@ bool Curl_cpool_find(struct Curl_easy *data,
 {
   struct cpool *cpool = cpool_get_instance(data);
   struct cpool_bundle *bundle;
+  struct Curl_llist_node *curr;
+  struct connectdata *conn;
   bool found = FALSE;
 
   DEBUGASSERT(cpool);
@@ -712,18 +717,37 @@ bool Curl_cpool_find(struct Curl_easy *data,
 
   CPOOL_LOCK(cpool, data);
   bundle = Curl_hash_pick(&cpool->dest2bundle,
-                          CURL_UNCONST(destination),
-                          strlen(destination) + 1);
+                          destination, strlen(destination) + 1);
   if(bundle) {
-    struct Curl_llist_node *curr = Curl_llist_head(&bundle->conns);
-    while(curr) {
-      struct connectdata *conn = Curl_node_elem(curr);
-      /* Get next node now. callback might discard current */
-      curr = Curl_node_next(curr);
+    if(data->state.lastconnect_id >= 0) {
+      /* Try to find the previously used connection in this bundle
+       * and if it still matches, use that one. This assures that
+       * an authentication involving several requests is using
+       * the same connection again. */
+      curr = Curl_llist_head(&bundle->conns);
+      while(curr) {
+        conn = Curl_node_elem(curr);
+        curr = Curl_node_next(curr);
+        if(data->state.lastconnect_id == conn->connection_id) {
+          if(conn_cb(conn, userdata))
+            found = TRUE;
+          break;
+        }
+      }
+    }
 
-      if(conn_cb(conn, userdata)) {
-        found = TRUE;
-        break;
+    if(!found) {
+      curr = Curl_llist_head(&bundle->conns);
+      while(curr) {
+        conn = Curl_node_elem(curr);
+        curr = Curl_node_next(curr);
+        /* Already tried a matching connection above. No need to
+         * invoke callback again for this one. */
+        if((data->state.lastconnect_id != conn->connection_id) &&
+           conn_cb(conn, userdata)) {
+          found = TRUE;
+          break;
+        }
       }
     }
   }
@@ -985,6 +1009,22 @@ bool Curl_cpool_conn_seems_healthy(struct connectdata *conn,
   if(healthy)
     conn->lastchecked_ms = curlx_ptimediff_ms(pnow, &conn->created);
   return healthy;
+}
+
+void Curl_cpool_conn_was_used(struct Curl_easy *data,
+                              struct connectdata *conn,
+                              const struct curltime *pnow)
+{
+  (void)data;
+  conn->lastupkeep_ms = curlx_ptimediff_ms(pnow, &conn->created);
+}
+
+timediff_t Curl_cpool_conn_age_ms(struct Curl_easy *data,
+                                  struct connectdata *conn,
+                                  const struct curltime *pnow)
+{
+  (void)data;
+  return curlx_ptimediff_ms(pnow, &conn->created);
 }
 
 #if 0

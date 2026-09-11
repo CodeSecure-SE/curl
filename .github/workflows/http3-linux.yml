@@ -32,6 +32,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions: {}
+cache-mode: write
 
 env:
   MAKEFLAGS: -j 5
@@ -39,7 +40,7 @@ env:
   CURL_TEST_MIN: 1850
   DO_NOT_TRACK: '1'
   # renovate: datasource=github-tags depName=awslabs/aws-lc versioning=semver registryUrl=https://github.com
-  AWSLC_VERSION: 5.5.0
+  AWSLC_VERSION: 5.8.0
   # renovate: datasource=github-tags depName=google/boringssl versioning=semver registryUrl=https://github.com
   BORINGSSL_VERSION: 0.20260903.0
   # renovate: datasource=github-tags depName=gnutls/nettle versioning=semver registryUrl=https://github.com
@@ -71,7 +72,6 @@ jobs:
   build-cache:
     name: 'Build caches'
     runs-on: ubuntu-26.04
-
     steps:
       - name: 'cache awslc'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

@@ -236,6 +236,7 @@ TESTS_C = \
   lib1597.c \
   lib1598.c \
   lib1599.c \
+  lib1605.c \
   lib1647.c \
   lib1648.c \
   lib1649.c \
@@ -315,6 +316,7 @@ TESTS_C = \
   lib2506.c \
   lib2700.c \
   lib2805.c \
+  lib2924.c \
   lib3010.c \
   lib3025.c \
   lib3026.c \
@@ -330,5 +332,6 @@ TESTS_C = \
   lib3207.c \
   lib3208.c \
   lib3231.c \
+  lib3595.c \
   lib5000.c \
   lib5004.c

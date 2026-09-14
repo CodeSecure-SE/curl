@@ -2,7 +2,7 @@
 <testcase>
 <info>
 <keywords>
-curl_easy_escape
+mime
 </keywords>
 </info>
 
@@ -12,7 +12,10 @@ curl_easy_escape
 lib%TESTNUMBER
 </tool>
 <name>
-Test negative data lengths as input to libcurl functions
+curl_mime_free
 </name>
 </client>
+
+<verify>
+</verify>
 </testcase>

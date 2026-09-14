@@ -60,12 +60,12 @@ jobs:
       matrix:
         include:
           # https://github.com/DragonFlyBSD/DPorts
-          # { os: 'dragonflybsd', version: '6.4.2', build: 'autotools', arch: 'x86_64' , cc: 'gcc'  , desc: 'openssl', tflags: 'skiprun',
-          #   install: 'autoconf automake libtool openldap26-client libidn2',
-          #   options: '--with-openssl --enable-ldap --enable-ldaps --with-libidn2' }
+          - { os: 'dragonflybsd', version: '6.4.2', build: 'autotools', arch: 'x86_64' , cc: 'gcc'  , desc: 'openssl', tflags: 'skiprun',
+              install: 'autoconf automake libtool openldap26-client libidn2',
+              options: '--with-openssl --enable-ldap --enable-ldaps --with-libidn2' }
 
-          # { os: 'dragonflybsd', version: '6.4.2', build: 'cmake'    , arch: 'x86_64' , cc: 'gcc'  , desc: 'openssl', tflags: 'skipall',
-          #   install: 'cmake ninja' }
+          - { os: 'dragonflybsd', version: '6.4.2', build: 'cmake'    , arch: 'x86_64' , cc: 'gcc'  , desc: 'openssl', tflags: 'skipall',
+              install: 'cmake ninja' }
 
           # https://ports.freebsd.org/
           - { os: 'freebsd'     , version: '15.1',  build: 'autotools', arch: 'x86_64' , cc: 'clang', desc: 'openssl',
@@ -84,7 +84,7 @@ jobs:
               install: 'autoconf automake libtool krb5-devel openldap26-client libidn2 stunnel',
               options: '--with-openssl --with-gssapi --enable-ldap --enable-ldaps --with-libidn2 --disable-typecheck' }
 
-          - { os: 'freebsd'     , version: '14.3',  build: 'cmake'    , arch: 'arm64'  , cc: 'clang', desc: 'openssl', tflags: 'skiprun',
+          - { os: 'freebsd'     , version: '14.5',  build: 'cmake'    , arch: 'arm64'  , cc: 'clang', desc: 'openssl', tflags: 'skiprun',
               install: 'cmake-core ninja perl5 krb5-devel openldap26-client libidn2 stunnel',
               options: '-DCURL_USE_GSSAPI=ON -DCURL_DISABLE_TYPECHECK=ON' }
 
@@ -125,7 +125,7 @@ jobs:
           persist-credentials: false
 
       - name: 'setup VM'
-        uses: cross-platform-actions/action@faa0c6197e94aacf1c5956460152c8380d3560a5 # v1.5.0
+        uses: cross-platform-actions/action@e0b9770014ba65d5e0815f15b74031c3a635f641 # v1.6.0
         with:
           environment_variables: 'CC CURL_CI CURL_TEST_MIN DO_NOT_TRACK MAKEFLAGS MATRIX_ARCH MATRIX_BUILD MATRIX_INSTALL MATRIX_OPTIONS MATRIX_OS MATRIX_VERSION TFLAGS'
           operating_system: '${{ matrix.os }}'

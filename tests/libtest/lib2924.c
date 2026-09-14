@@ -21,42 +21,27 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "unitcheck.h"
-#include "llist.h"
+#include "first.h"
 
-static CURLcode t1605_setup(CURL **easy)
+static CURLcode test_lib2924(const char *URL)
 {
+  CURL *curl;
   CURLcode result = CURLE_OK;
 
   global_init(CURL_GLOBAL_ALL);
-  *easy = curl_easy_init();
-  if(!*easy) {
-    curl_global_cleanup();
-    return CURLE_OUT_OF_MEMORY;
-  }
-  return result;
-}
 
-static void t1605_stop(CURL *easy)
-{
-  curl_easy_cleanup(easy);
+  easy_init(curl);
+
+  easy_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_HEADER, 1L);
+  easy_setopt(curl, CURLOPT_HTTP_TRANSFER_DECODING, 0L);
+
+  result = curl_easy_perform(curl);
+
+test_cleanup:
+
+  curl_easy_cleanup(curl);
   curl_global_cleanup();
-}
 
-static CURLcode test_unit1605(const char *arg)
-{
-  CURL *easy;
-
-  UNITTEST_BEGIN(t1605_setup(&easy))
-
-  int len;
-  char *esc;
-
-  esc = curl_easy_escape(easy, "", -1);
-  fail_unless(!esc, "negative string length cannot work");
-
-  esc = curl_easy_unescape(easy, "%41%41%41%41", -1, &len);
-  fail_unless(!esc, "negative string length cannot work");
-
-  UNITTEST_END(t1605_stop(easy))
+  return result;
 }

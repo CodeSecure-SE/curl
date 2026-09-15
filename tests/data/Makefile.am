@@ -676,6 +676,7 @@ TESTCASES = \
   test654 \
   test655 \
   test656 \
+  test657 \
   test658 \
   test659 \
   test660 \
@@ -1963,6 +1964,7 @@ TESTCASES = \
   test2412 \
   test2413 \
   test2414 \
+  test2415 \
   test2429 \
   test2453 \
   \
@@ -2099,8 +2101,8 @@ TESTCASES = \
   \
   test3400 \
   test3401 \
-  \
   test3500 \
+  test3555 \
   test3595 \
   test4000 \
   test4001 \

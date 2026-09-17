@@ -762,10 +762,13 @@ static int set_transfer_url(struct Curl_easy *newhandle,
   if(uc)
     rc = 4;
 fail:
-  curl_url_cleanup(u);
-  if(rc)
+  if(rc) {
+    curl_url_cleanup(u);
     return rc;
+  }
 
+  DEBUGASSERT(!newhandle->state.uh);
+  newhandle->state.uh = u;
   Curl_bufref_set(&newhandle->state.url, url, 0, curl_free);
   return 0;
 }
@@ -1332,8 +1335,16 @@ static int on_stream_close(nghttp2_session *session, int32_t stream_id,
 
   stream->closed = TRUE;
   stream->error = error_code;
-  if(stream->error)
+  if(stream->error) {
     stream->reset = TRUE;
+    if((stream->error == NGHTTP2_REFUSED_STREAM) &&
+       ctx->rcvd_goaway && ctx->goaway_error)
+    /* REFUSED_STREAM is used by nghttp2 on a GOAWAY from the
+     * server where it indicated it will no longer process this stream.
+     * If the GOAWAY carried an error code, take that as the error for
+     * the stream. */
+    stream->error = ctx->goaway_error;
+  }
 
   if(stream->error)
     CURL_TRC_CF(data_s, cf, "[%d] RESET: %s (err %u)",

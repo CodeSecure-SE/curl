@@ -3,17 +3,19 @@
 <info>
 <keywords>
 unittest
-uint_hash
+weekday
+day
+monthname
 </keywords>
 </info>
 
-# Client-side
 <client>
 <features>
 unittest
 </features>
 <name>
-uint_hash create/add/destroy testing, exercising clean functions
+weekday, month name and timezone parsers
 </name>
 </client>
+
 </testcase>

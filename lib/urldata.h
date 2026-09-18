@@ -69,7 +69,7 @@
 #include "request.h"
 #include "ratelimit.h"
 #include "netrc.h"
-#include "uint-hashset.h"
+#include "u8_strset.h"
 #include "vdns/asyn.h"
 #include "vdns/hostip.h"
 #include "vtls/vtls_config.h"
@@ -620,6 +620,8 @@ struct UrlState {
 #endif
 #ifndef CURL_DISABLE_RTSP
   /* This RTSP state information survives requests and connections */
+  struct Curl_peer *rtsp_session_origin; /* origin that issued the session id,
+                                            NULL when set by the application */
   uint8_t rtp_channel_mask[32]; /* for the correctness checking of the
                                          interleaved data */
   uint32_t rtsp_next_client_CSeq; /* the session's next client CSeq */

@@ -55,7 +55,6 @@ TESTS_C = \
   unit1612.c \
   unit1614.c \
   unit1615.c \
-  unit1616.c \
   unit1620.c \
   unit1625.c \
   unit1626.c \
@@ -108,4 +107,5 @@ TESTS_C = \
   unit3303.c \
   unit3304.c \
   unit3306.c \
-  unit3400.c
+  unit3400.c \
+  unit4781.c

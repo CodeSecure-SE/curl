@@ -1634,7 +1634,6 @@ TESTCASES = \
   test1613 \
   test1614 \
   test1615 \
-  test1616 \
   test1617 \
   test1618 \
   test1619 \
@@ -1707,6 +1706,10 @@ TESTCASES = \
   test1686 \
   test1687 \
   test1688 \
+  test1689 \
+  test1690 \
+  test1691 \
+  test1692 \
   \
   test1700 \
   test1702 \
@@ -2049,6 +2052,8 @@ TESTCASES = \
   test3034 \
   test3035 \
   test3036 \
+  test3037 \
+  test3038 \
   \
   test3100 \
   test3101 \
@@ -2092,6 +2097,7 @@ TESTCASES = \
   test3230 \
   test3231 \
   test3232 \
+  test3233 \
   \
   test3300 \
   test3301 \
@@ -2106,11 +2112,13 @@ TESTCASES = \
   test3500 \
   test3555 \
   test3595 \
+  test3596 \
   test4000 \
   test4001 \
   test4644 \
   test4656 \
   test4657 \
+  test4781 \
   test5000 \
   test5001 \
   test5002 \

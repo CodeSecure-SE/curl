@@ -691,7 +691,8 @@ static CURLcode output_auth_headers(struct Curl_easy *data,
       (proxy && !Curl_checkProxyheaders(data, conn,
                                         STRCONST("Proxy-authorization"))) ||
 #endif
-      (!proxy && !Curl_checkheaders(data, STRCONST("Authorization")))) {
+      (!proxy && !Curl_checkheaders(data, STRCONST("Authorization")) &&
+       Curl_auth_allowed_to_host(data))) {
       auth = "Negotiate";
       result = Curl_output_negotiate(data, conn, proxy);
       if(result)
@@ -704,10 +705,14 @@ static CURLcode output_auth_headers(struct Curl_easy *data,
 #endif
 #ifdef USE_NTLM
   if(authstatus->picked == CURLAUTH_NTLM) {
-    auth = "NTLM";
-    result = Curl_output_ntlm(data, proxy);
-    if(result)
-      return result;
+    if(proxy || Curl_auth_allowed_to_host(data)) {
+      auth = "NTLM";
+      result = Curl_output_ntlm(data, proxy);
+      if(result)
+        return result;
+    }
+    else
+      authstatus->done = TRUE;
   }
   else
 #endif
@@ -1289,6 +1294,26 @@ CURLcode Curl_http_follow(struct Curl_easy *data, const char *newurl,
   if(type == FOLLOW_FAKE) {
     /* we are only figuring out the new URL if we would have followed locations
        but now we are done so we can get out! */
+    if(!uc) {
+      CURLU *u = curl_url();
+      char *nocred = NULL;
+
+      if(!u) {
+        curlx_free(follow_url);
+        return CURLE_OUT_OF_MEMORY;
+      }
+      if(!curl_url_set(u, CURLUPART_URL, follow_url,
+                       CURLU_NON_SUPPORT_SCHEME |
+                       (data->set.path_as_is ? CURLU_PATH_AS_IS : 0)) &&
+         !curl_url_set(u, CURLUPART_USER, NULL, 0) &&
+         !curl_url_set(u, CURLUPART_PASSWORD, NULL, 0))
+        (void)curl_url_get(u, CURLUPART_URL, &nocred, CURLU_GET_EMPTY);
+      curl_url_cleanup(u);
+      if(nocred) {
+        curlx_free(follow_url);
+        follow_url = nocred;
+      }
+    }
     data->info.wouldredirect = follow_url;
 
     if(reachedmax) {

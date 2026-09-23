@@ -3,6 +3,7 @@
 <info>
 <keywords>
 mime
+libtest
 </keywords>
 </info>
 
@@ -20,9 +21,6 @@ Mime
 <server>
 http
 </server>
-<tool>
-lib%TESTNUMBER
-</tool>
 <name>
 Curl_mime_prepare_headers
 </name>

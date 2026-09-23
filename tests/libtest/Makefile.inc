@@ -68,6 +68,7 @@ TESTS_C = \
   cli_ws_pingpong.c \
   cli_ws_write_err.c \
   \
+  lib464.c \
   lib500.c \
   lib501.c \
   lib502.c \
@@ -247,6 +248,7 @@ TESTS_C = \
   lib1686.c \
   lib1742.c \
   lib1744.c \
+  lib1745.c \
   lib1791.c \
   lib1900.c \
   lib1901.c \
@@ -296,6 +298,7 @@ TESTS_C = \
   lib1977.c \
   lib1978.c \
   lib1985.c \
+  lib1989.c \
   lib2023.c \
   lib2032.c \
   lib2082.c \

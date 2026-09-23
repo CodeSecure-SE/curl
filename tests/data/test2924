@@ -4,6 +4,7 @@
 <keywords>
 CURLOPT_HTTP_TRANSFER_DECODING
 chunked Transfer-Encoding
+libtest
 </keywords>
 </info>
 
@@ -27,9 +28,6 @@ chunked data fun%CR
 
 # Client-side
 <client>
-<tool>
-lib%TESTNUMBER
-</tool>
 
 <server>
 http

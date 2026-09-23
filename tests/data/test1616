@@ -6,6 +6,7 @@ HTTP
 HTTP GET
 HTTP proxy
 HTTP proxy Digest auth
+libtest
 </keywords>
 </info>
 
@@ -56,9 +57,6 @@ proxied one
 <server>
 http
 </server>
-<tool>
-lib%TESTNUMBER
-</tool>
 <features>
 !SSPI
 crypto

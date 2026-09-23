@@ -486,6 +486,7 @@ TESTCASES = \
   test461 \
   test462 \
   test463 \
+  test464 \
   test467 \
   test468 \
   test469 \
@@ -1741,6 +1742,7 @@ TESTCASES = \
   test1742 \
   test1743 \
   test1744 \
+  test1745 \
   test1790 \
   test1791 \
   test1800 \
@@ -1821,7 +1823,7 @@ TESTCASES = \
   test1983 \
   test1984 \
   test1985 \
-  \
+  test1989 \
   test2000 \
   test2001 \
   test2002 \

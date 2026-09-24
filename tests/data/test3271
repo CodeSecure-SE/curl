@@ -2,7 +2,8 @@
 <testcase>
 <info>
 <keywords>
-tunittest
+unittest
+CURLOPT_RESOLVE
 </keywords>
 </info>
 
@@ -11,11 +12,10 @@ tunittest
 <features>
 unittest
 </features>
+
+# this test extends 1607 - they should probably be combined one day
 <name>
-create_dir_hierarchy()
+CURLOPT_RESOLVE override
 </name>
 </client>
-
-<verify>
-</verify>
 </testcase>

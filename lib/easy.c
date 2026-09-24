@@ -1030,7 +1030,8 @@ CURL *curl_easy_duphandle(CURL *curl)
     Curl_netrc_init(&outcurl->state.netrc);
 
     /* the connection pool is setup on demand */
-    outcurl->state.lastconnect_id = -1;
+    outcurl->state.last_conn_id = -1;
+    outcurl->state.last_cpid = UINT32_MAX;
     outcurl->id = -1;
     outcurl->mid = UINT32_MAX;
     outcurl->master_mid = UINT32_MAX;
@@ -1148,7 +1149,8 @@ void curl_easy_reset(CURL *curl)
   if(CURL_EAPI_ENTER(&guard, curl, easy_reset, NULL)) {
     struct Curl_easy *data = curl;
 
-    data->state.lastconnect_id = -1; /* clear remembered connection id */
+    data->state.last_conn_id = -1; /* clear remembered connection id */
+    data->state.last_cpid = UINT32_MAX;
     Curl_req_hard_reset(&data->req, data);
     Curl_hash_clean(&data->meta_hash);
 
@@ -1267,7 +1269,7 @@ static CURLcode easy_connection(struct Curl_easy *data,
 
   if(sfd == CURL_SOCKET_BAD) {
     failf(data, "Failed to get last socket used for connection #%" FMT_OFF_T,
-          data->state.lastconnect_id);
+          data->state.last_conn_id);
     return CURLE_UNSUPPORTED_PROTOCOL;
   }
 
@@ -1304,7 +1306,7 @@ CURLcode curl_easy_recv(CURL *curl, void *buffer, size_t buflen, size_t *n)
   CURLcode result;
 
   if(CURL_EAPI_ENTER(&guard, curl, easy_recv, &result)) {
-    if(!n) {
+    if(!n || (buflen && !buffer)) {
       result = CURLE_BAD_FUNCTION_ARGUMENT;
       goto out;
     }
@@ -1379,7 +1381,7 @@ CURLcode curl_easy_send(CURL *curl, const void *buffer, size_t buflen,
     struct Curl_easy *data = curl;
     size_t written = 0;
 
-    if(!n) {
+    if(!n || (buflen && !buffer)) {
       result = CURLE_BAD_FUNCTION_ARGUMENT;
       goto out;
     }

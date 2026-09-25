@@ -1748,6 +1748,7 @@ TESTCASES = \
   test1800 \
   test1801 \
   test1802 \
+  test1827 \
   test1847 \
   test1848 \
   test1849 \
@@ -2029,6 +2030,7 @@ TESTCASES = \
   test2722 \
   test2723 \
   test2805 \
+  test2824 \
   test2885 \
   test2918 \
   test2924 \

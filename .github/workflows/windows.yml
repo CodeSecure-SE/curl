@@ -42,8 +42,8 @@ env:
   OPENSSH_WINDOWS_VERSION: 10.0.0.0p2-Preview
   OPENSSH_WINDOWS_SHA256_ARM64: 698c6aec31c1dd0fb996206e8741f4531a97355686b5431ef347d531b07fcd42
   OPENSSH_WINDOWS_SHA256_WIN64: 23f50f3458c4c5d0b12217c6a5ddfde0137210a30fa870e98b29827f7b43aba5
-  STUNNEL_VERSION: '5.80'
-  STUNNEL_SHA256: 25947bd268e2e670e1c7f915cefd54585aaa440d09eb20c6109cdbeaf3140bc4
+  STUNNEL_VERSION: '5.82'
+  STUNNEL_SHA256: 722c1ad626919af2b0034666b4d19cc4795e925c32f60e8f3c59af4fb3ad2dfc
 
 jobs:
   build-cache:
@@ -1068,16 +1068,21 @@ jobs:
               # The option to disable the MSBuild heuristics is likely called:
               # IgnoreStandardErrorWarningFormat=true, but there seems to be no
               # facility to pass it via CMake or CLI.
-              MSVC_EDITION='2022/Enterprise/vc/tools/msvc'
-              [[ "${MATRIX_IMAGE}" = *'windows-2025'* ]] && MSVC_EDITION='18/Enterprise/vc/tools/msvc'
               [[ "$(uname -s)" = *'ARM64'* ]] && MSVC_HOST='arm64' || MSVC_HOST='x64'  # x86
               MSVC_ROOTD="$(cygpath --mixed --short-name "$PROGRAMFILES/Microsoft Visual Studio")"  # to avoid spaces in directory names
+              echo 'Installed MSVC versions:'
+              /usr/bin/find "$(cygpath --unix "$MSVC_ROOTD")" -mindepth 2 -maxdepth 2 -type d -name '*' || true
+              MSVC_EDITION='18/Enterprise/vc/tools/msvc'
+              echo 'Installed MSVC roots:'
+              /usr/bin/find "$(cygpath --unix "$MSVC_ROOTD/$MSVC_EDITION")" -mindepth 1 -maxdepth 1 -type d -name '*.*'
               MSVC_ROOTU="$(/usr/bin/find "$(cygpath --unix "$MSVC_ROOTD/$MSVC_EDITION")" -mindepth 1 -maxdepth 1 -type d -name '*.*' | sort | tail -n 1)"
               MSVC_ROOTW="$(cygpath --mixed "$MSVC_ROOTU")"
               MSVC_ROOTU="$(cygpath --unix "$MSVC_ROOTW")"
               MSVC_BINU="$MSVC_ROOTU/bin/Host$MSVC_HOST/$MATRIX_ARCH"
               MSDK_ROOTW="$(cygpath --mixed --short-name "$(printenv 'ProgramFiles(x86)')/Windows Kits")/10"
               MSDK_ROOTU="$(cygpath --unix "$MSDK_ROOTW")"
+              echo 'Installed Windows Kits:'
+              /usr/bin/find "$MSDK_ROOTU/lib" -mindepth 1 -maxdepth 1 -type d -name '*.*'
               MSDK_VER="$(basename "$(/usr/bin/find "$MSDK_ROOTU/lib" -mindepth 1 -maxdepth 1 -type d -name '*.*' | sort | tail -n 1)")"
               MSDK_LIBW="$MSDK_ROOTW/lib/$MSDK_VER"
               MSDK_INCW="$MSDK_ROOTW/include/$MSDK_VER"

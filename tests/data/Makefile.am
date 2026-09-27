@@ -1967,7 +1967,7 @@ TESTCASES = \
   test2311 \
   test2318 \
   test2349 \
-  \
+  test2380 \
   test2397 \
   \
   test2400 \
@@ -1986,6 +1986,7 @@ TESTCASES = \
   test2413 \
   test2414 \
   test2415 \
+  test2418 \
   test2429 \
   test2453 \
   \

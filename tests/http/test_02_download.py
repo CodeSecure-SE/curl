@@ -38,7 +38,8 @@ log = logging.getLogger(__name__)
 class TestDownload:
 
     @pytest.fixture(autouse=True, scope='class')
-    def _class_scope(self, env, httpd):
+    @classmethod
+    def _class_scope(cls, env, httpd):
         indir = httpd.docs_dir
         env.make_data_file(indir=indir, fname="data-0k", fsize=0)
         env.make_data_file(indir=indir, fname="data-10k", fsize=10 * 1024)
@@ -656,8 +657,8 @@ class TestDownload:
                     assert n <= max_total_conns
             assert matched_lines > 0
 
-    # 2 parallel transers, pause and resume. Load a 100 MB zip bomb from
-    # the server with "Content-Encoding: gzip" that gets exloded during
+    # 2 parallel transfers, pause and resume. Load a 100 MB zip bomb from
+    # the server with "Content-Encoding: gzip" that gets exploded during
     # response writing to the client. Client pauses after 1MB unzipped data
     # and causes buffers to fill while the server sends more response
     # data.

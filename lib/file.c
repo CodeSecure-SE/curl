@@ -331,15 +331,13 @@ static CURLcode file_upload(struct Curl_easy *data,
   else
     mode |= O_TRUNC;
 
-#ifdef _WIN32
   fd = curlx_open(file->path, mode,
-                  data->set.new_file_perms & (_S_IREAD | _S_IWRITE));
-#elif (defined(ANDROID) || defined(__ANDROID__)) && \
-  (defined(__i386__) || defined(__arm__))
-  fd = curlx_open(file->path, mode, (mode_t)data->set.new_file_perms);
+#ifdef _WIN32
+                  data->set.new_file_perms & (_S_IREAD | _S_IWRITE)
 #else
-  fd = curlx_open(file->path, mode, data->set.new_file_perms);
+                  CURLX_FILE_MODE(data->set.new_file_perms)
 #endif
+                  );
   if(fd < 0) {
     failf(data, "cannot open %s for writing", file->path);
     return CURLE_WRITE_ERROR;

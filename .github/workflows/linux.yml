@@ -224,19 +224,19 @@ jobs:
             install_steps: pytest
             configure: --with-openssl --enable-debug --disable-unity
 
-          - name: 'openssl libssh2 sync-resolver valgrind 1 +analyzer'
+          - name: 'openssl libssh2 sync-resolver valgrind 1'
             image: ubuntu-26.04-arm
             install_packages: gcc-16 libidn2-dev libssh2-1-dev libnghttp2-dev libldap-dev valgrind
             CC: gcc-16
             tflags: '--subset=0/2'
-            generate: -DENABLE_DEBUG=ON -DENABLE_THREADED_RESOLVER=OFF -DCURL_ENABLE_NTLM=ON -DCURL_GCC_ANALYZER=ON
+            generate: -DENABLE_DEBUG=ON -DENABLE_THREADED_RESOLVER=OFF -DCURL_ENABLE_NTLM=ON
 
-          - name: 'openssl libssh2 sync-resolver valgrind 2'
+          - name: 'openssl libssh2 sync-resolver valgrind 2 +analyzer'
             image: ubuntu-26.04-arm
             install_packages: gcc-16 libidn2-dev libssh2-1-dev libnghttp2-dev libldap-dev valgrind
             CC: gcc-16
             tflags: '--subset=1/2'
-            generate: -DENABLE_DEBUG=ON -DENABLE_THREADED_RESOLVER=OFF -DCURL_ENABLE_NTLM=ON
+            generate: -DENABLE_DEBUG=ON -DENABLE_THREADED_RESOLVER=OFF -DCURL_ENABLE_NTLM=ON -DCURL_GCC_ANALYZER=ON
 
           - name: 'openssl intel C89'
             image: ubuntu-24.04
@@ -284,14 +284,17 @@ jobs:
             image: ubuntu-24.04-arm
             configure: --with-openssl --disable-ipv6 --enable-debug --disable-unity --disable-libcurl-option --disable-digest-auth --enable-ntlm
 
-          - name: 'curl_global_init_mem debug valgrind'
+          - name: 'curl_global_init_mem debug valgrind 1'
             image: ubuntu-24.04-arm
             install_packages: valgrind
-            tflags: '--min=1800'
-            configure: >-
-              --enable-init-mem-debug
-              --with-openssl --disable-debug --enable-unity
-              --enable-ntlm
+            tflags: '--subset=0/2'
+            configure: --enable-init-mem-debug --with-openssl --disable-debug --enable-ntlm
+
+          - name: 'curl_global_init_mem debug valgrind 2'
+            image: ubuntu-24.04-arm
+            install_packages: valgrind
+            tflags: '--subset=1/2'
+            configure: --enable-init-mem-debug --with-openssl --disable-debug --enable-ntlm
 
           - name: 'openssl https-only'
             image: ubuntu-24.04-arm
@@ -404,7 +407,7 @@ jobs:
             install_packages: clang-22 libubsan1 libasan8 libtsan2
             install_steps: pytest
             install_steps_brew: openssl libssh2 libngtcp2 libnghttp3 c-ares
-            tflags: '!664 !665 !2007'  # MD5 support is disabled in Homebrew since libssh2 1.11.1_6
+            tflags: '!664 !665'  # MD5 support is disabled in Homebrew since libssh2 1.11.1_6
             CC: clang-22
             CFLAGS: >-
               -fsanitize=address,bounds,leak,signed-integer-overflow,undefined
@@ -462,16 +465,17 @@ jobs:
             CC: icc
             configure: --enable-debug --with-openssl
 
-          - name: 'Slackware !ssl gssapi gcc'
-            # Flags used to build the curl Slackware package, except OpenSSL 1.1.0:
+          - name: 'Slackware GnuTLS gssapi gcc'
+            # Flags used to build the curl Slackware package:
             # https://ftpmirror.infania.net/slackware/slackware64-current/source/n/curl/curl.SlackBuild
-            configure: --enable-debug --without-ssl --with-libssh2 --with-gssapi --enable-ares --without-ca-bundle --with-ca-path=/etc/ssl/certs
+            # Current curl no longer supports OpenSSL 1.1.0, thus build with GnuTLS instead:
+            configure: --enable-debug --with-gnutls --with-libssh2 --with-gssapi --enable-ares --without-ca-bundle --with-ca-path=/etc/ssl/certs
             # Docker Hub image that `container-job` executes in
-            container: andy5995/slackware-build-essential:15.0@sha256:f4f2242999038a2c2deb4e5727187caaae92502a7daf8353068932621e1ec92f
+            container: andy5995/slackware-build-essential:15.0@sha256:c5aeede463b4a52b5f4650078418718f2447bdb23f9a4cac0d5fb262e7b8dc84
 
           - name: 'Alpine MUSL https-rr'
             configure: --enable-debug --with-ssl --with-libssh2 --with-libidn2 --with-gssapi --enable-ldap --with-libpsl --enable-httpsrr --enable-ares --enable-threaded-resolver
-            container: alpine:3.23@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11 # 3.23.4
+            container: alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 # 3.24.2
 
           - name: 'Alpine MUSL https-rr c-ares'
             configure: --enable-debug --with-ssl --with-libssh2 --with-libidn2 --with-gssapi --enable-ldap --with-libpsl --enable-httpsrr --enable-ares --disable-threaded-resolver
@@ -536,7 +540,7 @@ jobs:
             "https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-${LIBRESSL_VERSION}.tar.gz" --output pkg.bin
           sha256sum pkg.bin && tar -xzf pkg.bin && rm -f pkg.bin
           cd "libressl-${LIBRESSL_VERSION}"
-          cmake -B . -G Ninja -DLIBRESSL_APPS=OFF -DLIBRESSL_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/home/runner/libressl -DCURL_ENABLE_NTLM=ON
+          cmake -B . -G Ninja -DLIBRESSL_APPS=OFF -DLIBRESSL_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/home/runner/libressl
           cmake --build .
           cmake --install .
 
@@ -783,7 +787,7 @@ jobs:
             --location --proto-redir =https "https://github.com/awslabs/aws-lc/archive/refs/tags/v${AWSLC_VERSION}.tar.gz" --output pkg.bin
           sha256sum pkg.bin && tar -xzf pkg.bin && rm -f pkg.bin
           cd "aws-lc-${AWSLC_VERSION}"
-          cmake -B . -G Ninja -DCMAKE_INSTALL_PREFIX=/home/runner/awslc -DBUILD_TOOL=OFF -DBUILD_TESTING=OFF
+          cmake -B . -G Ninja -DBUILD_TESTING=OFF -DBUILD_TOOL=OFF -DCMAKE_INSTALL_PREFIX=/home/runner/awslc
           cmake --build .
           cmake --install .
 
@@ -804,7 +808,7 @@ jobs:
             --location --proto-redir =https "https://github.com/google/boringssl/releases/download/${BORINGSSL_VERSION}/boringssl-${BORINGSSL_VERSION}.tar.gz" --output pkg.bin
           sha256sum pkg.bin && tar -xzf pkg.bin && rm -f pkg.bin
           cd "boringssl-${BORINGSSL_VERSION}"
-          cmake -B . -G Ninja -DCMAKE_INSTALL_PREFIX=/home/runner/boringssl -DBUILD_TESTING=OFF
+          cmake -B . -G Ninja -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=/home/runner/boringssl
           cmake --build .
           cmake --install .
 

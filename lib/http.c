@@ -446,8 +446,8 @@ static CURLcode http_perhapsrewind(struct Curl_easy *data,
     if((data->state.authproxy.picked == CURLAUTH_NEGOTIATE) ||
        (data->state.authhost.picked == CURLAUTH_NEGOTIATE)) {
       VERBOSE(ongoing_auth = "NEGOTIATE");
-      if((conn->http_negotiate_state != GSS_AUTHNONE) ||
-         (conn->proxy_negotiate_state != GSS_AUTHNONE)) {
+      if((conn->http_negotiate_state != CURL_NEGO_AUTH_NONE) ||
+         (conn->proxy_negotiate_state != CURL_NEGO_AUTH_NONE)) {
         /* The NEGOTIATE-negotiation has started, keep on sending.
          * Need to do further work on same connection */
         abort_upload = FALSE;
@@ -945,7 +945,7 @@ static CURLcode auth_spnego(struct Curl_easy *data,
     if(authp->picked == CURLAUTH_NEGOTIATE) {
       struct connectdata *conn = data->conn;
       CURLcode result = Curl_input_negotiate(data, conn, proxy, auth);
-      curlnegotiate *negstate = proxy ? &conn->proxy_negotiate_state :
+      uint8_t *negstate = proxy ? &conn->proxy_negotiate_state :
         &conn->http_negotiate_state;
       if(!result) {
         curlx_free(data->req.newurl);
@@ -954,7 +954,7 @@ static CURLcode auth_spnego(struct Curl_easy *data,
           return CURLE_OUT_OF_MEMORY;
         data->state.authproblem = FALSE;
         /* we received a GSS auth token and we dealt with it fine */
-        *negstate = GSS_AUTHRECV;
+        *negstate = CURL_NEGO_AUTH_RECV;
       }
       else
         data->state.authproblem = TRUE;
@@ -1067,7 +1067,7 @@ static CURLcode auth_bearer(struct Curl_easy *data,
  * headers. They are dealt with both in the transfer.c main loop and in the
  * proxy CONNECT loop.
  *
- * The 'auth' line ends with a null byte without CR or LF present.
+ * The 'auth' line ends with a NUL byte without CR or LF present.
  */
 CURLcode Curl_http_input_auth(struct Curl_easy *data, bool proxy,
                               const char *auth) /* the first non-space */
@@ -1481,7 +1481,7 @@ bool Curl_compareheader(const char *headerline, /* line to check */
     for(len = curlx_strlen(&val); len >= clen;) {
       struct Curl_str next;
       const char *o = p;
-      /* after a match there must be a comma, space, newline or null byte */
+      /* after a match there must be a comma, space, newline or NUL byte */
       if(curl_strnequal(p, content, clen) &&
          ((p[clen] == ',') || ISBLANK(p[clen]) || ISNEWLINE(p[clen]) ||
           !p[clen]))
@@ -3869,7 +3869,7 @@ CURLcode Curl_verify_header(struct Curl_easy *data,
     switch(hd[i]) {
     case '\0':
       /* this is bad, bail out */
-      failf(data, "Nul byte in header");
+      failf(data, "NUL byte in header");
       return CURLE_WEIRD_SERVER_REPLY;
     case '\r':
       if(i < hdlen - 2) {
@@ -4043,19 +4043,19 @@ static void http_check_auth_closure(struct Curl_easy *data,
 #ifdef USE_SPNEGO
   if(conn->bits.close &&
     (((data->req.httpcode == 401) &&
-      (conn->http_negotiate_state == GSS_AUTHRECV)) ||
+      (conn->http_negotiate_state == CURL_NEGO_AUTH_RECV)) ||
      ((data->req.httpcode == 407) &&
-      (conn->proxy_negotiate_state == GSS_AUTHRECV)))) {
+      (conn->proxy_negotiate_state == CURL_NEGO_AUTH_RECV)))) {
     infof(data, "Connection closure while negotiating auth (HTTP 1.0?)");
     data->state.authproblem = TRUE;
   }
-  if((conn->http_negotiate_state == GSS_AUTHDONE) &&
+  if((conn->http_negotiate_state == CURL_NEGO_AUTH_DONE) &&
      (data->req.httpcode != 401)) {
-    conn->http_negotiate_state = GSS_AUTHSUCC;
+    conn->http_negotiate_state = CURL_NEGO_AUTH_SUCC;
   }
-  if((conn->proxy_negotiate_state == GSS_AUTHDONE) &&
+  if((conn->proxy_negotiate_state == CURL_NEGO_AUTH_DONE) &&
      (data->req.httpcode != 407)) {
-    conn->proxy_negotiate_state = GSS_AUTHSUCC;
+    conn->proxy_negotiate_state = CURL_NEGO_AUTH_SUCC;
   }
 #endif
 }

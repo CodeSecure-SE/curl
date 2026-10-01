@@ -79,7 +79,6 @@ jobs:
             install_steps: libressl
             # FIXME: Could not make OPENSSL_ROOT_DIR work. CMake seems to prepend sysroot to it.
             generator: Xcode
-            xcode: ''  # default Xcode. Set it once to silence actionlint.
             options: --config Debug
             generate: >-
               -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=OFF
@@ -125,13 +124,10 @@ jobs:
             --location --proto-redir =https "https://github.com/libressl/portable/releases/download/v${LIBRESSL_VERSION}/libressl-${LIBRESSL_VERSION}.tar.gz" --output pkg.bin
           sha256sum pkg.bin && tar -xzf pkg.bin && rm -f pkg.bin
           cd "libressl-${LIBRESSL_VERSION}"
-          cmake -B . -G Ninja \
-            -DCMAKE_INSTALL_PREFIX=/Users/runner/libressl \
+          cmake -B . -G Ninja -DLIBRESSL_APPS=OFF -DLIBRESSL_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/Users/runner/libressl \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DLIBRESSL_APPS=OFF \
-            -DLIBRESSL_TESTS=OFF
+            -DBUILD_SHARED_LIBS=OFF
           cmake --build .
           cmake --install . --verbose
 
@@ -235,7 +231,6 @@ jobs:
             compiler: gcc-13
             configure: --without-ssl --with-brotli --with-zstd --with-apple-idn
             tflags: '--min=1620'
-            xcode: ''  # default Xcode. Set it once to silence actionlint.
 
           - name: '!ssl libssh2 AppleIDN'
             compiler: clang

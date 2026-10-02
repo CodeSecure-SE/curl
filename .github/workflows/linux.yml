@@ -35,7 +35,7 @@ cache-mode: write
 env:
   MAKEFLAGS: -j 5
   CURL_CI: github
-  CURL_TEST_MIN: 1790
+  CURL_TEST_MIN: 1800
   DO_NOT_TRACK: '1'
   # renovate: datasource=github-tags depName=awslabs/aws-lc versioning=semver registryUrl=https://github.com
   AWSLC_VERSION: 5.8.0
@@ -179,7 +179,7 @@ jobs:
             install_packages: libnghttp2-dev libldap-dev valgrind
             install_steps: rust rustls-arm
             PKG_CONFIG_PATH: /home/runner/rustls/lib/pkgconfig
-            tflags: '--subset=0/2 --min=880'
+            tflags: '--subset=0/2'
             generate: -DCURL_USE_RUSTLS=ON -DUSE_ECH=ON -DENABLE_DEBUG=ON
 
           - name: 'rustls valgrind 2'
@@ -207,7 +207,7 @@ jobs:
             image: ubuntu-26.04-arm
             install_packages: valgrind
             install_steps: wolfssl-opensslextra-arm
-            tflags: '--subset=0/2 --min=880'
+            tflags: '--subset=0/2'
             LDFLAGS: -Wl,-rpath,/home/runner/wolfssl-opensslextra/lib
             configure: --with-wolfssl=/home/runner/wolfssl-opensslextra --enable-ech --enable-debug --enable-httpsig
 
@@ -460,10 +460,10 @@ jobs:
             tflags: '-n --test-duphandle'
 
           - name: 'IntelC openssl'
-            install_packages: libssl-dev
+            install_packages: libssl-dev libssh2-1-dev libnghttp2-dev libidn2-dev libldap-dev libkrb5-dev
             install_steps: intelc
             CC: icc
-            configure: --enable-debug --with-openssl
+            configure: --enable-debug --with-openssl --with-libssh2 --with-gssapi --enable-httpsig
 
           - name: 'Slackware GnuTLS gssapi gcc'
             # Flags used to build the curl Slackware package:

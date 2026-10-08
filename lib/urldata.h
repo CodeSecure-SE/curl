@@ -503,6 +503,7 @@ typedef enum {
   EXPIRE_FTP_ACCEPT,
   EXPIRE_ALPN_EYEBALLS,
   EXPIRE_SHUTDOWN,
+  EXPIRE_SERVER_RESPONSE,
   EXPIRE_LAST /* not an actual timer, used as a marker only */
 } expire_id;
 
@@ -1001,9 +1002,6 @@ struct UserDefined {
 #endif
 #ifndef CURL_DISABLE_RTSP
   uint8_t rtspreq; /* RTSP request type */
-#endif
-#ifdef USE_ECH
-  uint8_t tls_ech;      /* TLS ECH configuration */
 #endif
 #ifndef CURL_DISABLE_NETRC
   uint8_t use_netrc;        /* enum CURL_NETRC_OPTION values */

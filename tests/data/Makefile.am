@@ -1716,6 +1716,7 @@ TESTCASES = \
   test1693 \
   \
   test1700 \
+  test1701 \
   test1702 \
   test1703 \
   test1704 \
@@ -2007,7 +2008,7 @@ TESTCASES = \
   test2604 \
   test2605 \
   test2606 \
-  \
+  test2622 \
   test2700 \
   test2701 \
   test2702 \
@@ -2138,6 +2139,9 @@ TESTCASES = \
   test3595 \
   test3596 \
   test3611 \
+  test3980 \
+  test3990 \
+  test3991 \
   test4000 \
   test4001 \
   test4039 \

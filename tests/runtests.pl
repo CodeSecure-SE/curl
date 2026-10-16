@@ -774,17 +774,6 @@ sub checksystemfeatures {
         die "Could not get curl's version";
     }
 
-    if(-r "../lib/curl_config.h") {
-        open(my $conf, "<", "../lib/curl_config.h");
-        while(<$conf>) {
-            if($_ =~ /^\#define HAVE_GETRLIMIT/) {
-                # set if system has getrlimit()
-                $feature{"getrlimit"} = 1;
-            }
-        }
-        close($conf);
-    }
-
     if($feature{"IPv6"}) {
         # client has IPv6 support
 
@@ -1549,11 +1538,6 @@ sub singletest_check {
         if($hash{'nonewline'}) {
             # cut off the final newline from the final line of the upload data
             chomp($upload[-1]);
-        }
-        for my $line (@upload) {
-            subbase64(\$line);
-            subsha256base64file(\$line);
-            substrippemfile(\$line);
         }
 
         # verify uploaded data

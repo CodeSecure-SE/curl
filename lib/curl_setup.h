@@ -1049,6 +1049,70 @@ typedef unsigned int curl_bit;
 #define DEBUGASSERT(x) do {} while(0)
 #endif
 
+/* Macro to configure Visual Studio debug CRT to output errors to stderr and
+   the debugger, replacing the interactive GUI dialog. */
+#if defined(_MSC_VER) && defined(_DEBUG) && defined(CURL_DEBUG_MSVC_CRTDBG)
+#include <crtdbg.h> /* for _CrtSetReportFile(), _CRT* macros */
+#define CURL_MSVC_CRTDBG_INIT()                                             \
+  do {                                                                      \
+    _set_error_mode(_OUT_TO_STDERR);  /* needs stdlib.h */                  \
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG); \
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);                    \
+    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);  \
+    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);                     \
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);   \
+    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);                      \
+  } while(0)
+#else
+#define CURL_MSVC_CRTDBG_INIT() do {} while(0)
+#endif
+
+#if defined(_WIN32) && !defined(CURL_WINDOWS_UWP)
+#include <tlhelp32.h>
+/* Print the list of all loaded modules with full paths. */
+#define CURL_DUMP_MODULE_PATHS(printf_f)                               \
+  do {                                                                 \
+    HANDLE hnd = INVALID_HANDLE_VALUE;                                 \
+    MODULEENTRY32 mod = { 0 };                                         \
+                                                                       \
+    mod.dwSize = sizeof(MODULEENTRY32);                                \
+                                                                       \
+    do {                                                               \
+      hnd = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, 0);            \
+    } while(hnd == INVALID_HANDLE_VALUE &&                             \
+            GetLastError() == ERROR_BAD_LENGTH);                       \
+                                                                       \
+    if(hnd == INVALID_HANDLE_VALUE)                                    \
+      goto error;                                                      \
+                                                                       \
+    if(!Module32First(hnd, &mod))                                      \
+      goto error;                                                      \
+                                                                       \
+    do {                                                               \
+      char *path; /* points to stack allocated buffer */               \
+      if(sizeof(*mod.szExePath) > 1) {  /* _UNICODE */                 \
+        /* sizeof(mod.szExePath) is the max total bytes of   */        \
+        /* wchars. the max total bytes of multibyte chars is */        \
+        /* not more than twice that.                         */        \
+        char buffer[sizeof(mod.szExePath) * 2];                        \
+        if(!WideCharToMultiByte(CP_ACP, 0, (WCHAR *)mod.szExePath, -1, \
+                                buffer, sizeof(buffer), NULL, NULL))   \
+          goto error;                                                  \
+        path = (char *)buffer;                                         \
+      }                                                                \
+      else                                                             \
+        path = (char *)mod.szExePath;                                  \
+      (printf_f)("%s\n", path);                                        \
+    } while(Module32Next(hnd, &mod));                                  \
+                                                                       \
+error:                                                                 \
+    if(hnd != INVALID_HANDLE_VALUE)                                    \
+      CloseHandle(hnd);                                                \
+  } while(0)
+#else
+#define CURL_DUMP_MODULE_PATHS(printf_f) do {} while(0)
+#endif
+
 /*
  * Macro SOCKERRNO / SET_SOCKERRNO() returns / sets the *socket-related* errno
  * (or equivalent) on this platform to hide platform details to code using it.

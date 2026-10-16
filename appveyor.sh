@@ -96,7 +96,7 @@ if [ -n "${CMAKE_GENERATOR:-}" ]; then
   [ -n "${verbose}" ] && { echo 'configurehelp.pm'; cat _bld/tests/configurehelp.pm || true; }
   time cmake --build _bld --config "${PRJ_CFG}" --parallel 2
   [[ "${CMAKE_GENERATE:-}" != *'-DBUILD_SHARED_LIBS=OFF'* ]] && PATH="$(pwd)/_bld/lib/${PRJ_CFG}:$PATH"
-  [[ "${CMAKE_GENERATE:-}" = *'-DCURL_USE_OPENSSL=ON'* ]] && { PATH="${openssl_root}:$PATH"; cp "${openssl_root}"/*.dll "_bld/src/${PRJ_CFG}"; }
+  [[ "${CMAKE_GENERATE:-}" = *'-DCURL_USE_OPENSSL=ON'* ]] && { PATH="${openssl_root}:$PATH"; cp -p "${openssl_root}"/*.dll "_bld/src/${PRJ_CFG}"; }
   curl="_bld/src/${PRJ_CFG}/curl.exe"
 else
   (
@@ -123,8 +123,8 @@ fi
 
 if [[ "${CREATE_ARTIFACT:-}" = 'true' ]]; then
   cp -p /usr/ssl/certs/ca-bundle.crt curl-ca-bundle.crt
-  echo 'Checking that https works (it should find curl-ca-bundle.crt if needed)'
-  "${curl}" --disable --verbose --fail --silent --show-error --retry 6 --retry-all-errors --out-null https://curl.se/
+  echo 'Checking that https works'
+  "${curl}" --disable --verbose --fail --silent --show-error --retry 6 --retry-all-errors --cacert curl-ca-bundle.crt --out-null https://curl.se/
   if [ -n "${APPVEYOR_PULL_REQUEST_NUMBER:-}" ]; then
     archive="curl_pr${APPVEYOR_PULL_REQUEST_NUMBER}_${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}.zip"
   else
@@ -147,6 +147,23 @@ fi
 
 if [ -n "${CMAKE_GENERATOR:-}" ] && [[ "${APPVEYOR_JOB_NAME}" = *'Build-tests'* ]]; then
   time cmake --build _bld --config "${PRJ_CFG}" --parallel 2 --target testdeps
+
+  if [ -z "${SKIP_RUN:-}" ]; then
+    if [[ "${CMAKE_GENERATE:-}" = *'-DCURL_USE_OPENSSL=ON'* ]]; then
+      cp -p "${openssl_root}"/*.dll "_bld/tests/libtest/${PRJ_CFG}"
+      cp -p "${openssl_root}"/*.dll "_bld/tests/tunit/${PRJ_CFG}"
+      cp -p "${openssl_root}"/*.dll "_bld/tests/unit/${PRJ_CFG}"
+    fi
+
+    if [ -n "${verbose}" ]; then
+      "_bld/tests/libtest/${PRJ_CFG}/libtests.exe" --dump-module-paths | sort -f
+      "_bld/tests/server/${PRJ_CFG}/servers.exe" --dump-module-paths | sort -f
+      "_bld/tests/tunit/${PRJ_CFG}/tunits.exe" --dump-module-paths | sort -f
+      "_bld/tests/unit/${PRJ_CFG}/units.exe" --dump-module-paths | sort -f
+    fi
+  else
+    echo "Skip running tests. Reason: ${SKIP_RUN}"
+  fi
 fi
 
 # build examples

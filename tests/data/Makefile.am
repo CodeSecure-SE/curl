@@ -1713,6 +1713,7 @@ TESTCASES = \
   test1691 \
   test1692 \
   test1693 \
+  test1695 \
   \
   test1700 \
   test1701 \
@@ -1731,6 +1732,7 @@ TESTCASES = \
   test1714 \
   test1715 \
   test1716 \
+  test1717 \
   test1720 \
   test1721 \
   test1722 \
@@ -1745,6 +1747,7 @@ TESTCASES = \
   test1745 \
   test1790 \
   test1791 \
+  test1792 \
   test1800 \
   test1801 \
   test1802 \

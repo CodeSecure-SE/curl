@@ -549,6 +549,10 @@ CURLMcode Curl_multi_add_handle(struct Curl_multi *multi,
    * a timeout callback invocation. */
   mresult = Curl_update_timer(multi);
   if(mresult) {
+    /* undo the additions above */
+    Curl_uint32_bset_remove(&multi->process, data->mid);
+    Curl_uint32_bset_remove(&multi->dirty, data->mid);
+    --multi->xfers_alive;
     data->multi = NULL; /* not anymore */
     Curl_uint32_tbl_remove(&multi->xfers, data->mid);
     data->mid = UINT32_MAX;
@@ -3265,8 +3269,12 @@ static CURLMcode multi_socket(struct Curl_multi *multi,
     mresult = multi_perform(multi, running_handles);
 
     if(mresult != CURLM_BAD_HANDLE) {
-      /* Reassess event status of all active transfers */
-      mresult = Curl_multi_ev_assess_xfer_bset(multi, &multi->process);
+      /* Reassess event status of all active transfers, but keep any error
+         from multi_perform() */
+      CURLMcode mresult2 =
+        Curl_multi_ev_assess_xfer_bset(multi, &multi->process);
+      if(!mresult)
+        mresult = mresult2;
     }
     goto out;
   }

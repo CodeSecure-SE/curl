@@ -90,6 +90,7 @@ struct ws_decoder {
   int head_len, head_total;
   enum ws_dec_state state;
   int cont_flags;
+  BIT(seen_close);      /* decoded a CLOSE frame */
 };
 
 /* a client-side WS frame encoder, generating frame headers and
@@ -351,6 +352,7 @@ static void ws_dec_reset(struct ws_decoder *dec)
   dec->head_len = dec->head_total = 0;
   dec->state = WS_DEC_INIT;
   dec->cont_flags = 0;
+  dec->seen_close = FALSE;
 }
 
 static void ws_dec_init(struct ws_decoder *dec)
@@ -413,10 +415,13 @@ static CURLcode ws_dec_read_head(struct ws_decoder *dec,
         ws_dec_reset(dec);
         return CURLE_RECV_ERROR;
       }
-      if(dec->frame_flags & CURLWS_CLOSE && dec->head[1] > WS_MAX_CNTRL_LEN) {
-        failf(data, "[WS] received CLOSE frame is too big");
-        ws_dec_reset(dec);
-        return CURLE_RECV_ERROR;
+      if(dec->frame_flags & CURLWS_CLOSE) {
+        dec->seen_close = TRUE;
+        if(dec->head[1] > WS_MAX_CNTRL_LEN) {
+          failf(data, "[WS] received CLOSE frame is too big");
+          ws_dec_reset(dec);
+          return CURLE_RECV_ERROR;
+        }
       }
 
       /* How long is the frame head? */
@@ -765,6 +770,13 @@ out:
     failf(data, "[WS] decode ended with incomplete frame");
     result = CURLE_RECV_ERROR;
   }
+  if(!result && ws->dec.seen_close && !ws->pending.type &&
+     Curl_bufq_is_empty(&ctx->buf) &&
+     Curl_bufq_is_empty(&ws->sendbuf)) {
+    CURL_TRC_WS(data, "seen CLOSE from server, stop receiving");
+    CURL_REQ_CLEAR_RECV(data);
+  }
+
   return result;
 }
 
@@ -998,37 +1010,78 @@ static CURLcode ws_enc_write_head(struct Curl_easy *data,
   return ws_enc_add_frame(data, enc, flags, payload_len, out);
 }
 
+/*
+ * Mask and append payload to the bufq in chunks.
+ *
+ * @unittest 2607
+ */
+UNITTEST CURLcode ws_enc_mask_write(const uint8_t *mask, unsigned int *pxori,
+                                    const uint8_t *buf, size_t len,
+                                    struct bufq *out, size_t *pnwritten);
+UNITTEST CURLcode ws_enc_mask_write(const uint8_t *mask, unsigned int *pxori,
+                                    const uint8_t *buf, size_t len,
+                                    struct bufq *out, size_t *pnwritten)
+{
+  CURLcode result;
+  size_t i, done = 0;
+
+  *pnwritten = 0;
+  while(done < len) {
+    uint8_t tmp[1024];
+    uint8_t mask8[8];
+    uint64_t m;
+    size_t n = CURLMIN(len - done, sizeof(tmp));
+    size_t nwritten;
+
+    for(i = 0; i < 8; i++)
+      mask8[i] = mask[(*pxori + i) & 3];
+    memcpy(&m, mask8, 8);
+    for(i = 0; i + 8 <= n; i += 8) {
+      uint64_t v;
+      memcpy(&v, &buf[done + i], 8);
+      v ^= m;
+      memcpy(&tmp[i], &v, 8);
+    }
+    for(; i < n; i++)
+      tmp[i] = buf[done + i] ^ mask8[i & 7];
+
+    result = Curl_bufq_write(out, tmp, n, &nwritten);
+    if(result) {
+      if((result != CURLE_AGAIN) || !done)
+        return result;
+      break;
+    }
+    done += nwritten;
+    *pxori = (*pxori + (unsigned int)nwritten) & 3;
+    if(nwritten < n)
+      break;
+  }
+  *pnwritten = done;
+  return CURLE_OK;
+}
+
 static CURLcode ws_enc_write_payload(struct ws_encoder *enc,
                                      struct Curl_easy *data,
                                      const uint8_t *buf, size_t buflen,
                                      struct bufq *out, size_t *pnwritten)
 {
   CURLcode result;
-  size_t i, len, n, remain;
+  size_t len, remain;
 
   *pnwritten = 0;
   if(Curl_bufq_is_full(out))
     return CURLE_AGAIN;
 
-  /* not the most performant way to do this */
   len = buflen;
   remain = curlx_sotouz_range(enc->payload_remain, 0, SIZE_MAX);
   if(remain < len)
     len = remain;
 
-  for(i = 0; i < len; ++i) {
-    uint8_t c = buf[i] ^ enc->mask[enc->xori];
-    result = Curl_bufq_write(out, &c, 1, &n);
-    if(result) {
-      if((result != CURLE_AGAIN) || !i)
-        return result;
-      break;
-    }
-    enc->xori++;
-    enc->xori &= 3;
-  }
-  *pnwritten = i;
-  enc->payload_remain -= (curl_off_t)i;
+  result = ws_enc_mask_write(enc->mask, &enc->xori, buf, len, out,
+                             pnwritten);
+  if(result)
+    return result;
+  enc->payload_remain -= (curl_off_t)*pnwritten;
   ws_enc_info(enc, data, "buffered");
   return CURLE_OK;
 }

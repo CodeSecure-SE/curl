@@ -1562,7 +1562,8 @@ static CURLUcode file_url(const CURLU *u, char **part,
                           const char *querysep)
 {
   char *url = curl_maprintf("file://%s%s%s%s%s",
-                            u->path, querysep, u->query ? u->query : "",
+                            u->path ? u->path : "/",
+                            querysep, u->query ? u->query : "",
                             fragmentsep, u->fragment ? u->fragment : "");
   if(!url)
     return CURLUE_OUT_OF_MEMORY;
@@ -2071,6 +2072,12 @@ static CURLUcode url_sethost(CURLU *u, struct dynbuf *encp,
     CURLcode result = Curl_urldecode(newp, n, &decoded, &dlen, REJECT_CTRL);
     if(result || hostname_check6(u, decoded, dlen))
       bad = TRUE;
+    else if(decoded[0] == '[') {
+      /* store the normalized IPv6 address, the zone id is kept separately */
+      curlx_dyn_reset(encp);
+      if(curlx_dyn_add(encp, decoded))
+        bad = TRUE;
+    }
     else {
       struct dynbuf dbuf;
       curlx_dyn_init(&dbuf, CURL_MAX_INPUT_LENGTH);

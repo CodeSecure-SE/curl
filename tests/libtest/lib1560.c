@@ -1211,6 +1211,10 @@ static const struct setcase set_parts_list[] = {
    "scheme=https,host=example.com,path=/,url=\"\",", /* redirect to "" */
    "https://example.com/",
    0, 0, CURLUE_OK, CURLUE_OK},
+  {NULL, /* start fresh! */
+   "scheme=file,", /* no path set */
+   "file:///",
+   0, 0, CURLUE_OK, CURLUE_OK},
   {"https://example.com/",
    "path=one\ntwo,",
    "https://example.com/one\ntwo",
@@ -1332,6 +1336,14 @@ static const struct setcase set_parts_list[] = {
   {"https://[::1%25fake]:1234/",
    "zoneid=NULL,",
    "https://[::1]:1234/",
+   0, 0, CURLUE_OK, CURLUE_OK},
+  {"https://example.com/",
+   "host=[fe80::1%25eth0],",
+   "https://[fe80::1%25eth0]/",
+   0, 0, CURLUE_OK, CURLUE_OK},
+  {"https://example.com/",
+   "host=[fe80::1%25eth0],zoneid=NULL,",
+   "https://[fe80::1]/",
    0, 0, CURLUE_OK, CURLUE_OK},
   {"https://host:1234/",
    "port=NULL,",

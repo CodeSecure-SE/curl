@@ -487,7 +487,6 @@ TESTCASES = \
   test462 \
   test463 \
   test464 \
-  test466 \
   test467 \
   test468 \
   test469 \
@@ -2046,6 +2045,7 @@ TESTCASES = \
   test2885 \
   test2918 \
   test2924 \
+  test2952 \
   test2967 \
   test3000 \
   test3001 \
@@ -2086,6 +2086,9 @@ TESTCASES = \
   test3036 \
   test3037 \
   test3038 \
+  test3039 \
+  test3040 \
+  test3041 \
   \
   test3100 \
   test3101 \

@@ -27,10 +27,8 @@
 #include <netinet/in.h>
 #endif
 
-#ifdef HAVE_LINUX_TCP_H
-#include <linux/tcp.h>
-#elif defined(HAVE_NETINET_TCP_H)
-#include <netinet/tcp.h>
+#ifdef HAVE_NETINET_TCP_H
+#include <netinet/tcp.h> /* for TCP_FASTOPEN_CONNECT */
 #endif
 
 #include "urldata.h"

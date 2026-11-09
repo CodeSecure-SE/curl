@@ -3953,6 +3953,10 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
 
   /* We do retry writes sometimes from another buffer address */
   SSL_CTX_set_mode(octx->ssl_ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+  /* Prevent OpenSSL from receiving more records from the BIO when
+   * TLS Meta records (like Session Tickets) are encountered. A server
+   * can stall us with only sending tickets and no data, otherwise. */
+  SSL_CTX_clear_mode(octx->ssl_ctx, SSL_MODE_AUTO_RETRY);
 
   ciphers = conn_config->cipher_list;
   if(!ciphers && (peer->transport != TRNSPRT_QUIC))
@@ -4863,6 +4867,12 @@ CURLcode Curl_ossl_check_peer_cert(struct Curl_cfilter *cf,
   long ossl_verify;
   X509 *server_cert;
   bool verified = FALSE;
+
+  /* we may have offered a session, but the server decides if it resumes */
+  if(octx->reused_session && !SSL_session_reused(octx->ssl)) {
+    infof(data, "SSL session not resumed by server, doing full checks");
+    octx->reused_session = FALSE;
+  }
 
   if(data->set.ssl.certinfo && !octx->reused_session) {
     /* asked to gather certificate info. Reused sessions do not have cert

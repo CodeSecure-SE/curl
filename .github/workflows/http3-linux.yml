@@ -38,7 +38,7 @@ env:
   CURL_TEST_MIN: 1820
   DO_NOT_TRACK: '1'
   # renovate: datasource=github-tags depName=awslabs/aws-lc
-  AWSLC_VERSION: 5.11.0
+  AWSLC_VERSION: 5.13.0
   # renovate: datasource=github-tags depName=google/boringssl
   BORINGSSL_VERSION: 0.20261020.0
   # renovate: datasource=github-tags depName=gnutls/nettle versioning=semver-coerced extractVersion=^nettle_?(?<version>.+)_release_.+$
@@ -488,8 +488,7 @@ jobs:
               /home/runner/pkg/ngtcp2/lib/pkgconfig:\
               /home/runner/pkg/nghttp2/lib/pkgconfig"
             generate: >-
-              -DCURL_USE_GNUTLS=ON -DUSE_NGTCP2=ON -DCURL_USE_LIBSSH=ON
-              -DCMAKE_UNITY_BUILD=ON -DCURL_DISABLE_HTTPSIG=OFF -DCURL_ENABLE_NTLM=OFF
+              -DCURL_USE_GNUTLS=ON -DUSE_NGTCP2=ON -DCURL_USE_LIBSSH=ON -DCMAKE_UNITY_BUILD=ON -DCURL_DISABLE_HTTPSIG=OFF
 
           - name: 'libressl'
             install_steps: skipall

@@ -163,7 +163,7 @@ static void h2_stream_ctx_free(struct h2_stream_ctx *stream)
 {
   Curl_bufq_free(&stream->sendbuf);
   Curl_h1_req_parse_free(&stream->h1);
-  Curl_dynhds_free(&stream->resp_trailers);
+  Curl_dynhds_cleanup(&stream->resp_trailers);
   free_push_headers(stream);
   curlx_free(stream);
 }
@@ -735,6 +735,8 @@ static struct Curl_easy *h2_duphandle(struct Curl_cfilter *cf,
     Curl_peer_link(&second->state.initial_origin, data->state.initial_origin);
     if(data->share)
       (void)Curl_share_easy_link(second, data->share);
+    /* Never retry this request should it fail */
+    second->set.never_retry = TRUE;
     /* copy a range of options from the parent handle */
     second->set.fwrite_func = data->set.fwrite_func;
     second->set.out = data->set.out;
@@ -1752,11 +1754,11 @@ static CURLcode http2_handle_stream_close(struct Curl_cfilter *cf,
   if(Curl_dynhds_count(&stream->resp_trailers)) {
     struct dynhds_entry *e;
     struct dynbuf dbuf;
-    size_t i;
+    uint32_t i, ntrailers = Curl_dynhds_count(&stream->resp_trailers);
 
     result = CURLE_OK;
     curlx_dyn_init(&dbuf, DYN_TRAILERS);
-    for(i = 0; i < Curl_dynhds_count(&stream->resp_trailers); ++i) {
+    for(i = 0; !result && (i < ntrailers); ++i) {
       e = Curl_dynhds_getn(&stream->resp_trailers, i);
       if(!e)
         break;
@@ -1775,7 +1777,7 @@ static CURLcode http2_handle_stream_close(struct Curl_cfilter *cf,
         break;
       result = Curl_bump_headersize(data, curlx_dyn_len(&dbuf), FALSE);
       if(result)
-        return result;
+        break;
     }
     curlx_dyn_free(&dbuf);
     if(result)
@@ -2235,7 +2237,7 @@ out:
               stream ? stream->id : -1, (int)result, *pnwritten);
   curlx_safefree(nva);
   *pstream = stream;
-  Curl_dynhds_free(&h2_headers);
+  Curl_dynhds_cleanup(&h2_headers);
   return result;
 }
 

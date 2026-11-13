@@ -1740,6 +1740,7 @@ TESTCASES = \
   test1920 \
   test1921 \
   test1922 \
+  test1923 \
   \
   test1933 \
   test1934 \
@@ -2103,6 +2104,7 @@ TESTCASES = \
   test3555 \
   test3595 \
   test3596 \
+  test3598 \
   test3611 \
   test3612 \
   test3980 \

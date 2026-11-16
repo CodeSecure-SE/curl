@@ -39,25 +39,24 @@
  * initialization.
  */
 
-static const unsigned char hmac_ipad = 0x36;
-static const unsigned char hmac_opad = 0x5C;
+static const uint8_t hmac_ipad = 0x36;
+static const uint8_t hmac_opad = 0x5C;
 
 /* Some hash contexts need 16-byte alignment, e.g. wolfSSL on 64-bit CPUs */
 #define HMAC_CTXT_OFFSET ((sizeof(struct HMAC_context) + 15) & ~(size_t)15)
 
 struct HMAC_context *Curl_HMAC_init(const struct HMAC_params *hashparams,
-                                    const unsigned char *key,
-                                    unsigned int keylen)
+                                    const void *key, size_t key_len)
 {
   size_t i;
   struct HMAC_context *ctxt;
-  unsigned char *hkey;
-  unsigned char b;
+  const uint8_t *bkey;
+  uint8_t *hkey;
+  uint8_t b;
 
   /* Create HMAC context. */
-  i = HMAC_CTXT_OFFSET + (2 * hashparams->ctxtsize) + hashparams->resultlen;
+  i = HMAC_CTXT_OFFSET + (2 * hashparams->ctxtsize) + hashparams->digest_len;
   ctxt = curlx_malloc(i);
-
   if(!ctxt)
     return ctxt;
 
@@ -66,14 +65,14 @@ struct HMAC_context *Curl_HMAC_init(const struct HMAC_params *hashparams,
   ctxt->hashctxt2 = (void *)((char *)ctxt->hashctxt1 + hashparams->ctxtsize);
 
   /* If the key is too long, replace it by its hash digest. */
-  if(keylen > hashparams->maxkeylen) {
+  if(key_len > hashparams->key_len_max) {
     if(hashparams->hinit(ctxt->hashctxt1))
       goto fail;
-    hashparams->hupdate(ctxt->hashctxt1, key, keylen);
-    hkey = (unsigned char *)ctxt->hashctxt2 + hashparams->ctxtsize;
+    hashparams->hupdate(ctxt->hashctxt1, key, key_len);
+    hkey = (uint8_t *)ctxt->hashctxt2 + hashparams->ctxtsize;
     hashparams->hfinal(hkey, ctxt->hashctxt1);
     key = hkey;
-    keylen = hashparams->resultlen;
+    key_len = hashparams->digest_len;
   }
 
   /* Prime the two hash contexts with the modified key. */
@@ -81,14 +80,15 @@ struct HMAC_context *Curl_HMAC_init(const struct HMAC_params *hashparams,
      hashparams->hinit(ctxt->hashctxt2))
     goto fail;
 
-  for(i = 0; i < keylen; i++) {
-    b = (unsigned char)(*key ^ hmac_ipad);
+  bkey = key;
+  for(i = 0; i < key_len; i++) {
+    b = (uint8_t)(*bkey ^ hmac_ipad);
     hashparams->hupdate(ctxt->hashctxt1, &b, 1);
-    b = (unsigned char)(*key++ ^ hmac_opad);
+    b = (uint8_t)(*bkey++ ^ hmac_opad);
     hashparams->hupdate(ctxt->hashctxt2, &b, 1);
   }
 
-  for(; i < hashparams->maxkeylen; i++) {
+  for(; i < hashparams->key_len_max; i++) {
     hashparams->hupdate(ctxt->hashctxt1, &hmac_ipad, 1);
     hashparams->hupdate(ctxt->hashctxt2, &hmac_opad, 1);
   }
@@ -102,72 +102,64 @@ fail:
 }
 
 void Curl_HMAC_update(struct HMAC_context *ctxt,
-                      const unsigned char *data,
-                      unsigned int len)
+                      const void *input, size_t input_len)
 {
   /* Update first hash calculation. */
-  ctxt->hash->hupdate(ctxt->hashctxt1, data, len);
+  ctxt->hash->hupdate(ctxt->hashctxt1, input, input_len);
 }
 
-int Curl_HMAC_final(struct HMAC_context *ctxt, unsigned char *output)
+int Curl_HMAC_final(struct HMAC_context *ctxt, uint8_t *mac)
 {
   const struct HMAC_params *hashparams = ctxt->hash;
 
-  /* Do not get output if called with a null parameter: only release
+  /* Do not get output if called with a NULL parameter: only release
      storage. */
+  if(!mac)
+    mac = (uint8_t *)ctxt->hashctxt2 + ctxt->hash->ctxtsize;
 
-  if(!output)
-    output = (unsigned char *)ctxt->hashctxt2 + ctxt->hash->ctxtsize;
-
-  hashparams->hfinal(output, ctxt->hashctxt1);
-  hashparams->hupdate(ctxt->hashctxt2, output, hashparams->resultlen);
-  hashparams->hfinal(output, ctxt->hashctxt2);
+  hashparams->hfinal(mac, ctxt->hashctxt1);
+  hashparams->hupdate(ctxt->hashctxt2, mac, hashparams->digest_len);
+  hashparams->hfinal(mac, ctxt->hashctxt2);
   curlx_free(ctxt);
   return 0;
 }
 
 /*
- * Curl_hmacit()
- *
  * This is used to generate a HMAC hash, for the specified input data, given
  * the specified hash function and key.
  *
  * Parameters:
  *
- * hashparams [in]     - The hash function (Curl_HMAC_MD5).
- * key        [in]     - The key to use.
- * keylen     [in]     - The length of the key.
- * buf        [in]     - The data to encrypt.
- * buflen     [in]     - The length of the data.
- * output     [in/out] - The output buffer.
+ * hashparams [in]  - The hash function (Curl_HMAC_SHA256).
+ * key        [in]  - The key to use.
+ * key_len    [in]  - The length of the key.
+ * input      [in]  - The data to encrypt.
+ * input_len  [in]  - The length of the data.
+ * mac        [out] - The output buffer.
  *
  * Returns CURLE_OK on success.
  */
 CURLcode Curl_hmacit(const struct HMAC_params *hashparams,
-                     const unsigned char *key, const size_t keylen,
-                     const unsigned char *data, size_t datalen,
-                     unsigned char *output)
+                     const void *key, const size_t key_len,
+                     const void *input, size_t input_len,
+                     uint8_t *mac)
 {
   struct HMAC_context *ctxt;
-  if(keylen > UINT_MAX) /* unlikely to ever happen */
-    return CURLE_BAD_FUNCTION_ARGUMENT;
-  ctxt = Curl_HMAC_init(hashparams, key, curlx_uztoui(keylen));
 
+  if(!hashparams->hinit)
+    return CURLE_NOT_BUILT_IN;
+
+  ctxt = Curl_HMAC_init(hashparams, key, key_len);
   if(!ctxt)
     return CURLE_OUT_OF_MEMORY;
 
   /* Update the digest with the given challenge */
-  do {
-    unsigned int ilen = (unsigned int)CURLMIN(datalen, UINT_MAX);
-    Curl_HMAC_update(ctxt, data, ilen);
-    datalen -= ilen;
-    data += ilen;
-  } while(datalen);
+  Curl_HMAC_update(ctxt, input, input_len);
 
   /* Finalise the digest */
-  Curl_HMAC_final(ctxt, output);
+  Curl_HMAC_final(ctxt, mac);
 
   return CURLE_OK;
 }
 
-#endif /* AWS or Digest and TLS */
+#endif /* AWS, httpsig or Digest and TLS */

@@ -28,22 +28,19 @@
   !defined(CURL_DISABLE_DIGEST_AUTH) ||                             \
   defined(USE_LIBSSH2) || defined(USE_SSL)
 
-#define HMAC_MD5_LENGTH 16
-
 typedef CURLcode (*HMAC_hinit)(void *context);
 typedef void (*HMAC_hupdate)(void *context,
-                             const unsigned char *data,
-                             unsigned int len);
-typedef void (*HMAC_hfinal)(unsigned char *result, void *context);
+                             const void *input, size_t input_len);
+typedef void (*HMAC_hfinal)(uint8_t *digest, void *context);
 
 /* Per-hash function HMAC parameters. */
 struct HMAC_params {
-  HMAC_hinit  hinit;       /* Initialize context procedure. */
+  HMAC_hinit hinit;        /* Initialize context procedure. */
   HMAC_hupdate hupdate;    /* Update context with data. */
   HMAC_hfinal hfinal;      /* Get final result procedure. */
   unsigned int ctxtsize;   /* Context structure size. */
-  unsigned int maxkeylen;  /* Maximum key length (bytes). */
-  unsigned int resultlen;  /* Result length (bytes). */
+  size_t key_len_max;      /* Maximum key length (bytes). */
+  size_t digest_len;       /* Result length (bytes). */
 };
 
 /* HMAC computation context. */
@@ -55,17 +52,15 @@ struct HMAC_context {
 
 /* Prototypes. */
 struct HMAC_context *Curl_HMAC_init(const struct HMAC_params *hashparams,
-                                    const unsigned char *key,
-                                    unsigned int keylen);
+                                    const void *key, size_t key_len);
 void Curl_HMAC_update(struct HMAC_context *ctxt,
-                      const unsigned char *data,
-                      unsigned int len);
-int Curl_HMAC_final(struct HMAC_context *ctxt, unsigned char *output);
+                      const void *input, size_t input_len);
+int Curl_HMAC_final(struct HMAC_context *ctxt, uint8_t *mac);
 
 CURLcode Curl_hmacit(const struct HMAC_params *hashparams,
-                     const unsigned char *key, const size_t keylen,
-                     const unsigned char *data, size_t datalen,
-                     unsigned char *output);
+                     const void *key, const size_t key_len,
+                     const void *input, size_t input_len,
+                     uint8_t *mac);
 #endif
 
 #endif /* HEADER_CURL_HMAC_H */

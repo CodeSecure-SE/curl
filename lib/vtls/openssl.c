@@ -479,7 +479,7 @@ static CURLcode ossl_certchain(struct Curl_easy *data, SSL *ssl)
     if(result)
       break;
 
-    pubkey = X509_get_pubkey(x);
+    pubkey = X509_get0_pubkey(x);
     if(!pubkey)
       infof(data, "   Unable to load public key");
     else {
@@ -498,7 +498,6 @@ static CURLcode ossl_certchain(struct Curl_easy *data, SSL *ssl)
         result = get_pkey_dh(data, pubkey, mem, i);
         break;
       }
-      EVP_PKEY_free(pubkey);
     }
 
     if(!result && psig) {
@@ -1561,11 +1560,9 @@ static CURLcode client_cert(struct Curl_easy *data,
 
     x509 = SSL_get_certificate(ssl);
 
-    if(x509) {
-      EVP_PKEY *pktmp = X509_get_pubkey(x509);
-      EVP_PKEY_copy_parameters(pktmp, SSL_get_privatekey(ssl));
-      EVP_PKEY_free(pktmp);
-    }
+    if(x509)
+      EVP_PKEY_copy_parameters(X509_get0_pubkey(x509),
+                               SSL_get_privatekey(ssl));
 
 #if !defined(OPENSSL_NO_RSA) && !defined(OPENSSL_NO_DEPRECATED_3_0)
     {
@@ -5588,27 +5585,25 @@ static CURLcode ossl_random(struct Curl_easy *data,
   return rc == 1 ? CURLE_OK : CURLE_FAILED_INIT;
 }
 
-static CURLcode ossl_sha256sum(const unsigned char *input,
-                               size_t len,
-                               unsigned char *sha256sum /* output */,
-                               size_t unused)
+static CURLcode ossl_sha256sum(const void *input, size_t input_len,
+                               uint8_t *digest, size_t digest_len)
 {
   CURLcode result = CURLE_OK;
-  EVP_MD_CTX *mdctx;
-  (void)unused;
+  EVP_MD_CTX *ctx;
+  (void)digest_len;
 
-  mdctx = EVP_MD_CTX_new();
-  if(!mdctx)
+  ctx = EVP_MD_CTX_new();
+  if(!ctx)
     return CURLE_OUT_OF_MEMORY;
-  if(!EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL)) {
+  if(!EVP_DigestInit_ex(ctx, EVP_sha256(), NULL)) {
     result = CURLE_FAILED_INIT;
     goto out;
   }
-  if(!EVP_DigestUpdate(mdctx, input, len) ||
-     !EVP_DigestFinal_ex(mdctx, sha256sum, NULL))
+  if(!EVP_DigestUpdate(ctx, input, input_len) ||
+     !EVP_DigestFinal_ex(ctx, digest, NULL))
     result = CURLE_BAD_FUNCTION_ARGUMENT;
 out:
-  EVP_MD_CTX_free(mdctx);
+  EVP_MD_CTX_free(ctx);
   return result;
 }
 

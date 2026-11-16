@@ -31,10 +31,10 @@
    1. USE_OPENSSL
    2. USE_WOLFSSL
    3. USE_GNUTLS
-   4. USE_MBEDTLS (TBD)
-   5. USE_RUSTLS (TBD)
-   6. __APPLE__ (TBD)
-   7. USE_WIN32_CRYPTO (TBD)
+   4. USE_MBEDTLS (not supported)
+   5. USE_RUSTLS (not supported)
+   6. __APPLE__ (not supported)
+   7. USE_WIN32_CRYPTO (not supported)
  */
 
 #ifdef USE_OPENSSL
@@ -66,8 +66,8 @@
 
 #ifdef CURL_HAVE_SHA512_256
 #define CURL_SHA512_256_DIGEST_LENGTH 32
-CURLcode Curl_sha512_256it(unsigned char *output, const unsigned char *input,
-                           size_t input_size);
+CURLcode Curl_sha512_256it(uint8_t *digest,
+                           const void *input, size_t input_len);
 #endif /* CURL_HAVE_SHA512_256 */
 
 #endif /* !CURL_DISABLE_DIGEST_AUTH && !CURL_DISABLE_SHA512_256 */

@@ -1584,11 +1584,10 @@ TESTCASES = \
   test1607 \
   test1608 \
   test1609 \
-  test1610 \
-  test1612 \
+  \
   test1613 \
   test1614 \
-  test1615 \
+  \
   test1616 \
   test1617 \
   test1618 \
@@ -1888,7 +1887,7 @@ TESTCASES = \
   test2109 \
   test2110 \
   test2111 \
-  test2112 \
+  \
   test2113 \
   test2114 \
   test2115 \

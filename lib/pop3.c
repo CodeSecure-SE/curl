@@ -542,7 +542,7 @@ static CURLcode pop3_perform_user(struct Curl_easy *data,
   return result;
 }
 
-#ifndef CURL_DISABLE_DIGEST_AUTH
+#if !defined(CURL_DISABLE_DIGEST_AUTH) && defined(CURL_HAVE_MD5)
 /***********************************************************************
  *
  * pop3_perform_apop()
@@ -555,9 +555,9 @@ static CURLcode pop3_perform_apop(struct Curl_easy *data,
   struct pop3_conn *pop3c = Curl_conn_meta_get(conn, CURL_META_POP3_CONN);
   CURLcode result = CURLE_OK;
   size_t i;
-  struct MD5_context *ctxt;
-  unsigned char digest[MD5_DIGEST_LEN];
-  char secret[(2 * MD5_DIGEST_LEN) + 1];
+  void *ctxt;
+  uint8_t digest[CURL_MD5_DIGEST_LEN];
+  char secret[(2 * CURL_MD5_DIGEST_LEN) + 1];
 
   if(!pop3c)
     return CURLE_FAILED_INIT;
@@ -571,21 +571,21 @@ static CURLcode pop3_perform_apop(struct Curl_easy *data,
   }
 
   /* Create the digest */
-  ctxt = Curl_MD5_init(&Curl_DIGEST_MD5);
+  ctxt = Curl_MD5_init();
   if(!ctxt)
     return CURLE_OUT_OF_MEMORY;
 
-  Curl_MD5_update(ctxt, (const unsigned char *)pop3c->apoptimestamp,
-                  curlx_uztoui(strlen(pop3c->apoptimestamp)));
+  Curl_MD5_update(ctxt, pop3c->apoptimestamp,
+                  strlen(pop3c->apoptimestamp));
 
-  Curl_MD5_update(ctxt, (const unsigned char *)Curl_creds_passwd(conn->creds),
-                  curlx_uztoui(strlen(Curl_creds_passwd(conn->creds))));
+  Curl_MD5_update(ctxt, Curl_creds_passwd(conn->creds),
+                  strlen(Curl_creds_passwd(conn->creds)));
 
   /* Finalise the digest */
   Curl_MD5_final(ctxt, digest);
 
   /* Convert the calculated 16 octet digest into a 32-byte hex string */
-  for(i = 0; i < MD5_DIGEST_LEN; i++)
+  for(i = 0; i < CURL_MD5_DIGEST_LEN; i++)
     curl_msnprintf(&secret[2 * i], 3, "%02x", digest[i]);
 
   result = Curl_pp_sendf(data, &pop3c->pp, "APOP %s %s",
@@ -596,7 +596,7 @@ static CURLcode pop3_perform_apop(struct Curl_easy *data,
 
   return result;
 }
-#endif
+#endif /* !CURL_DISABLE_DIGEST_AUTH && CURL_HAVE_MD5 */
 
 /***********************************************************************
  *
@@ -702,7 +702,7 @@ static CURLcode pop3_perform_authentication(struct Curl_easy *data,
   }
 
   if(!result && progress == SASL_IDLE) {
-#ifndef CURL_DISABLE_DIGEST_AUTH
+#if !defined(CURL_DISABLE_DIGEST_AUTH) && defined(CURL_HAVE_MD5)
     if(pop3c->authtypes & pop3c->preftype & POP3_TYPE_APOP)
       /* Perform APOP authentication */
       result = pop3_perform_apop(data, conn);
@@ -980,7 +980,7 @@ static CURLcode pop3_state_auth_resp(struct Curl_easy *data,
       pop3_state(data, POP3_STOP);  /* Authenticated */
       break;
     case SASL_IDLE:            /* No mechanism left after cancellation */
-#ifndef CURL_DISABLE_DIGEST_AUTH
+#if !defined(CURL_DISABLE_DIGEST_AUTH) && defined(CURL_HAVE_MD5)
       if(pop3c->authtypes & pop3c->preftype & POP3_TYPE_APOP)
         /* Perform APOP authentication */
         result = pop3_perform_apop(data, conn);

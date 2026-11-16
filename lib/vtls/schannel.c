@@ -2664,10 +2664,8 @@ static CURLcode schannel_random(struct Curl_easy *data,
   return curlx_win32_random(entropy, length);
 }
 
-static CURLcode schannel_checksum(const unsigned char *input,
-                                  size_t inputlen,
-                                  unsigned char *checksum,
-                                  size_t checksumlen,
+static CURLcode schannel_checksum(const void *input, size_t input_len,
+                                  uint8_t *digest, size_t digest_len,
                                   DWORD provType,
                                   const unsigned int algId)
 {
@@ -2685,7 +2683,7 @@ static CURLcode schannel_checksum(const unsigned char *input,
   /* since this can fail in multiple ways, zero memory first so we never
    * return old data
    */
-  memset(checksum, 0, checksumlen);
+  memset(digest, 0, digest_len);
 
   if(!CryptAcquireContext(&hProv, NULL, NULL, provType,
                           CRYPT_VERIFYCONTEXT | CRYPT_SILENT))
@@ -2697,9 +2695,9 @@ static CURLcode schannel_checksum(const unsigned char *input,
   result = CURLE_BAD_FUNCTION_ARGUMENT;
 
   off = 0;
-  while(off < inputlen) {
-    DWORD chunk = (DWORD)CURLMIN(inputlen - off, 0xffffffffUL);
-    if(!CryptHashData(hHash, input + off, chunk, 0))
+  while(off < input_len) {
+    DWORD chunk = (DWORD)CURLMIN(input_len - off, 0xffffffffUL);
+    if(!CryptHashData(hHash, (const BYTE *)input + off, chunk, 0))
       goto out;
     off += chunk;
   }
@@ -2712,11 +2710,11 @@ static CURLcode schannel_checksum(const unsigned char *input,
     goto out;
 
   /* check if hash fits into the return buffer */
-  if(checksumlen < cbHashSize)
+  if(digest_len < cbHashSize)
     goto out;
 
-  dwChecksumLen = (DWORD)checksumlen;
-  if(CryptGetHashParam(hHash, HP_HASHVAL, checksum, &dwChecksumLen, 0) &&
+  dwChecksumLen = (DWORD)digest_len;
+  if(CryptGetHashParam(hHash, HP_HASHVAL, digest, &dwChecksumLen, 0) &&
      dwChecksumLen == cbHashSize)
     result = CURLE_OK;
 
@@ -2730,12 +2728,10 @@ out:
   return result;
 }
 
-static CURLcode schannel_sha256sum(const unsigned char *input,
-                                   size_t inputlen,
-                                   unsigned char *sha256sum,
-                                   size_t sha256len)
+static CURLcode schannel_sha256sum(const void *input, size_t input_len,
+                                   uint8_t *digest, size_t digest_len)
 {
-  return schannel_checksum(input, inputlen, sha256sum, sha256len,
+  return schannel_checksum(input, input_len, digest, digest_len,
                            PROV_RSA_AES, CALG_SHA_256);
 }
 
@@ -2757,7 +2753,7 @@ HCERTSTORE Curl_schannel_get_cached_cert_store(struct Curl_cfilter *cf,
   const struct curl_blob *ca_info_blob = conn_config->ca_info_blob;
   struct schannel_cert_share *share;
   timediff_t timeout_ms;
-  unsigned char info_blob_digest[CURL_SHA256_DIGEST_LENGTH];
+  uint8_t info_blob_digest[CURL_SHA256_DIGEST_LENGTH];
 
   DEBUGASSERT(multi);
 
@@ -2793,10 +2789,8 @@ HCERTSTORE Curl_schannel_get_cached_cert_store(struct Curl_cfilter *cf,
     if(share->CAinfo_blob_size != ca_info_blob->len) {
       return NULL;
     }
-    if(schannel_sha256sum((const unsigned char *)ca_info_blob->data,
-                          ca_info_blob->len,
-                          info_blob_digest,
-                          CURL_SHA256_DIGEST_LENGTH))
+    if(schannel_sha256sum(ca_info_blob->data, ca_info_blob->len,
+                          info_blob_digest, CURL_SHA256_DIGEST_LENGTH))
       return NULL;
     if(memcmp(share->CAinfo_blob_digest, info_blob_digest,
               CURL_SHA256_DIGEST_LENGTH)) {
@@ -2835,7 +2829,7 @@ bool Curl_schannel_set_cached_cert_store(struct Curl_cfilter *cf,
   struct Curl_multi *multi = data->multi;
   const struct curl_blob *ca_info_blob = conn_config->ca_info_blob;
   struct schannel_cert_share *share;
-  unsigned char digest[CURL_SHA256_DIGEST_LENGTH];
+  uint8_t digest[CURL_SHA256_DIGEST_LENGTH];
   char *CAfile = NULL;
 
   DEBUGASSERT(multi);
@@ -2845,8 +2839,8 @@ bool Curl_schannel_set_cached_cert_store(struct Curl_cfilter *cf,
   }
 
   if(ca_info_blob) {
-    if(schannel_sha256sum((const unsigned char *)ca_info_blob->data,
-                          ca_info_blob->len, digest, sizeof(digest))) {
+    if(schannel_sha256sum(ca_info_blob->data, ca_info_blob->len,
+                          digest, sizeof(digest))) {
       return FALSE;
     }
   }

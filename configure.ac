@@ -2126,11 +2126,10 @@ CURL_WITH_APPLE_SECTRUST
 
 dnl link required libraries for USE_WIN32_CRYPTO or SCHANNEL_ENABLED
 if test "$USE_WIN32_CRYPTO" = "1" || test "$SCHANNEL_ENABLED" = "1"; then
-  LIBS="-ladvapi32 -lcrypt32 $LIBS"
+  LIBS="-lcrypt32 $LIBS"
 fi
 
 if test "$curl_cv_native_windows" = "yes"; then
-  dnl for BCryptGenRandom()
   LIBS="-lbcrypt $LIBS"
 fi
 

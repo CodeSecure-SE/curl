@@ -543,7 +543,6 @@ static long ossl_bio_cf_ctrl(BIO *bio, int cmd, long num, void *ptr)
   struct Curl_cfilter *cf = BIO_get_data(bio);
   long ret = 1;
 
-  (void)cf;
   (void)ptr;
   switch(cmd) {
   case BIO_CTRL_GET_CLOSE:
@@ -1879,6 +1878,19 @@ static CURLcode ossl_shutdown(struct Curl_cfilter *cf,
         break;
     }
     err = SSL_get_error(octx->ssl, nread);
+    if(err == SSL_ERROR_SSL || err == SSL_ERROR_SYSCALL) {
+      /* OpenSSL forbids further I/O after these results. A peer close
+       * notify is SSL_ERROR_ZERO_RETURN and stays on the path below. */
+      VERBOSE(unsigned long sslerr = ERR_get_error());
+      CURL_TRC_CF(data, cf,
+                  "SSL shutdown, fatal recv before send: %s (%s), errno %d",
+                  SSL_ERROR_to_str(err),
+                  (sslerr ? ossl_strerror(sslerr, buf, sizeof(buf)) :
+                   "no OpenSSL error"),
+                  SOCKERRNO);
+      *done = TRUE;
+      goto out;
+    }
     if(!nread && err == SSL_ERROR_ZERO_RETURN) {
       bool input_pending;
       /* Yes, it did. */
@@ -5585,28 +5597,6 @@ static CURLcode ossl_random(struct Curl_easy *data,
   return rc == 1 ? CURLE_OK : CURLE_FAILED_INIT;
 }
 
-static CURLcode ossl_sha256sum(const void *input, size_t input_len,
-                               uint8_t *digest, size_t digest_len)
-{
-  CURLcode result = CURLE_OK;
-  EVP_MD_CTX *ctx;
-  (void)digest_len;
-
-  ctx = EVP_MD_CTX_new();
-  if(!ctx)
-    return CURLE_OUT_OF_MEMORY;
-  if(!EVP_DigestInit_ex(ctx, EVP_sha256(), NULL)) {
-    result = CURLE_FAILED_INIT;
-    goto out;
-  }
-  if(!EVP_DigestUpdate(ctx, input, input_len) ||
-     !EVP_DigestFinal_ex(ctx, digest, NULL))
-    result = CURLE_BAD_FUNCTION_ARGUMENT;
-out:
-  EVP_MD_CTX_free(ctx);
-  return result;
-}
-
 static bool ossl_cert_status_request(void)
 {
 #ifndef OPENSSL_NO_OCSP
@@ -5666,7 +5656,6 @@ const struct Curl_ssl Curl_ssl_openssl = {
   ossl_close,               /* close_one */
   ossl_close_all,           /* close_all */
   ossl_engines_list,        /* engines_list */
-  ossl_sha256sum,           /* sha256sum */
   ossl_recv,                /* recv decrypted data */
   ossl_send,                /* send data to encrypt */
   ossl_get_channel_binding  /* get_channel_binding */

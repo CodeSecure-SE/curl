@@ -690,6 +690,7 @@ TESTCASES = \
   test691 \
   test692 \
   test693 \
+  test694 \
   test695 \
   test696 \
   test697 \
@@ -2125,9 +2126,11 @@ TESTCASES = \
   test4644 \
   test4656 \
   test4657 \
+  test4658 \
   test4702 \
   test4781 \
   test4782 \
+  test4997 \
   test5000 \
   test5001 \
   test5002 \

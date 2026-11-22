@@ -643,6 +643,9 @@ struct UrlState {
   BIT(maybe_folded);
   BIT(leading_unfold); /* unfold started, this is the leading bytes */
 #endif
+  BIT(still_connecting); /* transfer may have been in DO/DID/PERFORMING
+                          * state, but is still connecting, e.g. limited
+                          * by connect timeouts. */
 };
 
 /*
@@ -1137,8 +1140,6 @@ struct Curl_easy {
    * libcurl application or implicitly during `curl_easy_perform()`,
    * a unique identifier inside this one multi instance. */
   uint32_t mid;
-  CURLMstate mstate;  /* the handle's state */
-  CURLcode result;   /* previous result */
 
   struct connectdata *conn;
   struct Curl_multi *multi;    /* if non-NULL, points to the multi handle
@@ -1160,7 +1161,6 @@ struct Curl_easy {
      has no uniqueness either IFF more than one connection pool is used by the
      libcurl application. */
   curl_off_t id;
-  uint32_t master_mid; /* if set, this transfer belongs to a master */
   multi_sub_xfer_done_cb *sub_xfer_done;
 
   /* `meta_hash` is a general key-value store for implementations
@@ -1195,6 +1195,9 @@ struct Curl_easy {
   struct PureInfo info;        /* stats, reports and info data */
   struct curl_tlssessioninfo tsi; /* Information about the TLS session, only
                                      valid after a client has asked for it */
+  uint32_t master_mid; /* if set, this transfer belongs to a master */
+  uint8_t mstate;  /* the handle's state (CURLMstate) */
+  uint8_t done;  /* previous result (CURLcode), passed on to multi_done() */
 };
 
 #define CURL_EASY_STR(d, id) \

@@ -469,6 +469,7 @@ CURLcode Curl_pretransfer(struct Curl_easy *data)
   Curl_peer_unlink(&data->state.initial_origin);
   Curl_peer_unlink(&data->state.origin);
   data->state.requests = 0;
+  data->state.still_connecting = FALSE;
   data->state.followlocation = 0; /* reset the location-follow counter */
   data->state.this_is_a_follow = FALSE; /* reset this */
   data->state.http_ignorecustom = FALSE; /* use custom HTTP method */
@@ -819,12 +820,6 @@ CURLcode Curl_xfer_recv(struct Curl_easy *data,
   if(curlx_uitouz(data->set.buffer_size) < blen)
     blen = curlx_uitouz(data->set.buffer_size);
   return Curl_conn_recv(data, buf, blen, pnrcvd);
-}
-
-CURLcode Curl_xfer_send_close(struct Curl_easy *data)
-{
-  Curl_conn_ev_data_done_send(data);
-  return CURLE_OK;
 }
 
 bool Curl_xfer_is_blocked(struct Curl_easy *data)

@@ -2133,6 +2133,7 @@ TESTCASES = \
   test4781 \
   test4782 \
   test4997 \
+  test4998 \
   test5000 \
   test5001 \
   test5002 \
@@ -2165,7 +2166,12 @@ TESTCASES = \
   test5029 \
   test5030 \
   test5031 \
-  test5032
+  test5032 \
+  test5033 \
+  test5034 \
+  test5035 \
+  test5036 \
+  test5037
 
 EXTRA_DIST = \
   $(TESTCASES) \
